@@ -32,3 +32,5 @@
 - https://github.com/vercel-labs/agent-browser
 - https://github.com/steipete/mcporter
 - https://docs.fallow.tools
+- https://github.com/amosblomqvist/pi-config/
+- https://github.com/nicobailon
