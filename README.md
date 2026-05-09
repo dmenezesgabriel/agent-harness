@@ -1,7 +1,7 @@
 # Pi Setup
 
 1. **Idea**: App, Feature or Refactor
-2. **Resarch** (Optional): If difficult exploration phases, create a `research.md` to cache tbem  
+2. **Resarch** (Optional): If difficult exploration phases, create a `research.md` to cache tbem
 3. **Prototype** (Optional): Hash out ideais in code to get early feedback and provide assets that can be used later in implementation itself
 4. **PRD**: Create a markdown file to describe the destination, with user stories and implementation notes
 5. **Kanban**: Turn the PRD into individual tickets with blocking relationships
@@ -24,6 +24,32 @@
 
 - TDD is a must have
 - Design the interfaces and delegate the implementation
+
+## LLama.cpp
+
+- **get llama.cpp release**:
+
+```sh
+mkdir -p llama && \
+curl -L "https://github.com/ggml-org/llama.cpp/releases/download/b9093/llama-b9093-bin-ubuntu-vulkan-x64.tar.gz" \
+  | tar -xz -C llama --strip-components=1
+```
+
+- **check version**:
+
+```sh
+./llama/llama-cli --version
+```
+
+- **See if works**:
+
+
+```sh
+./llama/llama-cli \
+  -hf ggml-org/gemma-3-1b-it-GGUF \
+  -ngl 999 \
+  -p "Explain llama.cpp in one paragraph"
+```
 
 ## References
 
