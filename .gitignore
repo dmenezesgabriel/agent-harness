@@ -6,3 +6,5 @@ reports
 .stryker-tmp
 
 llama
+!configs/llama
+models
