@@ -1,13 +1,10 @@
 # Project Guidelines
 
-This is a Digital Garden project.
-
 ## Stack
 
 - Pnpm as package manager
-- Vite as build tool
-- React as UI library
-- Tailwind CSS as styling framework
+- Vite as bundler
+- Lit-Elements Web Components as components framework
 - TypeScript as programming language
 - Prettier for code formatting
 - ESLint for linting
@@ -16,9 +13,7 @@ This is a Digital Garden project.
 - Vitest for testing
 - V8 for code coverage
 - Storybook for UI component development
-- React Testing Library for testing React components
 - MSW for mocking API requests
-- Next.js for Static Site Generation (SSG)
 - StrikerJs for mutation testing
 - Playwright for end-to-end testing
 
@@ -56,8 +51,3 @@ This is a Digital Garden project.
 - Mock external dependencies and API calls in tests to ensure isolation
 - Use code coverage tools to identify untested code and improve test coverage
 - Cover edge cases and error handling in tests
-
-## Way of Working
-
-- Plan work in small, manageable chunks
-- Use a Test-Driven Development (TDD) approach to ensure code quality and maintainability

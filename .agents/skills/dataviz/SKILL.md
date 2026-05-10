@@ -17,8 +17,7 @@ Before anything else, ask:
 
 > **Where does your data live, and where should the output go?**
 >
-> - **Local files** (CSV, Parquet, JSON, Excel, local DuckDB) → I'll query with Python + DuckDB and build a local Vite/React app
-> - **MotherDuck** (cloud DuckDB) → I'll query via the MotherDuck MCP and output a MotherDuck Dive
+> - **Local files** (CSV, Parquet, JSON, Excel, local DuckDB) → I'll query with Python + DuckDB and build a local Vite app
 
 Remember the chosen mode — it governs data inspection (Phase 2) and output generation (Phase 4).
 
