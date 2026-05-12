@@ -60,3 +60,8 @@ curl -L "https://github.com/ggml-org/llama.cpp/releases/download/b9093/llama-b90
 - https://docs.fallow.tools
 - https://github.com/amosblomqvist/pi-config/
 - https://github.com/nicobailon
+- https://huggingface.co/LiquidAI/LFM2-1.2B-RAG-GGUF
+- https://www.youtube.com/watch?v=5LTDuOg9DVo
+- https://www.youtube.com/watch?v=wJEP4CuR6a4
+- LLM Studio
+- OpenWebUI
