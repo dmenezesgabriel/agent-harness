@@ -13,5 +13,9 @@ models
 context.md
 plan.md
 research.md
+progress.md
+false
 
+mlruns
+experiments/variants
 __pycache__

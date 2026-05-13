@@ -1,0 +1,147 @@
+{
+  "skill_name": "software-feature-planning",
+  "evals": [
+    {
+      "id": "trigger-train-01",
+      "kind": "trigger",
+      "split": "train",
+      "prompt": "Plan a new feature for adding scheduled invoice reminders to our billing app. I need acceptance criteria, invariants, responsibilities, and rollout slices before implementation.",
+      "should_trigger": true,
+      "intent": "feature_planning",
+      "entities": [
+        "scheduled invoice reminders",
+        "acceptance criteria",
+        "rollout slices"
+      ]
+    },
+    {
+      "id": "trigger-train-02",
+      "kind": "trigger",
+      "split": "train",
+      "prompt": "Implement a Python function that normalizes nested JSON keys and returns a flat dictionary.",
+      "should_trigger": false,
+      "intent": "other",
+      "entities": [
+        "python function",
+        "json"
+      ]
+    },
+    {
+      "id": "trigger-validation-01",
+      "kind": "trigger",
+      "split": "validation",
+      "prompt": "Before we code bulk archive for support tickets, help me plan the feature boundary, dependency direction, ports, invariants, and test sequence.",
+      "should_trigger": true,
+      "intent": "feature_planning",
+      "entities": [
+        "bulk archive",
+        "support tickets",
+        "dependency direction",
+        "test sequence"
+      ]
+    },
+    {
+      "id": "trigger-validation-02",
+      "kind": "trigger",
+      "split": "validation",
+      "prompt": "Audit this API for SQL injection, auth bypass, and insecure password reset flows.",
+      "should_trigger": false,
+      "intent": "other",
+      "entities": [
+        "sql injection",
+        "auth bypass",
+        "password reset"
+      ]
+    },
+    {
+      "id": "output-train-01",
+      "kind": "output",
+      "split": "train",
+      "prompt": "Plan a feature to let workspace admins configure scheduled invoice reminders in an existing SaaS billing app. Include explicit boundaries, invariants, dependency direction, and a small-slice implementation sequence.",
+      "expected_output": "A feature plan using the skill's sectioned format with concrete responsibilities, invariants, and implementation slices.",
+      "assertions": [
+        {
+          "type": "contains",
+          "text": "### Feature Plan:"
+        },
+        {
+          "type": "contains",
+          "text": "Goal:"
+        },
+        {
+          "type": "contains",
+          "text": "Non-goals:"
+        },
+        {
+          "type": "contains",
+          "text": "Acceptance criteria:"
+        },
+        {
+          "type": "contains",
+          "text": "Responsibilities:"
+        },
+        {
+          "type": "contains",
+          "text": "Dependency direction:"
+        },
+        {
+          "type": "contains",
+          "text": "Invariants:"
+        },
+        {
+          "type": "contains",
+          "text": "Implementation sequence:"
+        },
+        {
+          "type": "contains",
+          "text": "Test strategy:"
+        },
+        {
+          "type": "not_contains",
+          "text": "Use SOLID"
+        }
+      ]
+    },
+    {
+      "id": "output-validation-01",
+      "kind": "output",
+      "split": "validation",
+      "prompt": "Create a feature plan for bulk-archiving support tickets older than 90 days with a dry-run preview and audit log. Keep it implementation-oriented and identify only justified ports or adapters.",
+      "expected_output": "A plan with observable behavior, protected invariants, minimal adapters, and a safe implementation sequence.",
+      "assertions": [
+        {
+          "type": "contains",
+          "text": "Primary flow:"
+        },
+        {
+          "type": "contains",
+          "text": "Boundary:"
+        },
+        {
+          "type": "contains",
+          "text": "Ports and adapters:"
+        },
+        {
+          "type": "contains",
+          "text": "Risk:"
+        },
+        {
+          "type": "contains",
+          "text": "Target shape:"
+        },
+        {
+          "type": "contains",
+          "text": "dry-run preview"
+        },
+        {
+          "type": "contains",
+          "text": "audit log"
+        },
+        {
+          "type": "not_contains",
+          "text": "Design clean architecture"
+        }
+      ]
+    }
+  ]
+}

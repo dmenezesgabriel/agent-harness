@@ -8,6 +8,9 @@
 Input run format: JSON array or JSONL, with objects like:
   {"id": "trigger-01", "prompt": "...", "should_trigger": true, "triggered": false}
 
+Optional intent/entity predictions can also be supplied:
+  {"id": "trigger-01", "triggered": true, "predicted_intent": "feature_planning", "predicted_entities": ["csv", "dashboard"]}
+
 Usage:
   uv run scripts/skill-evals/score_triggers.py --manifest skills/dataviz/evals/evals.json --runs runs.json
 """
@@ -17,7 +20,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -35,6 +38,14 @@ class CaseScore:
     fuzzy_score: float
     tfidf_score: float
     passed: bool
+    expected_intent: str | None = None
+    predicted_intent: str | None = None
+    intent_passed: bool | None = None
+    expected_entities: list[str] = field(default_factory=list)
+    predicted_entities: list[str] = field(default_factory=list)
+    entity_precision: float | None = None
+    entity_recall: float | None = None
+    entity_f1: float | None = None
 
 
 FRONTMATTER_PREFIX = "---\n"
@@ -88,8 +99,7 @@ def get_cases(payload: Any) -> list[dict[str, Any]]:
         cases = payload["evals"]
     else:
         raise ValueError("Manifest must be a list or an object with an 'evals' array")
-    trigger_cases = [case for case in cases if case.get("kind") == "trigger" or "should_trigger" in case]
-    return trigger_cases
+    return [case for case in cases if case.get("kind") == "trigger" or "should_trigger" in case]
 
 
 def pair_runs(cases: list[dict[str, Any]], runs: list[dict[str, Any]] | None) -> list[dict[str, Any]]:
@@ -116,7 +126,16 @@ def pair_runs(cases: list[dict[str, Any]], runs: list[dict[str, Any]] | None) ->
     for case in cases:
         run = run_map[str(case.get("id"))]
         merged = dict(case)
-        merged.update({k: v for k, v in run.items() if k not in {"id"}})
+        for key, value in run.items():
+            if key == "id":
+                continue
+            if key == "intent":
+                merged["predicted_intent"] = value
+                continue
+            if key == "entities":
+                merged["predicted_entities"] = value
+                continue
+            merged[key] = value
         paired.append(merged)
     return paired
 
@@ -132,6 +151,45 @@ def compute_scores(description: str, prompts: list[str]) -> tuple[list[float], l
     return fuzzy, cosine
 
 
+def normalize_label(value: Any) -> str | None:
+    if value is None:
+        return None
+    text = str(value).strip().lower()
+    return text or None
+
+
+def normalize_entities(value: Any) -> list[str]:
+    raw_items: list[Any]
+    if value is None:
+        raw_items = []
+    elif isinstance(value, str):
+        raw_items = [value]
+    elif isinstance(value, (list, tuple, set)):
+        raw_items = list(value)
+    else:
+        raw_items = [value]
+
+    seen: set[str] = set()
+    normalized: list[str] = []
+    for item in raw_items:
+        token = str(item).strip().lower()
+        if not token or token in seen:
+            continue
+        seen.add(token)
+        normalized.append(token)
+    return normalized
+
+
+def compute_entity_metrics(expected: list[str], predicted: list[str]) -> tuple[float, float, float]:
+    expected_set = set(expected)
+    predicted_set = set(predicted)
+    matched = len(expected_set & predicted_set)
+    precision = matched / len(predicted_set) if predicted_set else 0.0
+    recall = matched / len(expected_set) if expected_set else 0.0
+    f1 = (2 * precision * recall / (precision + recall)) if (precision + recall) else 0.0
+    return precision, recall, f1
+
+
 def summarize(case_scores: list[CaseScore]) -> dict[str, Any]:
     tp = sum(1 for score in case_scores if score.should_trigger and score.triggered)
     fp = sum(1 for score in case_scores if not score.should_trigger and score.triggered)
@@ -140,17 +198,37 @@ def summarize(case_scores: list[CaseScore]) -> dict[str, Any]:
     precision = tp / (tp + fp) if (tp + fp) else 0.0
     recall = tp / (tp + fn) if (tp + fn) else 0.0
     f1 = (2 * precision * recall / (precision + recall)) if (precision + recall) else 0.0
-    accuracy = (tp + tn) / len(case_scores) if case_scores else 0.0
-    return {
+    summary: dict[str, Any] = {
         "precision": precision,
         "recall": recall,
         "f1": f1,
-        "accuracy": accuracy,
+        "accuracy": (tp + tn) / len(case_scores) if case_scores else 0.0,
         "true_positives": tp,
         "false_positives": fp,
         "true_negatives": tn,
         "false_negatives": fn,
     }
+
+    intent_cases = [score for score in case_scores if score.expected_intent is not None]
+    if intent_cases:
+        correct = sum(1 for score in intent_cases if score.intent_passed)
+        summary["intent_accuracy"] = correct / len(intent_cases)
+        summary["intent_total"] = len(intent_cases)
+
+    entity_cases = [score for score in case_scores if score.entity_f1 is not None]
+    if entity_cases:
+        expected_total = sum(len(score.expected_entities) for score in entity_cases)
+        predicted_total = sum(len(score.predicted_entities) for score in entity_cases)
+        matched_total = sum(len(set(score.expected_entities) & set(score.predicted_entities)) for score in entity_cases)
+        entity_precision = matched_total / predicted_total if predicted_total else 0.0
+        entity_recall = matched_total / expected_total if expected_total else 0.0
+        entity_f1 = (2 * entity_precision * entity_recall / (entity_precision + entity_recall)) if (entity_precision + entity_recall) else 0.0
+        summary["entity_precision"] = entity_precision
+        summary["entity_recall"] = entity_recall
+        summary["entity_f1"] = entity_f1
+        summary["entity_total_cases"] = len(entity_cases)
+
+    return summary
 
 
 def main() -> int:
@@ -175,6 +253,17 @@ def main() -> int:
         triggered = bool(case.get("triggered", False))
         should_trigger = bool(case.get("should_trigger", False))
         passed = triggered == should_trigger
+
+        expected_intent = normalize_label(case.get("intent")) if case.get("intent") is not None else None
+        predicted_intent = normalize_label(case.get("predicted_intent")) if case.get("predicted_intent") is not None else None
+        intent_passed = (expected_intent == predicted_intent) if expected_intent is not None else None
+
+        expected_entities = normalize_entities(case.get("entities")) if case.get("entities") is not None else []
+        predicted_entities = normalize_entities(case.get("predicted_entities")) if case.get("predicted_entities") is not None else []
+        entity_precision = entity_recall = entity_f1 = None
+        if case.get("entities") is not None:
+            entity_precision, entity_recall, entity_f1 = compute_entity_metrics(expected_entities, predicted_entities)
+
         scored_cases.append(
             CaseScore(
                 id=str(case.get("id", index)),
@@ -184,12 +273,22 @@ def main() -> int:
                 fuzzy_score=round(fuzzy_scores[index], 4) if index < len(fuzzy_scores) else 0.0,
                 tfidf_score=round(tfidf_scores[index], 4) if index < len(tfidf_scores) else 0.0,
                 passed=passed,
+                expected_intent=expected_intent,
+                predicted_intent=predicted_intent,
+                intent_passed=intent_passed,
+                expected_entities=expected_entities,
+                predicted_entities=predicted_entities,
+                entity_precision=round(entity_precision, 4) if entity_precision is not None else None,
+                entity_recall=round(entity_recall, 4) if entity_recall is not None else None,
+                entity_f1=round(entity_f1, 4) if entity_f1 is not None else None,
             )
         )
 
     summary = summarize(scored_cases)
     false_positives = [asdict(score) for score in scored_cases if not score.should_trigger and score.triggered]
     false_negatives = [asdict(score) for score in scored_cases if score.should_trigger and not score.triggered]
+    intent_mismatches = [asdict(score) for score in scored_cases if score.intent_passed is False]
+    entity_mismatches = [asdict(score) for score in scored_cases if score.entity_f1 is not None and score.entity_f1 < 1.0]
     hard_cases = sorted(scored_cases, key=lambda item: (item.fuzzy_score + item.tfidf_score) / 2, reverse=True)
 
     report = {
@@ -198,6 +297,8 @@ def main() -> int:
         "cases": [asdict(score) for score in scored_cases],
         "false_positives": false_positives,
         "false_negatives": false_negatives,
+        "intent_mismatches": intent_mismatches,
+        "entity_mismatches": entity_mismatches,
         "top_semantic_matches": [asdict(score) for score in hard_cases[: min(10, len(hard_cases))]],
     }
 
@@ -209,7 +310,13 @@ def main() -> int:
 
     print(
         json.dumps(
-            {"f1": summary["f1"], "precision": summary["precision"], "recall": summary["recall"]},
+            {
+                "f1": summary["f1"],
+                "precision": summary["precision"],
+                "recall": summary["recall"],
+                "intent_accuracy": summary.get("intent_accuracy"),
+                "entity_f1": summary.get("entity_f1"),
+            },
             indent=2,
             sort_keys=True,
         ),

@@ -1,0 +1,16 @@
+variants:
+  - id: baseline
+    description: Plan new features with clear responsibilities, cohesive boundaries, correct dependency direction, protected invariants, testable seams, and simple extension points.
+
+  - id: concise-trigger
+    description: Plan feature work before coding by defining behavior, acceptance criteria, responsibilities, invariants, boundaries, and tests.
+    body_prefix: |
+      > Variant focus: compress the trigger and foreground planning outputs that a caller can immediately execute.
+
+  - id: delivery-focused
+    description: Plan feature work into small vertical slices with explicit acceptance criteria, invariants, dependency direction, and test strategy.
+    body_prefix: |
+      > Variant focus: optimize for the smallest safe implementation slice and concrete rollout sequencing.
+    replacements:
+      - old: "Prefer incremental vertical slices over broad foundational rewrites:"
+        new: "Prefer incremental vertical slices over broad foundational rewrites, and prefer the smallest end-to-end slice that can be evaluated safely:"

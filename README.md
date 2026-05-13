@@ -40,7 +40,13 @@
 - Use `scripts/skill-evals/split_queries.py` to stratify trigger prompts.
 - Use `scripts/skill-evals/score_triggers.py` for trigger accuracy and near-miss diagnostics.
 - Use `scripts/skill-evals/score_outputs.py` for assertion grading on captured outputs.
+- Use `scripts/skill-evals/generate_variants.py` to render non-destructive skill variants into `experiments/variants/` for prompt/skill experiments.
+- Use `scripts/skill-evals/semantic_score.py` for optional embedding-based routing diagnostics and failure clustering.
+- Use `scripts/skill-evals/semantic_split.py` for optional embedding-aware train/validation splits.
+- Use `scripts/skill-evals/run_dataviz_mlflow.py` to auto-split the dataviz manifest, score both eval types, and log local MLflow runs (`--tracking-uri file:./mlruns`); inspect them with `uvx mlflow ui --backend-store-uri file:./mlruns`.
+- Use `scripts/skill-evals/run_skill_mlflow.py` to score any skill manifest, log trigger/output metrics, and compare generated variants in MLflow.
 - Use `scripts/skill-evals/report.py` to aggregate benchmark summaries.
+- See `docs/skill-experiments.md` for the end-to-end variant generation + MLflow workflow.
 
 ## Installing skills
 
@@ -91,6 +97,7 @@ curl -L "https://github.com/ggml-org/llama.cpp/releases/download/b9093/llama-b90
 - [Skills](https://www.skills.sh/)
 - [Skills Spec](https://agentskills.io/specification)
 - https://www.youtube.com/watch?v=rcRS8-7OgBo
+- https://arxiv.org/html/2311.11482v7
 
 
 ## Pi used extensions
