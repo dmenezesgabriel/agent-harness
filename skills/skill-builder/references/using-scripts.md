@@ -613,7 +613,7 @@ uv run scripts/validate_skill.py --skill-dir . --strict
 
 ```bash
 uv run scripts/grade_eval.py \
-  --outputs skill-builder-workspace/iteration-1/create-minimal-skill/with_skill/outputs \
+  --outputs .workspaces/skill-builder/iteration-1/create-minimal-skill/with_skill/outputs \
   --assertions evals/assertions/create-minimal-skill.json \
   --format json
 ```

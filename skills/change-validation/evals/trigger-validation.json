@@ -1,22 +1,40 @@
-[
-  {
-    "prompt": "Verify this form accessibility fix, including keyboard and error-state behavior, before merge.",
-    "expected_trigger": true,
-    "notes": "Frontend-focused validation."
-  },
-  {
-    "prompt": "Run targeted checks for this auth change and include security scanning only if the risk justifies it.",
-    "expected_trigger": true,
-    "notes": "High-risk validation with scoped security checks."
-  },
-  {
-    "prompt": "Classify this vague request as feature, bugfix, or refactor and turn it into a ready issue.",
-    "expected_trigger": false,
-    "notes": "Issue-definition task."
-  },
-  {
-    "prompt": "Safely refactor the service using characterization tests first.",
-    "expected_trigger": false,
-    "notes": "Implementation workflow request."
-  }
-]
+{
+  "skill_name": "change-validation",
+  "cases": [
+    {
+      "id": "trigger-frontend-accessibility-verification",
+      "prompt": "Verify this form accessibility fix, including keyboard and error-state behavior, before merge.",
+      "expected_trigger": true,
+      "notes": "Frontend-focused validation.",
+      "coverage": ["positive", "frontend", "accessibility"]
+    },
+    {
+      "id": "trigger-auth-validation-with-conditional-security-checks",
+      "prompt": "Run targeted checks for this auth change and include security scanning only if the risk justifies it.",
+      "expected_trigger": true,
+      "notes": "High-risk validation with scoped security checks.",
+      "coverage": ["positive", "auth", "risk-based-expansion"]
+    },
+    {
+      "id": "no-trigger-classification-and-scoping-task",
+      "prompt": "Classify this vague request as feature, bugfix, or refactor and turn it into a ready issue.",
+      "expected_trigger": false,
+      "notes": "Issue-definition task.",
+      "coverage": ["negative", "issue-definition"]
+    },
+    {
+      "id": "no-trigger-safe-refactor-execution",
+      "prompt": "Safely refactor the service using characterization tests first.",
+      "expected_trigger": false,
+      "notes": "Implementation workflow request.",
+      "coverage": ["negative", "implementation"]
+    },
+    {
+      "id": "no-trigger-specialist-security-review",
+      "prompt": "Perform a dedicated security review of our auth layer and enumerate abuse cases.",
+      "expected_trigger": false,
+      "notes": "The skill says not to use it for specialist security review unless the task is primarily validation of a defined change.",
+      "coverage": ["negative", "boundary", "specialist-review"]
+    }
+  ]
+}

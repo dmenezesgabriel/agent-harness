@@ -9,9 +9,9 @@
     },
     {
       "id": "billing-cleanup",
-      "query": "We should probably clean up the billing area somehow; make that a concrete task.",
+      "query": "Turn billing cleanup into an implementation-ready refactor issue: split invoice formatting from payment gateway calls, preserve current invoice and refund behavior, and define scope, non-goals, acceptance criteria, and task slices.",
       "should_trigger": true,
-      "notes": "Vague improvement needs issue framing."
+      "notes": "Concrete but still issue-definition work for a behavior-preserving billing refactor."
     },
     {
       "id": "dep-bump-validation",

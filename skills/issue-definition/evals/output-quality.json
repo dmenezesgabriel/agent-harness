@@ -2,63 +2,116 @@
   "skill_name": "issue-definition",
   "evals": [
     {
-      "id": "save-articles-feature",
+      "id": "frontend-feature-save-articles",
       "prompt": "Turn this vague feature request into an implementation-ready issue: add a way for users to save articles for later from both the article page and search results.",
-      "expected_output": "An issue definition with precise title, scope, non-goals, acceptance criteria for save/unsave/saved-state behavior, and validation expectations. Two entry points made explicit.",
+      "expected_output": "A frontend feature issue that explicitly classifies the request, follows frontend + feature guidance, and defines concrete behavior for both entry points without padding in irrelevant sections.",
       "files": [],
-      "tags": ["feature", "frontend", "output-quality"],
+      "tags": ["semantic-routing", "surface:frontend", "work-type:feature", "positive", "brevity"],
       "assertions": [
-        "Uses an issue-style structure with explicit sections for scope, non-goals, acceptance criteria, validation expectations, and task slices.",
-        "Makes the two entry points (article page, search results) observable in scope instead of leaving them implied.",
-        "Includes concrete acceptance criteria for saving, unsaving, and visible saved-state behavior.",
-        "Keeps implementation details lightweight and does not pre-decide architecture beyond what the prompt establishes.",
-        "Avoids vague wording such as 'improve the experience' or 'handle edge cases' without specifics.",
-        "Does not jump into coding steps, file edits, or implementation workflow routing."
+        "Explicitly labels the request as Surface: Frontend and Work type: Feature, or uses equivalent unambiguous classification.",
+        "Follows the frontend fork by naming visible states, interactions, accessibility expectations, or responsive constraints relevant to save/unsave behavior.",
+        "Follows the feature fork by describing the new behavior, affected users, and any rollout or compatibility constraints if relevant.",
+        "Makes the two entry points (article page and search results) observable in scope and acceptance criteria.",
+        "Avoids padding with irrelevant backend-only, refactor-only, or research-evidence sections when the prompt does not call for them.",
+        "Does not misroute the request as backend-only, bugfix, refactor, improvement, or research-backed change."
       ]
     },
     {
-      "id": "bugfix-500-orders",
+      "id": "backend-bugfix-orders-500",
       "prompt": "Write a bugfix issue for intermittent 500 errors on POST /orders when a guest user retries checkout after a payment timeout.",
-      "expected_output": "A bugfix issue with current vs expected behavior, repro conditions, impact, regression-oriented acceptance criteria, separate confirmed scope from open questions, and implementation-ready slices.",
+      "expected_output": "A backend bugfix issue that explicitly classifies the request, follows backend + bugfix guidance, and captures repro-sensitive failure handling.",
       "files": [],
-      "tags": ["bugfix", "backend", "output-quality"],
+      "tags": ["semantic-routing", "surface:backend", "work-type:bugfix", "positive"],
       "assertions": [
-        "Frames the current behavior, expected behavior, impact, and repro-sensitive conditions clearly.",
-        "Includes regression-oriented acceptance criteria and validation expectations.",
-        "Separates confirmed scope from open questions or assumptions if root cause is not yet known.",
-        "Breaks the work into implementation-ready slices rather than one large task.",
-        "Does not pretend the root cause is known when the prompt does not establish it.",
-        "Does not skip non-goals, risks, or validation expectations because it is 'just a bugfix'."
+        "Explicitly labels the request as Surface: Backend and Work type: Bugfix, or uses equivalent unambiguous classification.",
+        "Follows the backend fork by naming rules, contracts, persistence impact, or failure handling for POST /orders.",
+        "Follows the bugfix fork by stating current behavior, expected behavior, repro conditions, impact, and regression-sensitive paths.",
+        "Separates confirmed scope from assumptions or open questions if the root cause is unknown.",
+        "Does not misroute the request as frontend/fullstack, feature, refactor, improvement, or research-backed change."
       ]
     },
     {
-      "id": "refactor-billing",
+      "id": "backend-refactor-billing",
       "prompt": "Define a refactor issue for splitting the billing service into clearer modules while preserving current invoice and refund behavior.",
-      "expected_output": "A refactor issue with the design problem, preserved behavior boundary, scope and non-goals that prevent drift into feature work, acceptance criteria about unchanged behavior, and focused validation expectations.",
+      "expected_output": "A backend refactor issue that explicitly classifies the request, follows backend + refactor guidance, and preserves existing behavior boundaries.",
       "files": [],
-      "tags": ["refactor", "backend", "output-quality"],
+      "tags": ["semantic-routing", "surface:backend", "work-type:refactor", "positive"],
       "assertions": [
-        "States the design problem and preserved behavior boundary explicitly.",
-        "Defines scope and non-goals so the refactor does not drift into feature work.",
-        "Includes acceptance criteria about unchanged external behavior and focused validation expectations.",
-        "Keeps the issue at the definition level instead of prescribing a full implementation plan.",
-        "Does not mix in unrelated cleanup or feature expansion.",
-        "Does not produce a broad code audit or deep redesign document instead of a concise issue definition."
+        "Explicitly labels the request as Surface: Backend and Work type: Refactor, or uses equivalent unambiguous classification.",
+        "Follows the backend fork by naming contracts, data or persistence impact, and failure or safety handling where relevant.",
+        "Follows the refactor fork by naming preserved behavior, the design problem, and clear safety boundaries.",
+        "Defines non-goals that prevent the issue from drifting into feature work.",
+        "Does not misroute the request as feature, bugfix, improvement, or research-backed change."
       ]
     },
     {
-      "id": "fullstack-invite",
+      "id": "fullstack-feature-invite-flow",
       "prompt": "Turn this fullstack request into a ready issue: let workspace admins invite a teammate by email, show pending invites in the UI, and reject duplicate active invites.",
-      "expected_output": "A fullstack issue covering frontend and backend scope with a clear contract boundary, acceptance criteria for invite creation, duplicate handling, and pending-invite visibility, and small incremental slices.",
+      "expected_output": "A fullstack feature issue that explicitly classifies the request, follows fullstack + feature guidance, and covers both the UI and backend contract.",
       "files": [],
-      "tags": ["fullstack", "frontend", "backend", "output-quality"],
+      "tags": ["semantic-routing", "surface:fullstack", "work-type:feature", "positive"],
       "assertions": [
-        "Covers frontend and backend scope with a clear contract boundary.",
-        "Includes acceptance criteria for invite creation, duplicate handling, and pending-invite visibility.",
-        "Names validation expectations across API behavior and UI states without expanding into a full test plan.",
-        "Provides small slices that could be implemented incrementally.",
-        "Does not ignore one side of the flow and treats the request as both UI and backend.",
-        "Does not hand off directly to implementation or merge-validation language instead of defining the issue."
+        "Explicitly labels the request as Surface: Fullstack and Work type: Feature, or uses equivalent unambiguous classification.",
+        "Follows the fullstack fork by naming the end-to-end flow, the frontend/backend seam contract, and any sequencing or ownership split.",
+        "Follows the feature fork by describing the new behavior for admins and the affected workflow.",
+        "Includes acceptance criteria for invite creation, pending invite visibility, and duplicate invite rejection across both surfaces.",
+        "Does not collapse the issue into frontend-only or backend-only guidance."
+      ]
+    },
+    {
+      "id": "frontend-improvement-settings-usability",
+      "prompt": "Turn this vague request into an implementation-ready issue: users say the settings page is confusing and should be easier to use.",
+      "expected_output": "A frontend improvement issue that explicitly classifies the request, follows frontend + improvement guidance, and converts vague UX feedback into observable behavior changes without inventing net-new product scope.",
+      "files": [],
+      "tags": ["semantic-routing", "surface:frontend", "work-type:improvement", "boundary"],
+      "assertions": [
+        "Explicitly labels the request as Surface: Frontend and Work type: Improvement, or uses equivalent unambiguous classification.",
+        "Follows the frontend fork by naming current states, interaction pain points, accessibility considerations, or responsive constraints for the settings page.",
+        "Follows the improvement fork by stating what becomes better, how the improvement will be observed, and what stays unchanged.",
+        "Turns vague feedback into observable scope and acceptance criteria instead of generic wording like 'make it easier to use'.",
+        "Does not misroute the request as a net-new feature, backend change, refactor, or research-backed change without evidence from the prompt."
+      ]
+    },
+    {
+      "id": "backend-research-backed-onboarding-email",
+      "prompt": "Define an implementation-ready issue for this research-backed change: after reviewing 40 onboarding support calls, we found users miss the verification email because the post-signup screen gives no next-step guidance. Update the experience so more new users complete verification without changing the email delivery system.",
+      "expected_output": "An issue that routes to research-backed change and uses the evidence source to shape scope, intended effect, and boundaries. Because the prompt excludes delivery-system changes, it should stay on the product-surface guidance established by the request.",
+      "files": [],
+      "tags": ["semantic-routing", "surface:frontend", "work-type:research-backed-change", "boundary"],
+      "assertions": [
+        "Explicitly labels the request as Surface: Frontend and Work type: Research-backed change, or uses equivalent unambiguous classification.",
+        "Follows the research-backed fork by naming the evidence source, key finding, rationale, and intended effect on verification completion.",
+        "Follows the frontend fork by naming visible post-signup states, guidance, interactions, accessibility expectations, or responsive constraints.",
+        "Keeps the email delivery system out of scope because the prompt explicitly excludes it.",
+        "Does not misroute the request as a backend system fix, generic feature, or vague improvement without referencing the supplied research evidence."
+      ]
+    },
+    {
+      "id": "backend-improvement-report-performance",
+      "prompt": "Write an implementation-ready issue to reduce report generation time for the standard monthly export from about 12 seconds to under 5 seconds without changing report contents or the export UI.",
+      "expected_output": "A backend improvement issue that explicitly classifies the request, uses an observable performance target, and preserves existing behavior and UI boundaries.",
+      "files": [],
+      "tags": ["semantic-routing", "surface:backend", "work-type:improvement", "boundary"],
+      "assertions": [
+        "Explicitly labels the request as Surface: Backend and Work type: Improvement, or uses equivalent unambiguous classification.",
+        "Follows the improvement fork by naming what gets better, how it will be observed, and what stays unchanged.",
+        "Follows the backend fork by naming affected processing rules, data flow, jobs, persistence, or failure handling relevant to report generation.",
+        "Preserves report contents and the export UI as non-goals or unchanged behavior boundaries.",
+        "Does not misroute the request as a frontend change, refactor-only task, or net-new feature."
+      ]
+    },
+    {
+      "id": "concise-minimal-issue-shape",
+      "prompt": "Write an implementation-ready issue for adding a visible cancel button to the newsletter signup modal so users can dismiss it without submitting. No backend changes are needed.",
+      "expected_output": "A concise frontend feature issue that uses a minimal issue shape, keeps the change scoped to the modal UI, and omits irrelevant optional sections.",
+      "files": [],
+      "tags": ["output-quality", "brevity", "surface:frontend", "work-type:feature", "boundary"],
+      "assertions": [
+        "Explicitly labels the request as Surface: Frontend and Work type: Feature, or uses equivalent unambiguous classification.",
+        "Keeps the change scoped to the modal UI and states that backend changes are out of scope or unchanged.",
+        "Includes observable acceptance criteria for the cancel interaction.",
+        "Uses concise sufficiency rather than filling every optional section with boilerplate.",
+        "Does not invent backend contracts, research evidence, success metrics, or dependency sections that the prompt does not need."
       ]
     }
   ]

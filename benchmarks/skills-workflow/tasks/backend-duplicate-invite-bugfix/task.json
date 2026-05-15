@@ -1,0 +1,78 @@
+{
+  "id": "backend-duplicate-invite-bugfix",
+  "title": "Backend duplicate invite bugfix",
+  "skill_targets": [
+    "implementation-workflow",
+    "change-validation"
+  ],
+  "category": "implementation",
+  "fixture": {
+    "source": "benchmarks/skills-workflow/fixtures/invite_workflow_app"
+  },
+  "prompt": {
+    "user_request": "Fix the duplicate invite bug in POST /workspace-invites. Support says users cannot re-invite someone after an old invite was archived. Keep the change narrow and validate it.",
+    "repo_context": [
+      "app/invites.py",
+      "tests/test_public_backend.py",
+      "docs/support-ticket.md"
+    ],
+    "artifact_contracts": {
+      "artifacts/implementation-report.json": {
+        "purpose": "Describe the implemented backend fix and the targeted validation performed for this task.",
+        "instructions": [
+          "Write valid JSON, not Markdown or fenced code.",
+          "Include every schema-required top-level key exactly once: summary, files_changed, route, tests_run, risks.",
+          "files_changed should list repo-relative files you edited, such as app/invites.py.",
+          "tests_run should name the concrete checks you executed before finishing; use an empty array only if you truly ran none.",
+          "route should briefly describe the implementation path, for example backend bugfix."
+        ],
+        "example": {
+          "summary": "Allow reinviting when older invites are archived or expired while still rejecting active duplicates.",
+          "files_changed": [
+            "app/invites.py"
+          ],
+          "route": "backend bugfix",
+          "tests_run": [
+            "python3 -m unittest tests.test_public_backend"
+          ],
+          "risks": [
+            "Hidden cases may still exist if invite status handling is incomplete."
+          ]
+        }
+      }
+    }
+  },
+  "success_criteria": [
+    "Pending invites are still rejected as duplicates.",
+    "Archived and expired invites do not block a new pending invite.",
+    "Validation stays targeted to backend behavior."
+  ],
+  "artifacts": {
+    "required": [
+      {
+        "path": "artifacts/implementation-report.json",
+        "schema": "benchmarks/skills-workflow/schemas/implementation-report.schema.json"
+      }
+    ]
+  },
+  "run": {
+    "allowed_configurations": [
+      "with_skill",
+      "without_skill"
+    ],
+    "workspace_root": ".workspaces/skills-workflow-benchmarks",
+    "paired": true
+  },
+  "checks": {
+    "public": [
+      "python3 -m unittest tests.test_public_backend"
+    ],
+    "hidden": [
+      "python3 -m unittest tests.test_hidden_backend"
+    ]
+  },
+  "notes": [
+    "Initial deterministic implementation task.",
+    "Hidden suite catches archived/expired edge cases."
+  ]
+}

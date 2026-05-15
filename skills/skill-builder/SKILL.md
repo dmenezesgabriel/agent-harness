@@ -74,15 +74,17 @@ Run structured evaluations to measure the skill's output quality and iterate on 
 
 ### Setup
 
-Create a workspace directory alongside the skill directory:
+Create a workspace directory outside scanned skill roots, for example under `.workspaces/` at the repo root:
 
 ```text
-skill-builder-workspace/
+.workspaces/skill-builder/
 └── iteration-1/
     ├── eval-<id>-<name>/
     │   ├── with_skill/
     │   │   └── run-1/
     │   │       ├── outputs/
+    │   │       │   └── <skill-name>/
+    │   │       │       └── SKILL.md
     │   │       ├── timing.json
     │   │       └── grading.json
     │   └── without_skill/
@@ -94,12 +96,14 @@ skill-builder-workspace/
     └── benchmark.md
 ```
 
+Warning: `.gitignore` does not affect Pi skill discovery. Do not put generated skills or eval workspaces anywhere under `skills/`, even if those paths are gitignored.
+
 ### Step 1: Spawn eval runs
 
 For each test case in `evals/evals.json`, spawn two parallel subagents in the same turn:
 
-- **With-skill run**: provide the skill path, the eval prompt, input files, and save outputs to `with_skill/outputs/`.
-- **Baseline run**: same prompt, no skill path, save to `without_skill/outputs/`.
+- **With-skill run**: provide the skill path, the eval prompt, input files, and save any generated skill to `with_skill/outputs/<skill-name>/SKILL.md`.
+- **Baseline run**: same prompt, no skill path, and keep any outputs under `without_skill/outputs/`.
 
 Write an `eval_metadata.json` in each eval directory:
 

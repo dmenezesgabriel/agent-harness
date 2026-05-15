@@ -1,54 +1,66 @@
-[
-  {
-    "prompt": "Validate a small bugfix that stops duplicate toast notifications after form resubmission; run the smallest sufficient checks and fix any in-scope failures.",
-    "expected_qualities": [
-      "Confirms the bugfix scope and selects a minimal validation set tied to the duplicate-toast behavior.",
-      "Explains why broader suites are not needed unless failures or risk expand scope.",
-      "Handles any discovered failure in a scoped way and re-runs the relevant checks.",
-      "Ends with a clear readiness summary."
-    ],
-    "assert_against": [
-      "Defaulting to an unnecessary full test suite or broad exploratory audit.",
-      "Reporting results without stating what was intentionally not run."
-    ]
-  },
-  {
-    "prompt": "Validate a completed backend/API change that adds duplicate-invite rejection on POST /workspace-invites and updates the error contract.",
-    "expected_qualities": [
-      "Uses Backend or Fullstack validation language consistently with the changed surface.",
-      "Chooses checks that cover the API behavior, contract change, and relevant regression path.",
-      "Expands validation only as needed for the contract risk.",
-      "Summarizes pass/fail status, any fixes applied, and residual integration risk."
-    ],
-    "assert_against": [
-      "Treating the task as new implementation planning.",
-      "Escalating into unrelated security or performance auditing without justification."
-    ]
-  },
-  {
-    "prompt": "Verify a frontend change that adds loading, empty, and error states to the notifications panel, including keyboard retry behavior and screen-reader messaging.",
-    "expected_qualities": [
-      "Chooses a validation plan centered on affected UI states and accessibility behavior.",
-      "Keeps the checks focused on the changed panel rather than the entire frontend application.",
-      "Notes any manual or automated verification needed for keyboard and assistive-tech-relevant behavior.",
-      "Provides a merge-readiness conclusion with any residual UX risk called out."
-    ],
-    "assert_against": [
-      "Reducing validation to generic 'UI looks good' language.",
-      "Switching to issue-definition or implementation-workflow structure instead of a validation report."
-    ]
-  },
-  {
-    "prompt": "Validate a high-risk auth change that rotates session tokens after password reset; start with the smallest relevant checks, then expand only if the risk justifies it.",
-    "expected_qualities": [
-      "Begins with a scoped validation plan and then justifies any risk-based expansion.",
-      "Includes failure handling that distinguishes in-scope fixes from larger follow-up work.",
-      "Avoids unnecessary full-suite escalation unless the auth surface or failures warrant it.",
-      "Ends with a clear readiness state and explicit residual risk if confidence is partial."
-    ],
-    "assert_against": [
-      "Treating 'high-risk' as automatic justification for unfocused audit behavior.",
-      "Leaving the outcome at a vague confidence statement without a merge-readiness summary."
-    ]
-  }
-]
+{
+  "skill_name": "change-validation",
+  "evals": [
+    {
+      "id": "bugfix-minimal-regression-checks",
+      "prompt": "Validate a small bugfix that stops duplicate toast notifications after form resubmission; run the smallest sufficient checks and fix any in-scope failures.",
+      "expected_output": "A scoped validation report that confirms the duplicate-toast bugfix, picks targeted checks for the form/toast behavior, explains what broader checks were intentionally skipped, handles any discovered in-scope failure, re-runs relevant checks, and ends with a merge-readiness decision.",
+      "tags": ["bugfix", "minimal-checks", "regression", "reporting"],
+      "assertions": [
+        "The response restates the concrete change being validated rather than shifting into generic implementation planning.",
+        "The response chooses a minimal validation set tied to the duplicate-toast behavior and explains why that set is sufficient.",
+        "The response explicitly states at least one broader check or suite that is intentionally not run, with a reason.",
+        "If a failure is discussed, the response classifies it in scope and says the relevant checks must be re-run after the fix.",
+        "The response ends with a clear readiness outcome, not just a vague confidence statement."
+      ]
+    },
+    {
+      "id": "backend-contract-change",
+      "prompt": "Validate a completed backend/API change that adds duplicate-invite rejection on POST /workspace-invites and updates the error contract.",
+      "expected_output": "A backend-oriented validation plan and result that covers the API behavior, the changed error contract, the relevant regression path, any contract-risk-driven expansion, and a final pass/fail/readiness summary with residual integration risk.",
+      "tags": ["backend", "api", "contract", "integration-risk"],
+      "assertions": [
+        "The response uses backend or fullstack validation language that matches the changed surface.",
+        "The response includes checks for both the duplicate-invite behavior and the changed error contract, not just one of them.",
+        "Any expansion beyond narrow API checks is justified by contract or integration risk instead of broad habit.",
+        "The response summarizes pass/fail status, fixes applied if any, and residual integration risk."
+      ]
+    },
+    {
+      "id": "frontend-accessibility-states",
+      "prompt": "Verify a frontend change that adds loading, empty, and error states to the notifications panel, including keyboard retry behavior and screen-reader messaging.",
+      "expected_output": "A focused frontend validation report covering the changed panel's UI states and accessibility behavior, including what should be checked manually or automatically, what broader frontend coverage is not needed, and a readiness conclusion with any residual UX/accessibility risk.",
+      "tags": ["frontend", "accessibility", "ui-states", "manual-verification"],
+      "assertions": [
+        "The validation plan is centered on the notifications panel's changed states rather than the entire frontend application.",
+        "The response explicitly covers keyboard behavior and assistive-technology-relevant messaging, not just visual states.",
+        "The response distinguishes automated checks from manual verification where appropriate.",
+        "The response provides a merge-readiness conclusion and calls out any residual UX or accessibility risk."
+      ]
+    },
+    {
+      "id": "high-risk-auth-change",
+      "prompt": "Validate a high-risk auth change that rotates session tokens after password reset; start with the smallest relevant checks, then expand only if the risk justifies it.",
+      "expected_output": "A risk-aware validation report that begins with targeted auth checks, justifies any broader expansion, separates in-scope fixes from larger follow-up work, avoids unfocused audit behavior, and ends with explicit readiness and residual risk.",
+      "tags": ["auth", "high-risk", "risk-based-expansion", "failure-handling"],
+      "assertions": [
+        "The response starts with a scoped validation plan instead of treating high risk as justification for an automatic full audit.",
+        "Any broader validation or security scanning is justified by the auth surface or concrete risk, not by generic caution language.",
+        "The response distinguishes in-scope regressions from follow-up work that should be documented separately.",
+        "The response ends with an explicit readiness state and residual risk statement if confidence is partial."
+      ]
+    },
+    {
+      "id": "preexisting-or-flaky-failure-classification",
+      "prompt": "Validate a refactor in the billing service that should be behavior-preserving. The targeted service tests pass, but an unrelated flaky CI e2e test fails during validation.",
+      "expected_output": "A validation response that confirms the refactor scope, keeps the initial checks focused, classifies the unrelated e2e failure as pre-existing or flaky rather than silently owning it, re-runs only what is relevant, and reports readiness with the external blocker or risk clearly called out.",
+      "tags": ["refactor", "failure-classification", "flaky", "scope-control"],
+      "assertions": [
+        "The response keeps validation proportional to a behavior-preserving refactor instead of defaulting to wide exploratory coverage.",
+        "The response explicitly classifies the unrelated e2e failure rather than treating every failure as part of the current change.",
+        "The response does not silently claim readiness without mentioning the flaky or pre-existing failure and its impact.",
+        "The response reports what was validated, what remains blocked or risky, and the resulting readiness decision."
+      ]
+    }
+  ]
+}

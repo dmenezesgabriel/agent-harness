@@ -1,0 +1,12 @@
+{
+  "id": "invite-flow-pipeline",
+  "tasks": [
+    "fullstack-invite-flow-vertical-slice",
+    "validation-only-false-confidence"
+  ],
+  "handoff_artifacts": [
+    "artifacts/issue.json",
+    "artifacts/implementation-report.json",
+    "artifacts/validation-report.json"
+  ]
+}

@@ -114,10 +114,16 @@ function renderRun(index) {
   if (run.grading && run.grading.expectations) {
     gradingHtml = '<div class="grading"><h3>Assertions</h3>';
     const summary = run.grading.summary || {};
-    gradingHtml += `<div class="grading-summary">${summary.passed || 0} / ${summary.total || 0} passed</div>`;
+    const pending = summary.pending || 0;
+    const gradedTotal = (summary.passed || 0) + (summary.failed || 0);
+    gradingHtml += `<div class="grading-summary">${summary.passed || 0} / ${summary.total || 0} passed`;
+    if (pending > 0) gradingHtml += ` (${pending} pending)`;
+    gradingHtml += `</div>`;
     run.grading.expectations.forEach(exp => {
-      const cls = exp.passed ? 'pass' : 'fail';
-      const label = exp.passed ? 'PASS' : 'FAIL';
+      let cls, label;
+      if (exp.passed === true) { cls = 'pass'; label = 'PASS'; }
+      else if (exp.passed === false) { cls = 'fail'; label = 'FAIL'; }
+      else { cls = 'pending'; label = 'PEND'; }
       gradingHtml += `<div class="assertion ${cls}"><span class="result">${label}</span><span>${exp.text}</span>`;
       if (exp.evidence) gradingHtml += `<div class="evidence">${exp.evidence}</div>`;
       gradingHtml += `</div>`;

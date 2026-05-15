@@ -1,0 +1,96 @@
+{
+  "skill_name": "implementation-workflow",
+  "evals": [
+    {
+      "id": "backend-archived-project-rule",
+      "prompt": "Implement a backend rule so archived projects cannot receive new tasks; start with the right first protection and keep validation focused.",
+      "expected_output": "An implementation workflow response that explicitly picks the Backend TDD route, protects the backend rule first, identifies the owning boundary, proposes the smallest passing change, and keeps validation tight to the new rule.",
+      "files": [],
+      "tags": ["backend", "routing", "output-quality"],
+      "assertions": [
+        "Explicitly chooses the Backend TDD route and explains why the change is backend/domain-heavy.",
+        "Uses a failing behavior test or equivalent backend-first protection before implementation.",
+        "Names the owning boundary for the rule instead of treating the change as a loose code edit.",
+        "Describes the smallest change that would make the protection pass.",
+        "Keeps validation limited to targeted checks tied to the archived-project rule.",
+        "Does not switch into issue-definition framing such as drafting scope, non-goals, or task slices as the main deliverable.",
+        "Does not jump to broad test suites or unrelated audits without risk-based justification."
+      ]
+    },
+    {
+      "id": "frontend-notifications-panel-states",
+      "prompt": "Build the new empty, loading, and error states for the notifications panel with accessible messaging and keyboard-safe retry behavior.",
+      "expected_output": "An implementation workflow response that explicitly picks the Frontend component-driven route, starts from visible states and interactions, identifies the component boundary, proposes a smallest UI change, and validates accessibility-relevant behavior narrowly.",
+      "files": [],
+      "tags": ["frontend", "accessibility", "routing", "output-quality"],
+      "assertions": [
+        "Explicitly chooses the Frontend component-driven route and explains why the core risk is user-visible behavior.",
+        "Starts from visible states, interactions, or scenarios rather than backend-style TDD language alone.",
+        "Names the component, panel, or screen boundary that owns the behavior.",
+        "Describes the smallest implementation step for the affected UI states.",
+        "Includes focused validation for loading, empty, error, keyboard retry, and accessibility behavior as relevant to the prompt.",
+        "Does not route this as backend or fullstack without justification.",
+        "Does not turn the response into a final merge-readiness report."
+      ]
+    },
+    {
+      "id": "fullstack-invite-vertical-slice",
+      "prompt": "Implement the invite-teammate flow across the settings UI and POST /workspace-invites API in the smallest vertical slice.",
+      "expected_output": "An implementation workflow response that explicitly picks the Fullstack seam-splitting route, identifies the seam or contract first, protects both sides of the seam, and proposes an incremental vertical slice with seam-relevant validation.",
+      "files": [],
+      "tags": ["fullstack", "contract", "routing", "output-quality"],
+      "assertions": [
+        "Explicitly chooses the Fullstack seam-splitting route and identifies the seam or contract first.",
+        "Protects both sides of the seam instead of treating the work as unrelated frontend and backend tasks.",
+        "Names a smallest vertical slice rather than a broad multi-phase implementation plan.",
+        "Uses targeted seam-relevant validation rather than broad exploratory checks.",
+        "Does not ignore the UI/API boundary by routing purely as frontend or backend when both are clearly in scope.",
+        "Does not expand into issue-framing content such as Definition of Ready or broad acceptance-criteria drafting."
+      ]
+    },
+    {
+      "id": "checkout-spinner-regression-bugfix",
+      "prompt": "Fix a regression where deleting the last address in checkout leaves the page stuck on a spinner; reproduce first and protect against reintroducing it.",
+      "expected_output": "An implementation workflow response that explicitly picks the Bugfix route, uses reproduce-first reasoning, adds regression protection before cleanup, keeps the fix narrow, and validates the regression path plus closely related checkout behavior.",
+      "files": [],
+      "tags": ["bugfix", "regression", "routing", "output-quality"],
+      "assertions": [
+        "Explicitly chooses the Bugfix route and explains the reproduce-first approach.",
+        "Uses a repro or regression protection as the first step before broader cleanup.",
+        "Keeps the implementation to the smallest change that resolves the stuck-spinner behavior.",
+        "Limits validation to the regression path and closely related checkout behavior.",
+        "Does not treat the bug as a generic refactor or broad audit workflow.",
+        "Does not skip regression protection in favor of only manual confidence."
+      ]
+    },
+    {
+      "id": "permissions-resolver-refactor",
+      "prompt": "Refactor the permissions resolver to reduce duplication while preserving current role checks and response shapes.",
+      "expected_output": "An implementation workflow response that explicitly picks the Refactor route, defines the preserved-behavior boundary, adds characterization protection before structural changes, and validates unchanged behavior instead of redesigning the subsystem.",
+      "files": [],
+      "tags": ["refactor", "behavior-preservation", "routing", "output-quality"],
+      "assertions": [
+        "Explicitly chooses the Refactor route and defines the preserved-behavior boundary.",
+        "Adds characterization or equivalent protection before structural changes.",
+        "Focuses on smallest safe restructuring steps instead of redesigning the subsystem.",
+        "Keeps validation centered on unchanged role-check behavior and affected contracts.",
+        "Does not introduce new feature scope under the refactor label.",
+        "Does not escalate to a full architecture review instead of a focused implementation workflow."
+      ]
+    },
+    {
+      "id": "bundled-unrelated-requests-needs-slicing",
+      "prompt": "Implement three unrelated changes: add a dark mode toggle, tighten invoice retry rules, and refactor the permissions resolver naming. Just pick the best route and get started.",
+      "expected_output": "An implementation workflow response that refuses to force one route across unrelated slices, identifies that the request is not implementation-ready as a single change, and hands off to issue-definition for slicing before implementation.",
+      "files": [],
+      "tags": ["negative-case", "routing-boundary", "issue-definition-handoff", "output-quality"],
+      "assertions": [
+        "Identifies that the request bundles unrelated implementation slices and should not be forced through one route.",
+        "Routes the work to issue-definition for slicing before implementation.",
+        "Explains why the task is not implementation-ready as a single coherent change.",
+        "Does not choose a single backend, frontend, fullstack, bugfix, or refactor route for the whole bundled request.",
+        "Does not start implementation steps as if the unrelated changes were already scoped safely."
+      ]
+    }
+  ]
+}

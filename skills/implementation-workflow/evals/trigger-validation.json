@@ -18,5 +18,15 @@
     "prompt": "Run the smallest relevant checks for this refactor and report merge readiness.",
     "expected_trigger": false,
     "notes": "Change validation request."
+  },
+  {
+    "prompt": "Implement three unrelated changes: add dark mode, tighten invoice retry rules, and rename permissions resolver helpers.",
+    "expected_trigger": false,
+    "notes": "Bundled unrelated work should be sliced by issue-definition first."
+  },
+  {
+    "prompt": "Explore options for redesigning our eventing architecture before we commit to an implementation path.",
+    "expected_trigger": false,
+    "notes": "Architecture exploration is out of scope for implementation-workflow."
   }
 ]

@@ -1,7 +1,8 @@
 ### Implementation Workflow: <precise change name>
 
-Classification:
-Backend | Frontend | Fullstack | Bugfix | Refactor
+Issue taxonomy:
+- Surface: Frontend | Backend | Fullstack
+- Work type: Feature | Bugfix | Refactor | Improvement | Research-backed change
 
 Routing decision:
 <chosen workflow and why>
@@ -18,8 +19,15 @@ First protection:
 Smallest change:
 <minimum implementation step>
 
-Validation:
-<short targeted checks run for this change>
+Local proof run during implementation:
+- <targeted check and why it proves the changed behavior>
 
-Risk:
+Remaining risk:
 <any remaining coupling / invariant / contract / migration / UI / regression risk>
+
+Handoff status:
+Ready for final change-validation | Blocked | Needs more implementation
+
+Recommended final validation scope:
+- <acceptance criteria or DoD item to confirm>
+- <broader check that should happen after implementation>

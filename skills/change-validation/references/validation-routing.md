@@ -1,6 +1,18 @@
 # Validation Routing
 
-Route validation by change type. Start small, then expand only when risk or failures justify it.
+Route final validation by changed surface and work type. Start with the smallest sufficient proof set, then expand only when risk or failures justify it.
+
+## Issue taxonomy to validation route
+
+| Issue surface | Issue work type | Primary validation route |
+| --- | --- | --- |
+| Frontend | Feature / Improvement / Research-backed change | Frontend |
+| Backend | Feature / Improvement / Research-backed change | Backend |
+| Fullstack | Feature / Improvement / Research-backed change | Fullstack |
+| Frontend / Backend / Fullstack | Bugfix | Bugfix depth plus the listed surface |
+| Frontend / Backend / Fullstack | Refactor | Refactor depth plus the listed surface |
+
+`Feature`, `Improvement`, and `Research-backed change` stay issue labels. Final validation still lands on a frontend, backend, or fullstack surface, with work type adding bugfix regression depth or refactor behavior-preservation depth on top of the listed surface.
 
 ## Small pure logic or isolated bugfix
 Usually run:

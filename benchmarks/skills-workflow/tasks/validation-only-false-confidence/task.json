@@ -1,0 +1,72 @@
+{
+  "id": "validation-only-false-confidence",
+  "title": "Validation-only false confidence task",
+  "skill_targets": [
+    "change-validation"
+  ],
+  "category": "validation",
+  "fixture": {
+    "source": "benchmarks/skills-workflow/fixtures/invite_workflow_app"
+  },
+  "prompt": {
+    "user_request": "Validation only: verify that the invite change is ready. Public tests are green. Do not expand scope unless a tiny validation-scope fix is clearly justified.",
+    "repo_context": [
+      "app/invites.py",
+      "tests/test_public_backend.py"
+    ],
+    "artifact_contracts": {
+      "artifacts/validation-report.json": {
+        "purpose": "Record the validation decision without expanding the task into broad implementation work.",
+        "instructions": [
+          "Write valid JSON with status, checks_run, findings, and recommendation.",
+          "Do not mark status ready unless your checks justify it.",
+          "If you discover the hidden-risk bug or lack enough evidence, say so directly in findings/recommendation."
+        ],
+        "example": {
+          "status": "not_ready",
+          "checks_run": [
+            "python3 -m unittest tests.test_public_backend"
+          ],
+          "findings": [
+            "Public backend tests alone are not enough to prove the invite change is ready."
+          ],
+          "recommendation": "Run targeted backend regression checks or keep the change blocked."
+        }
+      }
+    }
+  },
+  "success_criteria": [
+    "The validator runs the right narrow checks instead of trusting public green status.",
+    "Hidden regression is detected or the change is reported not ready.",
+    "The output stays in validation scope."
+  ],
+  "artifacts": {
+    "required": [
+      {
+        "path": "artifacts/validation-report.json",
+        "schema": "benchmarks/skills-workflow/schemas/validation-report.schema.json"
+      }
+    ]
+  },
+  "run": {
+    "allowed_configurations": [
+      "with_skill",
+      "without_skill"
+    ],
+    "workspace_root": ".workspaces/skills-workflow-benchmarks",
+    "paired": true,
+    "allowed_fix_scope": "tiny validation-scope fix only"
+  },
+  "checks": {
+    "public": [
+      "python3 -m unittest tests.test_public_backend"
+    ],
+    "hidden": [
+      "python3 -m unittest tests.test_hidden_backend"
+    ]
+  },
+  "notes": [
+    "Designed to measure public-to-hidden confidence gap.",
+    "Can later support optional narrow-fix scoring."
+  ]
+}

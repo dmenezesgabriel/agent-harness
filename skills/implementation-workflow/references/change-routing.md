@@ -4,7 +4,19 @@
 
 Use this reference to choose the implementation route before coding.
 
-Pick the route that matches the main risk and main kind of behavior being changed.
+Pick the route that matches the main risk and the first protection you need while implementing.
+
+## Issue taxonomy to implementation route
+
+| Issue surface | Issue work type | Primary implementation route |
+| --- | --- | --- |
+| Frontend | Feature / Improvement / Research-backed change | Frontend component-driven |
+| Backend | Feature / Improvement / Research-backed change | Backend TDD |
+| Fullstack | Feature / Improvement / Research-backed change | Fullstack seam-splitting |
+| Frontend / Backend / Fullstack | Bugfix | Bugfix workflow first; preserve the listed surface for owning-boundary checks |
+| Frontend / Backend / Fullstack | Refactor | Refactor workflow first; preserve the listed surface for behavior protection |
+
+`Feature`, `Improvement`, and `Research-backed change` shape the issue. They do not replace the implementation routes.
 
 ## Available routes
 

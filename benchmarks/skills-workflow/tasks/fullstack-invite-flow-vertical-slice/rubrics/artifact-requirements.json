@@ -1,0 +1,8 @@
+{
+  "artifact_chain": ["issue", "implementation-report", "validation-report"],
+  "required_handoff_properties": [
+    "acceptance criteria mention duplicate invite handling",
+    "implementation route is fullstack or seam-first",
+    "validation report references the executed public checks"
+  ]
+}

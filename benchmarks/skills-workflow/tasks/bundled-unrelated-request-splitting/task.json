@@ -1,0 +1,126 @@
+{
+  "id": "bundled-unrelated-request-splitting",
+  "title": "Bundled unrelated request rejection and splitting",
+  "skill_targets": [
+    "issue-definition",
+    "implementation-workflow",
+    "change-validation"
+  ],
+  "category": "routing",
+  "fixture": {
+    "source": "benchmarks/skills-workflow/fixtures/invite_workflow_app"
+  },
+  "prompt": {
+    "user_request": "Please do all of this in one pass: add dark mode to the app, change invoice retry rules, and rename the invite resolver for clarity. For this benchmark, do not implement the bundle; record the routing decision in the required run-level artifact files only.",
+    "repo_context": [
+      "docs/support-ticket.md"
+    ],
+    "artifact_contracts": {
+      "artifacts/issue-split.json": {
+        "purpose": "Record the split or rejection of the bundled request in the issue artifact shape.",
+        "instructions": [
+          "Create exactly one issue artifact at the run-level path `artifacts/issue-split.json` provided by the harness; do not write this artifact to any other artifacts directory inside the repo.",
+          "Use scope and non_goals to show that the dark mode, invoice retry, and invite resolver rename requests must be split into separate follow-up issues or rejected as one bundled implementation task.",
+          "Keep the artifact compact and structured: write exactly 4 scope items (1 bundle-level routing item plus 3 dedicated slice items), exactly 5 acceptance_criteria items, exactly 3 non_goals items, and exactly 3 validation_expectations items.",
+          "Each per-slice scope item must classify the work by surface or work type (for example UI/theming, billing policy, or API/refactor) rather than only restating the topic.",
+          "Make acceptance_criteria explicitly say the bundle is split/rejected, needs separate follow-up issue definition, and must not proceed as one combined implementation route, with a distinct follow-up condition for each slice.",
+          "Use validation_expectations to give a route hint for each slice (for example frontend/design, billing/backend, or API/refactor ownership).",
+          "Be concise and sufficient rather than exhaustive; do not pad the artifact with repeated rationale or implementation detail.",
+          "Do not pretend unrelated requests are one implementation-ready issue."
+        ],
+        "example": {
+          "summary": "Reject bundled execution and split into separate follow-up issues.",
+          "problem": "The request combines unrelated dark mode, invoice retry, and invite resolver naming work, so it is not implementation-ready as one combined route.",
+          "scope": [
+            "Reject the bundled request as a single implementation route and require separate issue definition before implementation.",
+            "Create a dark mode follow-up issue as a UI/theming slice for frontend or design routing.",
+            "Create an invoice retry follow-up issue as a billing policy/backend slice for payments routing.",
+            "Create an invite resolver rename follow-up issue as an API/refactor slice for backend or GraphQL routing."
+          ],
+          "acceptance_criteria": [
+            "Bundled execution is rejected and the work is split into separate follow-up issues.",
+            "The dark mode request becomes its own follow-up issue instead of shipping inside the bundle.",
+            "The invoice retry request becomes its own follow-up issue instead of shipping inside the bundle.",
+            "The invite resolver rename becomes its own follow-up issue instead of shipping inside the bundle.",
+            "The request must not proceed as one combined implementation route."
+          ],
+          "non_goals": [
+            "Implement dark mode in this benchmark run",
+            "Change invoice retry logic in this benchmark run",
+            "Rename the invite resolver in this benchmark run"
+          ],
+          "validation_expectations": [
+            "Route dark mode follow-up validation through frontend or design review rather than combined implementation.",
+            "Route invoice retry follow-up validation through billing or backend review rather than combined implementation.",
+            "Route invite resolver rename follow-up validation through API or refactor review rather than combined implementation."
+          ]
+        }
+      },
+      "artifacts/validation-report.json": {
+        "purpose": "Explain why the bundled request is not ready for combined implementation.",
+        "instructions": [
+          "Create exactly one validation artifact at the run-level path `artifacts/validation-report.json` provided by the harness; do not write this artifact to any other artifacts directory inside the repo.",
+          "Set status to `needs_issue_definition` because this bundled request must be split before implementation.",
+          "Use findings to explicitly say the combined request should be split or rejected, mention the dark mode, invoice retry, and invite resolver rename areas, and directly say it should not proceed as one combined implementation route.",
+          "Keep the artifact compact and structured: set checks_run to an empty array, write exactly 4 findings (3 slice-level reasons plus 1 bundle-level rejection), and keep the recommendation to one concise routing summary.",
+          "Do not stop at one generic finding; provide distinct slice-level reasoning for dark mode, invoice retry, and invite resolver rename so the validator can see why each belongs in a separate follow-up issue.",
+          "Use recommendation to route the work into separate follow-up issues rather than a single implementation plan, explicitly mention all three follow-up areas, and explicitly state that implementation should wait until the bundle is split.",
+          "Do not add implementation steps, code diff discussion, or repeated prose that is unnecessary for the routing decision."
+        ],
+        "example": {
+          "status": "needs_issue_definition",
+          "checks_run": [],
+          "findings": [
+            "Dark mode is a UI/theming change in a different product surface and should be split into its own frontend or design follow-up issue.",
+            "Invoice retry rules are a billing policy or backend behavior change and should be split into a separate payments-focused follow-up issue.",
+            "Invite resolver rename work is an API/refactor naming change and should be split into its own backend or GraphQL follow-up issue.",
+            "The combined bundle should not proceed as one implementation route."
+          ],
+          "recommendation": "Create separate follow-up issues for dark mode, invoice retry, and invite resolver rename, route them through the appropriate frontend/design, billing/backend, and API/refactor paths, and do not start implementation until the bundled request is split."
+        }
+      }
+    }
+  },
+  "success_criteria": [
+    "The response splits the request into separate issues or explicitly rejects bundled execution.",
+    "The routing artifact includes structured per-slice issue definition detail, not just generic split/reject wording.",
+    "The validation output hands work back with slice-specific reasoning and route hints instead of pretending the bundle is implementation-ready.",
+    "The artifacts are concise, complete, and field-efficient rather than verbose or padded.",
+    "No unrelated code changes are required for a pass."
+  ],
+  "artifacts": {
+    "required": [
+      {
+        "path": "artifacts/issue-split.json",
+        "schema": "benchmarks/skills-workflow/schemas/issue-artifact.schema.json"
+      },
+      {
+        "path": "artifacts/validation-report.json",
+        "schema": "benchmarks/skills-workflow/schemas/validation-report.schema.json"
+      }
+    ]
+  },
+  "run": {
+    "allowed_configurations": [
+      "with_skill",
+      "without_skill"
+    ],
+    "workspace_root": ".workspaces/skills-workflow-benchmarks",
+    "paired": true,
+    "code_changes_expected": false
+  },
+  "checks": {
+    "public": [
+      "python3 {task_dir}/hidden-tests/validate_routing_artifacts.py --artifacts-dir {artifacts_dir} --rules {task_dir}/rubrics/routing-assertions.json"
+    ],
+    "hidden": [
+      "python3 {task_dir}/hidden-tests/validate_routing_artifacts.py --artifacts-dir {artifacts_dir} --rules {task_dir}/rubrics/routing-assertions.json"
+    ]
+  },
+  "notes": [
+    "Deterministic artifact-and-routing task.",
+    "Checks now validate both correctness and efficiency: complete coverage of the three requested workstreams, bundle rejection, per-slice work-type classification, per-slice route hints, exact slice counts, empty checks_run, and concise artifact length limits.",
+    "This supports paired with_skill vs without_skill comparison on pass rate plus artifact compactness (for example validator-reported total_chars or raw artifact bytes) without tying success to any single phrasing.",
+    "Harness should mark any code diff outside artifacts as suspicious for this task."
+  ]
+}

@@ -52,26 +52,30 @@ evals/
 └── results/                    # Optional generated results
 ```
 
-For full benchmark runs, write results outside the skill or inside an ignored workspace:
+For full benchmark runs, write results in a workspace outside scanned skill roots, for example under `.workspaces/` at the repo root:
 
 ```text
-skill-name-workspace/
+.workspaces/skill-builder/
 └── iteration-1/
     ├── eval-case-id/
     │   ├── with_skill/
     │   │   ├── outputs/
+    │   │   │   └── <skill-name>/
+    │   │   │       └── SKILL.md
     │   │   ├── timing.json
     │   │   └── grading.json
-    │   └── baseline/
+    │   └── without_skill/
     │       ├── outputs/
     │       ├── timing.json
     │       └── grading.json
     └── benchmark.json
 ```
 
-Use `baseline/` for either:
+`.gitignore` only affects Git tracking; it does not affect Pi skill discovery. Do not store generated skills or eval workspaces anywhere under `skills/`, even if those paths are gitignored.
 
-- no skill;
+Use `baseline/` as a generic term in benchmark summaries when comparing against either:
+
+- no skill (`without_skill/` on disk);
 - the previous skill version;
 - a competing skill version.
 
@@ -362,9 +366,9 @@ For each eval case:
 
 1. Start from a clean context.
 2. Run the prompt with the skill.
-3. Save outputs to `with_skill/outputs/`.
+3. Save outputs to `with_skill/outputs/<skill-name>/SKILL.md` when the run generates a skill.
 4. Run the same prompt against the baseline.
-5. Save outputs to `baseline/outputs/`.
+5. Save baseline outputs under `without_skill/outputs/`.
 6. Grade both outputs using the same assertions.
 7. Record timing and token data when available.
 8. Aggregate results into `benchmark.json`.
@@ -377,7 +381,7 @@ Execute this eval:
 Skill path: /path/to/skill-builder
 Prompt: Create a minimal Agent Skill for validating JSON files.
 Input files: none
-Save outputs to: skill-builder-workspace/iteration-1/create-minimal-skill/with_skill/outputs/
+Save outputs to: .workspaces/skill-builder/iteration-1/create-minimal-skill/with_skill/outputs/json-validator/SKILL.md
 ```
 
 Example task instruction for a baseline run:
@@ -387,7 +391,7 @@ Execute this eval without using the skill-builder skill:
 
 Prompt: Create a minimal Agent Skill for validating JSON files.
 Input files: none
-Save outputs to: skill-builder-workspace/iteration-1/create-minimal-skill/baseline/outputs/
+Save outputs to: .workspaces/skill-builder/iteration-1/create-minimal-skill/without_skill/outputs/
 ```
 
 ## Timing data
@@ -638,7 +642,7 @@ Expected interface:
 
 ```bash
 uv run scripts/grade_skill_output.py \
-  --outputs skill-builder-workspace/iteration-1/create-minimal-skill/with_skill/outputs \
+  --outputs .workspaces/skill-builder/iteration-1/create-minimal-skill/with_skill/outputs \
   --assertions evals/assertions/create-minimal-skill.json \
   --format json
 ```

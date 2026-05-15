@@ -153,13 +153,20 @@ def compute_config_stats(groups):
             }
             continue
         stats = {}
-        for metric in ("pass_rate", "time_seconds", "tokens"):
+        for metric in ("time_seconds", "tokens"):
             values = [r[metric] for r in runs]
             stats[metric] = stats_summary(values)
         total_passed = sum(r["passed"] for r in runs)
         total_assertions = sum(r["total"] for r in runs)
+        overall_mean = round(total_passed / total_assertions, 4) if total_assertions > 0 else 0.0
         ci_low, ci_high = proportion_ci(total_passed, total_assertions)
-        stats["pass_rate"] = {**stats["pass_rate"], "ci_low": ci_low, "ci_high": ci_high}
+        pass_rates = [r["pass_rate"] for r in runs]
+        stats["pass_rate"] = {
+            **stats_summary(pass_rates),
+            "mean": overall_mean,
+            "ci_low": ci_low,
+            "ci_high": ci_high,
+        }
         config_stats[config] = stats
     return config_stats
 

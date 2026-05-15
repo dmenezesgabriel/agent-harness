@@ -2,35 +2,32 @@
 
 Use this as a final pass before calling an issue implementation-ready.
 
-A good issue definition makes these explicit:
+## Must be true
+- surface is named: Frontend, Backend, or Fullstack
+- work type is named: Feature, Bugfix, Refactor, Improvement, or Research-backed change
+- problem or request is explicit in observable terms
+- scope and non-goals are clear
+- acceptance criteria are observable and falsifiable
+- task slices are small enough to start implementation safely
 
-## Core framing
-- the exact problem, request, or behavior change
-- why it matters
-- who or what is affected
-- the desired outcome in observable terms
+## Boundary and fork checks
+- assumptions are separated from facts when needed
+- dependencies or constraints are named when they affect sequencing or safety
+- the issue includes the relevant surface details:
+  - Frontend: states, interactions, accessibility, responsive constraints
+  - Backend: rules, contracts, persistence, failure handling
+  - Fullstack: end-to-end flow, seam contract, sequencing
+- the issue includes the relevant work-type details:
+  - Bugfix: repro and expected behavior
+  - Refactor: preserved behavior and safety boundary
+  - Improvement: observable improvement target and unchanged boundary
+  - Research-backed change: evidence source and rationale
 
-## Scope control
-- what is in scope
-- what is out of scope
-- assumptions that shape the work
-- known dependencies or constraints
-
-## Requirements
-- functional requirements: what the system must do
-- non-functional requirements only when relevant: performance, accessibility, security, reliability, compatibility, observability, maintainability
-- important use cases and edge cases
-
-## Delivery readiness
-- risks or unknowns that could block safe implementation
-- Definition of Ready: what must be resolved before coding starts
-- Definition of Done: what must be true to call the issue complete
-- validation expectations: what kinds of checks should exist during implementation
-
-## Completion criteria
-- acceptance criteria written as observable outcomes
-- task slices small enough to implement incrementally
-- open questions listed only when they materially affect implementation
+## Optional sections stay optional
+- non-functional requirements appear only when relevant
+- success metrics appear only when meaningful
+- open questions appear only when they materially affect implementation
+- omitted sections do not leave material ambiguity
 
 ## Quick fail checks
 The issue is not ready if it still says things like:
@@ -40,9 +37,3 @@ The issue is not ready if it still says things like:
 - fix the bug
 - add the feature
 - refactor for maintainability
-
-Replace vague wording with:
-- what changes
-- what stays unchanged
-- how completion will be judged
-- what evidence will show the work is done

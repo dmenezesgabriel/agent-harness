@@ -1,3 +1,7 @@
 {
-  "skills": ["../skills/"]
+  "skills": [
+    "../skills/*",
+    "!../skills/*workspace*",
+    "!../skills/*workspace*/**"
+  ]
 }

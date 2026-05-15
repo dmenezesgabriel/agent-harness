@@ -1,6 +1,6 @@
 # Check Selection and Risk Mapping
 
-Use this as the canonical risk-to-check mapping when choosing the smallest sufficient validation set.
+Use this as the canonical risk-to-check mapping when choosing the smallest sufficient final validation set.
 
 Prefer the smallest relevant set first. Expand only when scope, risk, or failures justify it.
 
@@ -51,11 +51,12 @@ Prefer the smallest relevant set first. Expand only when scope, risk, or failure
 - smoke path for the most critical affected flow
 
 ## Selection reminders
-- choose checks by affected surface and risk, not habit
-- record why the selected set is sufficient
+- choose final checks by affected surface and risk, not habit
+- record why the selected set is sufficient for merge readiness
 - note what you intentionally skipped and why
 - do not run the entire check suite when a smaller set can establish confidence
 - do not skip a necessary higher-level check when the change crosses that boundary
+- do not confuse implementation-time local proof with final validation; expand only when readiness needs more than the local implementation checks
 
 ## One-off commands vs scripts
 

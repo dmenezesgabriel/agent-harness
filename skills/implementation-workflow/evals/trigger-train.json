@@ -18,5 +18,15 @@
     "prompt": "Validate the completed API contract change and fix any failing checks.",
     "expected_trigger": false,
     "notes": "Post-implementation validation."
+  },
+  {
+    "prompt": "Refactor the billing adapter to separate invoice formatting from gateway calls while preserving current outputs.",
+    "expected_trigger": true,
+    "notes": "Refactor route should trigger."
+  },
+  {
+    "prompt": "We have a few unrelated asks: tweak navbar spacing, add an audit log export endpoint, and clean up a permission helper. Handle them in one pass.",
+    "expected_trigger": false,
+    "notes": "Bundled unrelated changes should be sliced before implementation."
   }
 ]

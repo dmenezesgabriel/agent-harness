@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Skills workflow benchmark task",
+  "type": "object",
+  "required": [
+    "id",
+    "skill_targets",
+    "category",
+    "fixture",
+    "prompt",
+    "success_criteria",
+    "artifacts",
+    "run",
+    "checks"
+  ],
+  "properties": {
+    "id": {"type": "string"},
+    "title": {"type": "string"},
+    "skill_targets": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+    "category": {"type": "string"},
+    "fixture": {
+      "type": "object",
+      "required": ["source"],
+      "properties": {
+        "source": {"type": "string"},
+        "overlay": {"type": "string"}
+      },
+      "additionalProperties": true
+    },
+    "prompt": {
+      "type": "object",
+      "properties": {
+        "user_request": {"type": "string"},
+        "repo_context": {"type": "array", "items": {"type": "string"}},
+        "artifact_contracts": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "purpose": {"type": "string"},
+              "instructions": {"type": "array", "items": {"type": "string"}},
+              "example": {}
+            },
+            "additionalProperties": true
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "success_criteria": {"type": "array", "items": {"type": "string"}},
+    "artifacts": {
+      "type": "object",
+      "properties": {
+        "required": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["path"],
+            "properties": {
+              "path": {"type": "string"},
+              "schema": {"type": "string"}
+            },
+            "additionalProperties": true
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "run": {"type": "object"},
+    "checks": {"type": "object"},
+    "notes": {"type": "array", "items": {"type": "string"}}
+  },
+  "additionalProperties": true
+}
