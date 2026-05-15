@@ -1,0 +1,22 @@
+[
+  {"id": "create-simple-skill", "query": "Create a skill for reviewing python code quality — just a basic SKILL.md with a workflow and a couple edge cases", "should_trigger": true},
+  {"id": "fix-uppercase-name", "query": "hey this skill i made doesnt validate correctly, the name has uppercase letters can you fix it", "should_trigger": true},
+  {"id": "add-validation-script", "query": "I need to add a validation script to my skill so it checks frontmatter automatically", "should_trigger": true},
+  {"id": "refactor-skill-workflow", "query": "Refactor the skill in skills/db-backup to split the monolithic workflow into smaller ordered steps and add a reference file in assets", "should_trigger": true},
+  {"id": "lint-all-skills", "query": "Lint all skills in this repo — check frontmatter validity, name conventions, and that every description is activation-oriented", "should_trigger": true},
+  {"id": "audit-activation-description", "query": "Look at skills/deploy-to-ec2/SKILL.md and tell me if the activation description clearly says when someone should use this skill", "should_trigger": true},
+  {"id": "add-eval-coverage", "query": "Add an eval to skills/csv-validator/evals.json that tests whether the skill rejects empty files", "should_trigger": true},
+  {"id": "write-skill-validator-script", "query": "Write a bash script that walks every skills/*/SKILL.md and fails if name has uppercase, description is empty, or frontmatter doesnt parse", "should_trigger": true},
+  {"id": "setup-new-skill-agents", "query": "Set up the agents directory for my new skill — add a usage example and system prompt that agents can reference", "should_trigger": true},
+  {"id": "migrate-to-skill-format", "query": "Take this markops.md file and turn it into a proper Agent Skill — add frontmatter, a workflow, an activation description, and an evals entry", "should_trigger": true},
+  {"id": "write-project-readme", "query": "Help me write a better README for my project — it needs install instructions, usage examples, and a contributors section", "should_trigger": false},
+  {"id": "add-linter-config", "query": "Can you add a linter config to my repo — eslint with typescript rules and prettier", "should_trigger": false},
+  {"id": "json-schema-validation", "query": "Write a bash script that validates all JSON files in the config/ directory against a JSON schema", "should_trigger": false},
+  {"id": "docker-compose-setup", "query": "I need a docker compose file that sets up postgres 16 and redis 7 for local dev work", "should_trigger": false},
+  {"id": "github-actions-workflow", "query": "Create a GitHub Actions workflow that runs pytest and pylint on every push to main", "should_trigger": false},
+  {"id": "refactor-to-async", "query": "Refactor my web scraper to use httpx async instead of requests — keep the same interface", "should_trigger": false},
+  {"id": "fix-blog-frontmatter", "query": "The date format in my blog posts frontmatter is wrong — they use YYYY/MM/DD but Hugo expects RFC 3339", "should_trigger": false},
+  {"id": "setup-eslint-prettier", "query": "Set up eslint and prettier config for this monorepo — root config with overrides per package", "should_trigger": false},
+  {"id": "batch-rename-assets", "query": "Write a script to rename all .jpg files in the static/images/ folder to .webp and update references in the html files", "should_trigger": false},
+  {"id": "document-makefile", "query": "Add a help target to the Makefile that documents all available commands with their descriptions", "should_trigger": false}
+]

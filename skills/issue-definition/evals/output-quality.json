@@ -1,0 +1,54 @@
+[
+  {
+    "prompt": "Turn this vague feature request into an implementation-ready issue: add a way for users to save articles for later from both the article page and search results.",
+    "expected_qualities": [
+      "Uses an issue-style structure with a precise title and explicit sections for scope, non-goals, acceptance criteria, validation expectations, and task slices.",
+      "Makes the two entry points observable in scope instead of leaving them implied.",
+      "Includes concrete acceptance criteria for saving, unsaving, and visible saved-state behavior.",
+      "Keeps implementation details lightweight and does not pre-decide architecture beyond what the prompt establishes."
+    ],
+    "assert_against": [
+      "Vague wording such as 'improve the experience' or 'handle edge cases' without specifics.",
+      "Jumping into coding steps, file edits, or implementation workflow routing."
+    ]
+  },
+  {
+    "prompt": "Write a bugfix issue for intermittent 500 errors on POST /orders when a guest user retries checkout after a payment timeout.",
+    "expected_qualities": [
+      "Frames the current behavior, expected behavior, impact, and repro-sensitive conditions clearly.",
+      "Includes regression-oriented acceptance criteria and validation expectations.",
+      "Separates confirmed scope from open questions or assumptions if root cause is not yet known.",
+      "Breaks the work into implementation-ready slices rather than one large task."
+    ],
+    "assert_against": [
+      "Pretending the root cause is known when the prompt does not establish it.",
+      "Skipping non-goals, risks, or validation expectations because it is 'just a bugfix'."
+    ]
+  },
+  {
+    "prompt": "Define a refactor issue for splitting the billing service into clearer modules while preserving current invoice and refund behavior.",
+    "expected_qualities": [
+      "States the design problem and preserved behavior boundary explicitly.",
+      "Defines scope and non-goals so the refactor does not drift into feature work.",
+      "Includes acceptance criteria about unchanged external behavior and focused validation expectations.",
+      "Keeps the issue at the definition level instead of prescribing a full implementation plan."
+    ],
+    "assert_against": [
+      "Mixing in unrelated cleanup or feature expansion.",
+      "Producing a broad code audit or deep redesign document instead of a concise issue definition."
+    ]
+  },
+  {
+    "prompt": "Turn this fullstack request into a ready issue: let workspace admins invite a teammate by email, show pending invites in the UI, and reject duplicate active invites.",
+    "expected_qualities": [
+      "Covers frontend and backend scope with a clear contract boundary.",
+      "Includes acceptance criteria for invite creation, duplicate handling, and pending-invite visibility.",
+      "Names validation expectations across API behavior and UI states without expanding into a full test plan.",
+      "Provides small slices that could be implemented incrementally."
+    ],
+    "assert_against": [
+      "Ignoring one side of the flow and treating the request as only UI or only backend.",
+      "Handing off directly to implementation or merge-validation language instead of defining the issue."
+    ]
+  }
+]

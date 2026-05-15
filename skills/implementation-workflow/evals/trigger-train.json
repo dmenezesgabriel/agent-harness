@@ -1,0 +1,22 @@
+[
+  {
+    "prompt": "Implement a new backend rule that prevents duplicate active subscriptions and start with a failing test.",
+    "expected_trigger": true,
+    "notes": "Defined backend change with explicit workflow signal."
+  },
+  {
+    "prompt": "Fix the checkout regression by reproducing it first and adding a regression test.",
+    "expected_trigger": true,
+    "notes": "Bugfix route should trigger."
+  },
+  {
+    "prompt": "Turn this feature idea into acceptance criteria and task slices.",
+    "expected_trigger": false,
+    "notes": "Issue-definition work."
+  },
+  {
+    "prompt": "Validate the completed API contract change and fix any failing checks.",
+    "expected_trigger": false,
+    "notes": "Post-implementation validation."
+  }
+]

@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Eval Viewer</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; color: #1a1a1a; line-height: 1.5; }
+
+:focus-visible { outline: 2px solid #0066cc; outline-offset: 2px; border-radius: 2px; }
+
+.tablist { display: flex; background: #fff; border-bottom: 1px solid #ddd; position: sticky; top: 0; z-index: 10; }
+.tab { padding: 12px 24px; cursor: pointer; border: none; background: none; font-size: 14px; font-weight: 500; color: #666; border-bottom: 2px solid transparent; }
+.tab[aria-selected="true"] { color: #1a1a1a; border-bottom-color: #0066cc; }
+[role="tabpanel"] { display: none; padding: 20px; max-width: 960px; margin: 0 auto; }
+[role="tabpanel"][aria-hidden="false"] { display: block; }
+.run-header { background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+.run-header h2 { font-size: 16px; margin-bottom: 8px; }
+.prompt { background: #f0f5ff; border-radius: 4px; padding: 12px; font-size: 13px; white-space: pre-wrap; margin-bottom: 12px; }
+.output-files { display: grid; gap: 12px; }
+.output-file { background: #fff; border: 1px solid #ddd; border-radius: 6px; padding: 12px; min-width: 0; }
+.output-file h3 { font-size: 13px; color: #0066cc; margin-bottom: 8px; }
+.output-file pre { background: #fafafa; border: 1px solid #eee; border-radius: 4px; padding: 12px; font-size: 12px; overflow-x: auto; max-height: 400px; max-width: 100%; }
+.output-file img { max-width: 100%; border: 1px solid #eee; border-radius: 4px; }
+.nav-buttons { display: flex; gap: 8px; margin: 16px 0; }
+.nav-buttons button { padding: 8px 16px; border: 1px solid #ddd; border-radius: 4px; background: #fff; cursor: pointer; font-size: 13px; }
+.nav-buttons button:hover { background: #f0f0f0; }
+.nav-buttons button:disabled { opacity: 0.5; cursor: default; }
+.eval-counter { font-size: 13px; color: #555; padding: 8px 0; }
+.grading { margin-top: 12px; }
+.grading h3 { font-size: 13px; margin-bottom: 8px; }
+.assertion { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 8px; padding: 6px 0; font-size: 13px; }
+.assertion .result { font-weight: 600; min-width: 40px; }
+.assertion.pass .result { color: #1a7f37; }
+.assertion.fail .result { color: #cf222e; }
+.assertion .evidence { color: #555; font-size: 12px; flex: 0 0 100%; padding-left: 48px; }
+.grading-summary { font-size: 12px; color: #555; margin-bottom: 8px; }
+.feedback-box { margin-top: 12px; }
+.feedback-box label { font-size: 13px; font-weight: 500; display: block; margin-bottom: 4px; }
+.feedback-box textarea { width: 100%; min-height: 80px; border: 1px solid #ddd; border-radius: 4px; padding: 8px; font-size: 13px; resize: vertical; }
+.feedback-box textarea:focus { border-color: #0066cc; box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.3); }
+.summary-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+.stat-card { background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 16px; }
+.stat-card h3 { font-size: 12px; color: #555; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+.stat-card .value { font-size: 24px; font-weight: 600; }
+.stat-card .value.positive { color: #1a7f37; }
+.stat-card .value.negative { color: #cf222e; }
+.stat-card .sub { font-size: 12px; color: #555; margin-top: 2px; }
+table.benchmark-table { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; }
+table.benchmark-table th, table.benchmark-table td { padding: 10px 12px; text-align: left; font-size: 13px; border-bottom: 1px solid #eee; }
+table.benchmark-table th { background: #fafafa; font-weight: 600; color: #444; }
+.config-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; }
+.config-badge.with_skill { background: #ddf4ff; color: #0066cc; }
+.config-badge.without_skill { background: #f0f0f0; color: #555; }
+.config-badge.baseline { background: #f0f0f0; color: #555; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+</style>
+</head>
+<body>
+<header>
+  <nav aria-label="Tabs" role="tablist" class="tablist">
+    <button role="tab" aria-selected="true" aria-controls="tabpanel-outputs" id="tab-btn-outputs" class="tab">Outputs</button>
+    <button role="tab" aria-selected="false" aria-controls="tabpanel-benchmark" id="tab-btn-benchmark" class="tab">Benchmark</button>
+  </nav>
+</header>
+
+<main>
+  <h1 class="sr-only" id="page-title">Eval Viewer</h1>
+
+  <section role="tabpanel" id="tabpanel-outputs" aria-labelledby="tab-btn-outputs" aria-hidden="false">
+    <nav aria-label="Run navigation">
+      <div class="nav-buttons">
+        <button id="prev-btn" disabled>&larr; Previous</button>
+        <button id="next-btn">Next &rarr;</button>
+      </div>
+    </nav>
+    <div aria-live="polite" aria-atomic="true">
+      <div class="eval-counter" id="eval-counter"></div>
+      <div id="run-display"></div>
+    </div>
+  </section>
+
+  <section role="tabpanel" id="tabpanel-benchmark" aria-labelledby="tab-btn-benchmark" aria-hidden="true">
+    <div id="benchmark-display"></div>
+  </section>
+</main>
+
+<script>
+/*__EMBEDDED_DATA__*/
+
+const state = { currentIndex: 0, feedback: {} };
+const runs = EMBEDDED_DATA.runs || [];
+const benchmark = EMBEDDED_DATA.benchmark || null;
+const previousFeedback = EMBEDDED_DATA.previous_feedback || {};
+const previousOutputs = EMBEDDED_DATA.previous_outputs || {};
+
+function renderRun(index) {
+  if (!runs.length) { document.getElementById('run-display').innerHTML = '<p>No runs found.</p>'; return; }
+  const run = runs[index];
+  const total = runs.length;
+  document.getElementById('eval-counter').textContent = `Run ${index + 1} of ${total}`;
+  document.getElementById('prev-btn').disabled = index === 0;
+  document.getElementById('next-btn').disabled = index === total - 1;
+
+  let gradingHtml = '';
+  if (run.grading && run.grading.expectations) {
+    gradingHtml = '<div class="grading"><h3>Assertions</h3>';
+    const summary = run.grading.summary || {};
+    gradingHtml += `<div class="grading-summary">${summary.passed || 0} / ${summary.total || 0} passed</div>`;
+    run.grading.expectations.forEach(exp => {
+      const cls = exp.passed ? 'pass' : 'fail';
+      const label = exp.passed ? 'PASS' : 'FAIL';
+      gradingHtml += `<div class="assertion ${cls}"><span class="result">${label}</span><span>${exp.text}</span>`;
+      if (exp.evidence) gradingHtml += `<div class="evidence">${exp.evidence}</div>`;
+      gradingHtml += `</div>`;
+    });
+    gradingHtml += '</div>';
+  }
+
+  let outputsHtml = '';
+  if (run.outputs && run.outputs.length) {
+    outputsHtml = '<div class="output-files">';
+    run.outputs.forEach(f => {
+      outputsHtml += `<div class="output-file"><h3>${f.name}</h3>`;
+      if (f.type === 'text') outputsHtml += `<pre>${escapeHtml(f.content)}</pre>`;
+      else if (f.type === 'image') outputsHtml += `<img src="${f.data_uri}" alt="${f.name}">`;
+      else if (f.type === 'pdf') outputsHtml += `<embed src="${f.data_uri}" type="application/pdf" width="100%" height="500px" title="${escapeHtml(f.name)}">`;
+      else outputsHtml += `<p><a href="${f.data_uri}" download="${f.name}">Download ${f.name}</a></p>`;
+      outputsHtml += '</div>';
+    });
+    outputsHtml += '</div>';
+  }
+
+  const fbKey = run.id;
+  const savedFeedback = state.feedback[fbKey] || '';
+
+  state.currentIndex = index;
+  document.getElementById('run-display').innerHTML = `
+    <div class="run-header">
+      <h2 id="run-heading-${index}" tabindex="-1">${escapeHtml(run.eval_id || 'Run')}</h2>
+      <div class="prompt">${escapeHtml(run.prompt)}</div>
+      ${outputsHtml}
+      ${gradingHtml}
+      <div class="feedback-box">
+        <label for="feedback-${index}">Feedback</label>
+        <textarea id="feedback-${index}" onchange="saveFeedback('${fbKey}', this.value)">${escapeHtml(savedFeedback)}</textarea>
+      </div>
+    </div>
+  `;
+  document.getElementById(`run-heading-${index}`).focus();
+}
+
+function saveFeedback(runId, value) {
+  state.feedback[runId] = value;
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function renderBenchmark() {
+  const display = document.getElementById('benchmark-display');
+  if (!benchmark) {
+    display.innerHTML = '<p>No benchmark data available.</p>';
+    return;
+  }
+
+  const summary = benchmark.config_stats || {};
+  const delta = benchmark.delta || {};
+  const configs = Object.keys(summary);
+
+  let html = '<div class="summary-stats">';
+  configs.forEach(config => {
+    const data = summary[config] || {};
+    const pr = data.pass_rate || {};
+    const tm = data.time_seconds || {};
+    const tok = data.tokens || {};
+    html += `<div class="stat-card">
+      <h3>${config.replace(/_/g, ' ')}</h3>
+      <div class="value">${(pr.mean * 100).toFixed(0)}%</div>
+      <div class="sub">pass rate &plusmn;${(pr.stddev * 100).toFixed(1)}%</div>
+      <div class="sub">${tm.mean.toFixed(1)}s &plusmn;${tm.stddev.toFixed(1)}s</div>
+      <div class="sub">${tok.mean.toFixed(0)} tok &plusmn;${tok.stddev.toFixed(0)}</div>
+    </div>`;
+  });
+  if (delta.pass_rate) {
+    const isPos = delta.pass_rate.startsWith('+');
+    html += `<div class="stat-card">
+      <h3>Delta</h3>
+      <div class="value ${isPos ? 'positive' : 'negative'}">${delta.pass_rate}</div>
+      <div class="sub">pass rate</div>
+      <div class="sub">${delta.time_seconds}s</div>
+      <div class="sub">${delta.tokens} tok</div>
+    </div>`;
+  }
+  html += '</div>';
+
+  if (benchmark.runs && benchmark.runs.length) {
+    html += '<table class="benchmark-table"><thead><tr><th>Eval</th><th>Config</th><th>Run</th><th>Pass Rate</th><th>Time</th><th>Tokens</th></tr></thead><tbody>';
+    benchmark.runs.forEach(r => {
+      const res = r.result || {};
+      html += `<tr>
+        <td>${escapeHtml(String(r.eval_id))}</td>
+        <td><span class="config-badge ${r.configuration}">${r.configuration}</span></td>
+        <td>${r.run_number}</td>
+        <td>${(res.pass_rate * 100).toFixed(0)}%</td>
+        <td>${res.time_seconds.toFixed(1)}s</td>
+        <td>${res.tokens || '-'}</td>
+      </tr>`;
+    });
+    html += '</tbody></table>';
+  }
+
+  display.innerHTML = html;
+}
+
+function switchTab(tabBtn) {
+  document.querySelectorAll('[role="tab"]').forEach(b => {
+    b.setAttribute('aria-selected', 'false');
+  });
+  document.querySelectorAll('[role="tabpanel"]').forEach(p => {
+    p.setAttribute('aria-hidden', 'true');
+  });
+  tabBtn.setAttribute('aria-selected', 'true');
+  const panel = document.getElementById(tabBtn.getAttribute('aria-controls'));
+  if (panel) panel.setAttribute('aria-hidden', 'false');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const tablist = document.querySelector('[role="tablist"]');
+  const tabs = Array.from(document.querySelectorAll('[role="tab"]'));
+
+  tabs.forEach(btn => {
+    btn.addEventListener('click', () => {
+      switchTab(btn);
+    });
+  });
+
+  tablist.addEventListener('keydown', (e) => {
+    const idx = tabs.indexOf(document.activeElement);
+    if (idx === -1) return;
+    let nextIdx;
+    if (e.key === 'ArrowRight') {
+      nextIdx = (idx + 1) % tabs.length;
+    } else if (e.key === 'ArrowLeft') {
+      nextIdx = (idx - 1 + tabs.length) % tabs.length;
+    } else {
+      return;
+    }
+    e.preventDefault();
+    switchTab(tabs[nextIdx]);
+    tabs[nextIdx].focus();
+  });
+
+  document.getElementById('prev-btn').addEventListener('click', () => {
+    if (state.currentIndex > 0) renderRun(state.currentIndex - 1);
+  });
+  document.getElementById('next-btn').addEventListener('click', () => {
+    if (state.currentIndex < runs.length - 1) renderRun(state.currentIndex + 1);
+  });
+
+  if (runs.length) renderRun(0);
+  renderBenchmark();
+});
+</script>
+</body>
+</html>

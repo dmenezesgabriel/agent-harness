@@ -19,3 +19,6 @@ false
 mlruns
 experiments/variants
 __pycache__
+
+
+*-workspace/

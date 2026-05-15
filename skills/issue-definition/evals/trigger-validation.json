@@ -1,0 +1,22 @@
+[
+  {
+    "prompt": "Define scope, non-goals, and acceptance criteria for adding draft autosave to the editor.",
+    "expected_trigger": true,
+    "notes": "Clear issue-definition ask."
+  },
+  {
+    "prompt": "We should probably clean up the billing area somehow; make that a concrete task.",
+    "expected_trigger": true,
+    "notes": "Vague improvement needs issue framing."
+  },
+  {
+    "prompt": "Pick the smallest validation plan for this dependency bump and run the checks.",
+    "expected_trigger": false,
+    "notes": "This belongs to change validation."
+  },
+  {
+    "prompt": "Refactor the module safely using characterization tests first.",
+    "expected_trigger": false,
+    "notes": "Scoped implementation workflow, not issue framing."
+  }
+]

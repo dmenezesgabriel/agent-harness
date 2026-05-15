@@ -1,0 +1,22 @@
+[
+  {
+    "prompt": "Verify this form accessibility fix, including keyboard and error-state behavior, before merge.",
+    "expected_trigger": true,
+    "notes": "Frontend-focused validation."
+  },
+  {
+    "prompt": "Run targeted checks for this auth change and include security scanning only if the risk justifies it.",
+    "expected_trigger": true,
+    "notes": "High-risk validation with scoped security checks."
+  },
+  {
+    "prompt": "Classify this vague request as feature, bugfix, or refactor and turn it into a ready issue.",
+    "expected_trigger": false,
+    "notes": "Issue-definition task."
+  },
+  {
+    "prompt": "Safely refactor the service using characterization tests first.",
+    "expected_trigger": false,
+    "notes": "Implementation workflow request."
+  }
+]

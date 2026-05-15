@@ -1,0 +1,52 @@
+{
+  "skill_name": "skill-builder",
+  "evals": [
+    {
+      "id": "create-minimal-yaml-validator",
+      "prompt": "Create an Agent Skill for validating YAML schema files before deployment. Keep it minimal — just the SKILL.md with a clear activation description, a basic workflow with a validation command, and at least one edge case.",
+      "expected_output": "A valid skill directory containing SKILL.md with correct frontmatter, an activation-oriented description, an ordered workflow with a validation step, and at least one edge case.",
+      "files": [],
+      "tags": ["creation", "minimal"],
+      "assertions": [
+        "The output includes a SKILL.md file",
+        "The frontmatter contains a valid `name` field using only lowercase letters and hyphens",
+        "The frontmatter contains a non-empty `description` field",
+        "The description is activation-oriented and says what the skill does and when to use it",
+        "The body includes a `## Workflow` section with ordered steps",
+        "The workflow includes a validation command or checklist",
+        "The body includes at least one edge case or gotcha",
+        "The frontmatter parses as valid YAML"
+      ]
+    },
+    {
+      "id": "fix-broken-frontmatter",
+      "prompt": "This skill's SKILL.md has invalid frontmatter — the name has uppercase letters, and the description is empty. Fix it so it passes validation.",
+      "expected_output": "A corrected SKILL.md with lowercase-hyphenated name matching the directory, and a non-empty activation-oriented description.",
+      "files": ["evals/files/broken-frontmatter-skill/SKILL.md"],
+      "tags": ["fix", "frontmatter", "validation"],
+      "assertions": [
+        "The `name` field uses only lowercase letters and hyphens",
+        "The `name` field matches the parent directory name",
+        "The `description` field is non-empty",
+        "The description says what the skill does and when to use it",
+        "The frontmatter parses as valid YAML",
+        "The body is non-empty"
+      ]
+    },
+    {
+      "id": "improve-vague-description",
+      "prompt": "This skill's description is way too vague: \"Helps with files.\" Rewrite it to be activation-oriented, specific, and under 1024 characters. The skill is for a CSV quality reporter.",
+      "expected_output": "A revised description that starts with activation-oriented phrasing, says what the skill does and when to use it, mentions concrete artifacts (CSV, quality checks), and is under 1024 characters.",
+      "files": ["evals/files/vague-description-skill/SKILL.md"],
+      "tags": ["description", "improvement"],
+      "assertions": [
+        "The description uses activation-oriented phrasing",
+        "The description says what the skill does",
+        "The description says when to use the skill",
+        "The description mentions CSV or data quality",
+        "The description is under 1024 characters",
+        "The original vague wording \"Helps with\" is replaced"
+      ]
+    }
+  ]
+}

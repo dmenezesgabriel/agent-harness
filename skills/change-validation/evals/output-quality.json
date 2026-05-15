@@ -1,0 +1,54 @@
+[
+  {
+    "prompt": "Validate a small bugfix that stops duplicate toast notifications after form resubmission; run the smallest sufficient checks and fix any in-scope failures.",
+    "expected_qualities": [
+      "Confirms the bugfix scope and selects a minimal validation set tied to the duplicate-toast behavior.",
+      "Explains why broader suites are not needed unless failures or risk expand scope.",
+      "Handles any discovered failure in a scoped way and re-runs the relevant checks.",
+      "Ends with a clear readiness summary."
+    ],
+    "assert_against": [
+      "Defaulting to an unnecessary full test suite or broad exploratory audit.",
+      "Reporting results without stating what was intentionally not run."
+    ]
+  },
+  {
+    "prompt": "Validate a completed backend/API change that adds duplicate-invite rejection on POST /workspace-invites and updates the error contract.",
+    "expected_qualities": [
+      "Uses Backend or Fullstack validation language consistently with the changed surface.",
+      "Chooses checks that cover the API behavior, contract change, and relevant regression path.",
+      "Expands validation only as needed for the contract risk.",
+      "Summarizes pass/fail status, any fixes applied, and residual integration risk."
+    ],
+    "assert_against": [
+      "Treating the task as new implementation planning.",
+      "Escalating into unrelated security or performance auditing without justification."
+    ]
+  },
+  {
+    "prompt": "Verify a frontend change that adds loading, empty, and error states to the notifications panel, including keyboard retry behavior and screen-reader messaging.",
+    "expected_qualities": [
+      "Chooses a validation plan centered on affected UI states and accessibility behavior.",
+      "Keeps the checks focused on the changed panel rather than the entire frontend application.",
+      "Notes any manual or automated verification needed for keyboard and assistive-tech-relevant behavior.",
+      "Provides a merge-readiness conclusion with any residual UX risk called out."
+    ],
+    "assert_against": [
+      "Reducing validation to generic 'UI looks good' language.",
+      "Switching to issue-definition or implementation-workflow structure instead of a validation report."
+    ]
+  },
+  {
+    "prompt": "Validate a high-risk auth change that rotates session tokens after password reset; start with the smallest relevant checks, then expand only if the risk justifies it.",
+    "expected_qualities": [
+      "Begins with a scoped validation plan and then justifies any risk-based expansion.",
+      "Includes failure handling that distinguishes in-scope fixes from larger follow-up work.",
+      "Avoids unnecessary full-suite escalation unless the auth surface or failures warrant it.",
+      "Ends with a clear readiness state and explicit residual risk if confidence is partial."
+    ],
+    "assert_against": [
+      "Treating 'high-risk' as automatic justification for unfocused audit behavior.",
+      "Leaving the outcome at a vague confidence statement without a merge-readiness summary."
+    ]
+  }
+]

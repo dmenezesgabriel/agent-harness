@@ -1,0 +1,22 @@
+[
+  {
+    "prompt": "Validate this completed API change, run the smallest relevant checks, and fix any in-scope failures.",
+    "expected_trigger": true,
+    "notes": "Direct post-implementation validation ask."
+  },
+  {
+    "prompt": "Check this dependency bump for regressions and run audit commands only if justified.",
+    "expected_trigger": true,
+    "notes": "Risk-based validation request."
+  },
+  {
+    "prompt": "Implement the feature from these acceptance criteria.",
+    "expected_trigger": false,
+    "notes": "Implementation workflow, not validation."
+  },
+  {
+    "prompt": "Draft an issue with scope, non-goals, and acceptance criteria for a new export flow.",
+    "expected_trigger": false,
+    "notes": "Issue-definition task."
+  }
+]
