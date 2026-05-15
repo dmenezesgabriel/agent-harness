@@ -7,10 +7,13 @@ from __future__ import annotations
 import argparse
 import base64
 import json
+import logging
 import mimetypes
 import re
 import sys
 from pathlib import Path
+
+logging.basicConfig(level=logging.INFO, format="%(message)s")
 
 
 TEXT_EXTENSIONS = {
@@ -267,12 +270,12 @@ def main() -> None:
 
     workspace = args.workspace.resolve()
     if not workspace.is_dir():
-        print(f"Error: {workspace} is not a directory", file=sys.stderr)
+        logging.error(f"Error: {workspace} is not a directory")
         sys.exit(1)
 
     runs = discover_runs(workspace)
     if not runs:
-        print(f"No runs found in {workspace}", file=sys.stderr)
+        logging.error(f"No runs found in {workspace}")
         sys.exit(1)
 
     skill_name = args.skill_name or workspace.parent.name.replace("-workspace", "")
@@ -281,9 +284,10 @@ def main() -> None:
     if args.previous_workspace:
         previous = load_previous_iteration(args.previous_workspace.resolve())
 
+    benchmark_path = args.benchmark or workspace / "benchmark.json"
     benchmark = None
-    if args.benchmark and args.benchmark.exists():
-        text = read_text(args.benchmark)
+    if benchmark_path.exists():
+        text = read_text(benchmark_path)
         if text is not None:
             try:
                 benchmark = json.loads(text)
@@ -295,11 +299,11 @@ def main() -> None:
     if args.static:
         args.static.parent.mkdir(parents=True, exist_ok=True)
         args.static.write_text(html)
-        print(f"\n  Report written to: {args.static}\n")
+        logging.info(f"\n  Report written to: {args.static}\n")
     else:
         output_path = workspace / "review.html"
         output_path.write_text(html)
-        print(f"\n  Report written to: {output_path}\n")
+        logging.info(f"\n  Report written to: {output_path}\n")
 
 
 if __name__ == "__main__":

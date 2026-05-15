@@ -16,14 +16,34 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import math
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+logging.basicConfig(level=logging.INFO, format="%(message)s")
+
 
 ROUND_PRECISION = 4
 EMPTY_STATS = {"mean": 0.0, "stddev": 0.0, "min": 0.0, "max": 0.0}
+PASS_RATE_EMPTY = {**EMPTY_STATS, "ci_low": 0.0, "ci_high": 0.0}
+
+
+def config_label(name: str) -> str:
+    return name.replace("_", " ").title()
+
+
+def proportion_ci(successes, trials, confidence=0.95):
+    """Wilson score interval for a proportion."""
+    if trials == 0:
+        return (0.0, 0.0)
+    z = 1.96
+    p = successes / trials
+    denominator = 1 + z**2 / trials
+    centre = (p + z**2 / (2 * trials)) / denominator
+    margin = z * math.sqrt((p * (1 - p) / trials + z**2 / (4 * trials**2))) / denominator
+    return (round(max(0, centre - margin), 4), round(min(1, centre + margin), 4))
 
 
 def grading_path(run_dir):
@@ -123,15 +143,25 @@ def stats_summary(values):
 
 
 def compute_config_stats(groups):
-    return {
-        config: {
-            metric: stats_summary([r[metric] for r in runs])
-            for metric in ("pass_rate", "time_seconds", "tokens")
-        }
-        if runs
-        else {metric: dict(EMPTY_STATS) for metric in ("pass_rate", "time_seconds", "tokens")}
-        for config, runs in sorted(groups.items())
-    }
+    config_stats = {}
+    for config, runs in sorted(groups.items()):
+        if not runs:
+            config_stats[config] = {
+                "pass_rate": dict(PASS_RATE_EMPTY),
+                "time_seconds": dict(EMPTY_STATS),
+                "tokens": dict(EMPTY_STATS),
+            }
+            continue
+        stats = {}
+        for metric in ("pass_rate", "time_seconds", "tokens"):
+            values = [r[metric] for r in runs]
+            stats[metric] = stats_summary(values)
+        total_passed = sum(r["passed"] for r in runs)
+        total_assertions = sum(r["total"] for r in runs)
+        ci_low, ci_high = proportion_ci(total_passed, total_assertions)
+        stats["pass_rate"] = {**stats["pass_rate"], "ci_low": ci_low, "ci_high": ci_high}
+        config_stats[config] = stats
+    return config_stats
 
 
 def compute_delta(config_stats):
@@ -197,11 +227,11 @@ def markdown_table(benchmark):
     config_stats = benchmark["config_stats"]
     delta = benchmark["delta"]
     configs = list(config_stats.keys())
-    config_a = configs[0].replace("_", " ").title() if configs else "Config A"
-    config_b = configs[1].replace("_", " ").title() if len(configs) >= 2 else "Config B"
+    config_a = config_label(configs[0]) if configs else "Config A"
+    config_b = config_label(configs[1]) if len(configs) >= 2 else "Config B"
 
-    a_pass = config_stats.get(configs[0], {}).get("pass_rate", EMPTY_STATS) if configs else EMPTY_STATS
-    b_pass = config_stats.get(configs[1], {}).get("pass_rate", EMPTY_STATS) if len(configs) >= 2 else EMPTY_STATS
+    a_pass = config_stats.get(configs[0], {}).get("pass_rate", PASS_RATE_EMPTY) if configs else PASS_RATE_EMPTY
+    b_pass = config_stats.get(configs[1], {}).get("pass_rate", PASS_RATE_EMPTY) if len(configs) >= 2 else PASS_RATE_EMPTY
     a_time = config_stats.get(configs[0], {}).get("time_seconds", EMPTY_STATS) if configs else EMPTY_STATS
     b_time = config_stats.get(configs[1], {}).get("time_seconds", EMPTY_STATS) if len(configs) >= 2 else EMPTY_STATS
     a_tok = config_stats.get(configs[0], {}).get("tokens", EMPTY_STATS) if configs else EMPTY_STATS
@@ -217,8 +247,8 @@ def markdown_table(benchmark):
         "",
         f"| Metric | {config_a} | {config_b} | Delta |",
         "|--------|------------|---------------|-------|",
-        f"| Pass Rate | {a_pass['mean']*100:.0f}% \u00b1 {a_pass['stddev']*100:.0f}% |"
-        f" {b_pass['mean']*100:.0f}% \u00b1 {b_pass['stddev']*100:.0f}% |"
+        f"| Pass Rate | {a_pass['mean']*100:.0f}% (95% CI: {a_pass['ci_low']*100:.0f}\u2013{a_pass['ci_high']*100:.0f}%) |"
+        f" {b_pass['mean']*100:.0f}% (95% CI: {b_pass['ci_low']*100:.0f}\u2013{b_pass['ci_high']*100:.0f}%) |"
         f" {delta['pass_rate']} |",
         f"| Time | {a_time['mean']:.1f}s \u00b1 {a_time['stddev']:.1f}s |"
         f" {b_time['mean']:.1f}s \u00b1 {b_time['stddev']:.1f}s |"
@@ -234,22 +264,22 @@ def markdown_table(benchmark):
 def write_outputs(benchmark, output_dir):
     json_path = output_dir / "benchmark.json"
     json_path.write_text(json.dumps(benchmark, indent=2))
-    print(f"Generated: {json_path}")
+    logging.info(f"Generated: {json_path}")
 
     md_path = output_dir / "benchmark.md"
     md_path.write_text(markdown_table(benchmark))
-    print(f"Generated: {md_path}")
+    logging.info(f"Generated: {md_path}")
 
 
 def print_summary(benchmark):
     config_stats = benchmark["config_stats"]
     delta = benchmark["delta"]
-    print()
-    print("Summary:")
+    logging.info("")
+    logging.info("Summary:")
     for config in config_stats:
-        pr = config_stats[config]["pass_rate"]["mean"]
-        print(f"  {config.replace('_', ' ').title()}: {pr*100:.1f}% pass rate")
-    print(f"  Delta: {delta['pass_rate']}")
+        pr = config_stats[config]["pass_rate"]
+        logging.info(f"  {config_label(config)}: {pr['mean']*100:.1f}% (95% CI: {pr['ci_low']*100:.1f}%\u2013{pr['ci_high']*100:.1f}%)")
+    logging.info(f"  Delta: {delta['pass_rate']}")
 
 
 def parse_args():
@@ -263,7 +293,7 @@ def parse_args():
 def main():
     args = parse_args()
     if not args.iteration_dir.exists():
-        print(f"Directory not found: {args.iteration_dir}", file=sys.stderr)
+        logging.error(f"Directory not found: {args.iteration_dir}")
         return 1
     benchmark = generate_benchmark(args.iteration_dir, args.skill_name)
     output_dir = args.output_dir or args.iteration_dir

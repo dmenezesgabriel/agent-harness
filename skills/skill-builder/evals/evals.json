@@ -8,14 +8,32 @@
       "files": [],
       "tags": ["creation", "minimal"],
       "assertions": [
-        "The output includes a SKILL.md file",
-        "The frontmatter contains a valid `name` field using only lowercase letters and hyphens",
-        "The frontmatter contains a non-empty `description` field",
+        {
+          "text": "The output includes a SKILL.md file",
+          "checks": [{"type": "file_exists", "path": "SKILL.md"}]
+        },
+        {
+          "text": "The frontmatter contains a valid `name` field using only lowercase letters and hyphens",
+          "checks": [{"type": "yaml_field", "path": "SKILL.md", "field": "name", "matches": "^[a-z0-9-]+$"}]
+        },
+        {
+          "text": "The frontmatter contains a non-empty `description` field",
+          "checks": [{"type": "yaml_field", "path": "SKILL.md", "field": "description", "min_length": 1}]
+        },
         "The description is activation-oriented and says what the skill does and when to use it",
-        "The body includes a `## Workflow` section with ordered steps",
+        {
+          "text": "The body includes a `## Workflow` section with ordered steps",
+          "checks": [{"type": "contains", "path": "SKILL.md", "text": "## Workflow"}]
+        },
         "The workflow includes a validation command or checklist",
-        "The body includes at least one edge case or gotcha",
-        "The frontmatter parses as valid YAML"
+        {
+          "text": "The body includes at least one edge case or gotcha",
+          "checks": [{"type": "contains", "path": "SKILL.md", "text": "## Edge\n"}]
+        },
+        {
+          "text": "The frontmatter parses as valid YAML",
+          "checks": [{"type": "yaml_valid", "path": "SKILL.md"}]
+        }
       ]
     },
     {
@@ -25,12 +43,24 @@
       "files": ["evals/files/broken-frontmatter-skill/SKILL.md"],
       "tags": ["fix", "frontmatter", "validation"],
       "assertions": [
-        "The `name` field uses only lowercase letters and hyphens",
+        {
+          "text": "The `name` field uses only lowercase letters and hyphens",
+          "checks": [{"type": "yaml_field", "path": "SKILL.md", "field": "name", "matches": "^[a-z0-9-]+$"}]
+        },
         "The `name` field matches the parent directory name",
-        "The `description` field is non-empty",
+        {
+          "text": "The `description` field is non-empty",
+          "checks": [{"type": "yaml_field", "path": "SKILL.md", "field": "description", "min_length": 1}]
+        },
         "The description says what the skill does and when to use it",
-        "The frontmatter parses as valid YAML",
-        "The body is non-empty"
+        {
+          "text": "The frontmatter parses as valid YAML",
+          "checks": [{"type": "yaml_valid", "path": "SKILL.md"}]
+        },
+        {
+          "text": "The body is non-empty",
+          "checks": [{"type": "not_empty", "path": "SKILL.md"}]
+        }
       ]
     },
     {
@@ -43,9 +73,18 @@
         "The description uses activation-oriented phrasing",
         "The description says what the skill does",
         "The description says when to use the skill",
-        "The description mentions CSV or data quality",
-        "The description is under 1024 characters",
-        "The original vague wording \"Helps with\" is replaced"
+        {
+          "text": "The description mentions CSV or data quality",
+          "checks": [{"type": "contains_regex", "path": "SKILL.md", "pattern": "CSV|data.quality"}]
+        },
+        {
+          "text": "The description is under 1024 characters",
+          "checks": [{"type": "char_count", "path": "SKILL.md", "field": "description", "max": 1024}]
+        },
+        {
+          "text": "The original vague wording \"Helps with\" is replaced",
+          "checks": [{"type": "not_contains", "path": "SKILL.md", "text": "Helps with"}]
+        }
       ]
     }
   ]

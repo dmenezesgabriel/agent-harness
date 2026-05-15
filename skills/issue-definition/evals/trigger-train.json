@@ -1,22 +1,29 @@
-[
-  {
-    "prompt": "Turn this vague request into an implementation-ready issue: users say the settings page is confusing and should be easier to use.",
-    "expected_trigger": true,
-    "notes": "Vague improvement request needs scope, acceptance criteria, and slices."
-  },
-  {
-    "prompt": "Write a bug ticket for intermittent 500s on POST /orders, including repro steps, impact, and regression expectations.",
-    "expected_trigger": true,
-    "notes": "Bug report needs framing before implementation."
-  },
-  {
-    "prompt": "Implement the already-scoped API change and add the tests.",
-    "expected_trigger": false,
-    "notes": "This is implementation, not issue framing."
-  },
-  {
-    "prompt": "Validate this completed form accessibility fix before merge.",
-    "expected_trigger": false,
-    "notes": "This is post-change verification."
-  }
-]
+{
+  "id": "trigger-train",
+  "queries": [
+    {
+      "id": "settings-confusing",
+      "query": "Turn this vague request into an implementation-ready issue: users say the settings page is confusing and should be easier to use.",
+      "should_trigger": true,
+      "notes": "Vague improvement request needs scope, acceptance criteria, and slices."
+    },
+    {
+      "id": "bug-500-orders",
+      "query": "Write a bug ticket for intermittent 500s on POST /orders, including repro steps, impact, and regression expectations.",
+      "should_trigger": true,
+      "notes": "Bug report needs framing before implementation."
+    },
+    {
+      "id": "scoped-api-change",
+      "query": "Implement the already-scoped API change and add the tests.",
+      "should_trigger": false,
+      "notes": "This is implementation, not issue framing."
+    },
+    {
+      "id": "validate-a11y-fix",
+      "query": "Validate this completed form accessibility fix before merge.",
+      "should_trigger": false,
+      "notes": "This is post-change verification."
+    }
+  ]
+}

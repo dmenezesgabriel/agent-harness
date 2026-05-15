@@ -55,6 +55,8 @@ table.benchmark-table th { background: #fafafa; font-weight: 600; color: #444; }
 .config-badge.without_skill { background: #f0f0f0; color: #555; }
 .config-badge.baseline { background: #f0f0f0; color: #555; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+.glossary-term { font-weight: 600; font-size: 14px; color: #1a1a1a; margin-top: 16px; margin-bottom: 4px; }
+.glossary-def { font-size: 13px; color: #444; line-height: 1.6; margin-bottom: 8px; padding-left: 12px; border-left: 2px solid #0066cc; }
 </style>
 </head>
 <body>
@@ -62,6 +64,7 @@ table.benchmark-table th { background: #fafafa; font-weight: 600; color: #444; }
   <nav aria-label="Tabs" role="tablist" class="tablist">
     <button role="tab" aria-selected="true" aria-controls="tabpanel-outputs" id="tab-btn-outputs" class="tab">Outputs</button>
     <button role="tab" aria-selected="false" aria-controls="tabpanel-benchmark" id="tab-btn-benchmark" class="tab">Benchmark</button>
+    <button role="tab" aria-selected="false" aria-controls="tabpanel-glossary" id="tab-btn-glossary" class="tab">Glossary</button>
   </nav>
 </header>
 
@@ -83,6 +86,10 @@ table.benchmark-table th { background: #fafafa; font-weight: 600; color: #444; }
 
   <section role="tabpanel" id="tabpanel-benchmark" aria-labelledby="tab-btn-benchmark" aria-hidden="true">
     <div id="benchmark-display"></div>
+  </section>
+
+  <section role="tabpanel" id="tabpanel-glossary" aria-labelledby="tab-btn-glossary" aria-hidden="true">
+    <div id="glossary-display"></div>
   </section>
 </main>
 
@@ -181,8 +188,9 @@ function renderBenchmark() {
       <h3>${config.replace(/_/g, ' ')}</h3>
       <div class="value">${(pr.mean * 100).toFixed(0)}%</div>
       <div class="sub">pass rate &plusmn;${(pr.stddev * 100).toFixed(1)}%</div>
+      <div class="sub">95% CI: ${(pr.ci_low * 100).toFixed(0)}%&ndash;${(pr.ci_high * 100).toFixed(0)}%</div>
       <div class="sub">${tm.mean.toFixed(1)}s &plusmn;${tm.stddev.toFixed(1)}s</div>
-      <div class="sub">${tok.mean.toFixed(0)} tok &plusmn;${tok.stddev.toFixed(0)}</div>
+      <div class="sub">${tok.mean.toFixed(0)} chars &plusmn;${tok.stddev.toFixed(0)}</div>
     </div>`;
   });
   if (delta.pass_rate) {
@@ -192,13 +200,13 @@ function renderBenchmark() {
       <div class="value ${isPos ? 'positive' : 'negative'}">${delta.pass_rate}</div>
       <div class="sub">pass rate</div>
       <div class="sub">${delta.time_seconds}s</div>
-      <div class="sub">${delta.tokens} tok</div>
+      <div class="sub">${delta.tokens} chars</div>
     </div>`;
   }
   html += '</div>';
 
   if (benchmark.runs && benchmark.runs.length) {
-    html += '<table class="benchmark-table"><thead><tr><th>Eval</th><th>Config</th><th>Run</th><th>Pass Rate</th><th>Time</th><th>Tokens</th></tr></thead><tbody>';
+    html += '<table class="benchmark-table"><thead><tr><th>Eval</th><th>Config</th><th>Run</th><th>Pass Rate</th><th>Time</th><th>Output</th></tr></thead><tbody>';
     benchmark.runs.forEach(r => {
       const res = r.result || {};
       html += `<tr>
@@ -214,6 +222,51 @@ function renderBenchmark() {
   }
 
   display.innerHTML = html;
+}
+
+function renderGlossary() {
+  const display = document.getElementById('glossary-display');
+  display.innerHTML = `
+    <h2 style="font-size:18px;margin-bottom:16px;">Evaluation Glossary</h2>
+    <div class="glossary-term">Assertion</div>
+    <div class="glossary-def">A single observable pass/fail check against an eval output. Each assertion tests one specific requirement — structural (e.g., file exists), mechanical (e.g., YAML parses), behavioral (e.g., workflow has validation step), or quality (e.g., description is activation-oriented). Assertions with deterministic checks are auto-resolved by script; subjective assertions require an LLM grader.</div>
+
+    <div class="glossary-term">Deterministic Check</div>
+    <div class="glossary-def">A script-based assertion that runs automatically using <code>check_assertions.py</code>. Types include <code>file_exists</code>, <code>yaml_field</code>, <code>yaml_valid</code>, <code>char_count</code>, <code>contains</code>, <code>not_contains</code>, <code>contains_regex</code>, and <code>not_empty</code>. Resolved before LLM grading — zero cost, no bias, instant.</div>
+
+    <div class="glossary-term">Subjective Assertion</div>
+    <div class="glossary-def">An assertion without executable checks, requiring an LLM grader to judge. Used for quality dimensions that cannot be mechanically verified — e.g., "the description is activation-oriented" or "the workflow covers edge cases." Subject to grader bias (position, verbosity, self-enhancement); mitigated via bias-awareness instructions in <code>agents/grader.md</code>.</div>
+
+    <div class="glossary-term">Pass Rate</div>
+    <div class="glossary-def">The proportion of assertions that passed in a run or configuration: <code>passed / total</code>. A value of 1.0 (100%) means every assertion passed. Pass rate is the primary quality metric — higher is better, but variance across runs matters too.</div>
+
+    <div class="glossary-term">Wilson 95% Confidence Interval</div>
+    <div class="glossary-def">The Wilson score interval for the true pass rate, computed across all assertions in a configuration. Unlike the normal approximation, it handles edge cases (0% or 100% pass rates) correctly. A wider CI means more uncertainty (fewer assertions or inconsistent results). Computed by <code>aggregate_benchmark.py</code> using the formula: <code>ci = (p + z²/2n ± z*sqrt(p(1-p)/n + z²/4n²)) / (1 + z²/n)</code> where z=1.96 for 95% confidence.</div>
+
+    <div class="glossary-term">Output Size</div>
+    <div class="glossary-def">Total characters across all generated output files in a run. Measured by <code>check_assertions.py</code> via <code>count_output_chars()</code>, which sums <code>len(read_bytes())</code> for every file in the outputs directory. A rough proxy for output volume — larger outputs cost more tokens but may also indicate more thorough work. Use in conjunction with pass rate: high quality + small output is ideal.</div>
+
+    <div class="glossary-term">Standard Deviation</div>
+    <div class="glossary-def">Measures variability across multiple runs in the same configuration. A small stddev relative to the mean indicates consistent performance. A large stddev suggests the skill or agent behaves unpredictably — investigate specific eval cases for root cause.</div>
+
+    <div class="glossary-term">Configuration</div>
+    <div class="glossary-def">The environment or skill setting for a group of runs. Common configurations: <code>with_skill</code> (agent has access to the evaluated skill), <code>without_skill</code> (baseline — agent runs without the skill), or <code>old_skill</code> (previous version for regression comparison). The benchmark compares configurations to measure the skill's impact.</div>
+
+    <div class="glossary-term">Delta</div>
+    <div class="glossary-def">The difference in a metric between the primary and baseline configurations. A positive pass-rate delta means the skill improved outcomes. Example: <code>+0.15</code> means 15 percentage points higher pass rate with the skill. Token and time deltas should be evaluated against quality gains — higher cost is acceptable if quality improves meaningfully.</div>
+
+    <div class="glossary-term">Evidence</div>
+    <div class="glossary-def">Concrete proof cited for each assertion result. For deterministic checks, evidence includes the file path, matched value, or parse status. For subjective assertions, the LLM grader must quote or reference output content. Every pass or fail must include evidence — no naked judgments.</div>
+
+    <div class="glossary-term">Eval Case</div>
+    <div class="glossary-def">A single evaluation scenario defined in <code>evals.json</code>. Contains a prompt (the task given to the agent), an expected output description, optional input files, tags for categorization, and a list of assertions to check the output against. Each eval case tests a specific skill behavior: creation, validation, fix, improvement, etc.</div>
+
+    <div class="glossary-term">Benchmark</div>
+    <div class="glossary-def">An aggregated report across all eval cases and configurations. Produced by <code>aggregate_benchmark.py</code>, it includes per-configuration pass-rate statistics (mean, stddev, CI), time and token usage, deltas between configurations, and per-run detail. The benchmark answers: "Did the skill improve outcomes, and is it worth the cost?"</div>
+
+    <div class="glossary-term">Grader Bias</div>
+    <div class="glossary-def">Systematic errors in LLM-based grading. Three common types: <strong>position bias</strong> (preferring first or last item in a list), <strong>verbosity bias</strong> (equating longer output with better quality), and <strong>self-enhancement bias</strong> (preferring output that matches the grader's own style). Mitigated via explicit bias-awareness instructions in <code>agents/grader.md</code> and by minimizing LLM grader use through deterministic checks.</div>
+  `;
 }
 
 function switchTab(tabBtn) {
@@ -263,6 +316,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (runs.length) renderRun(0);
   renderBenchmark();
+  renderGlossary();
 });
 </script>
 </body>

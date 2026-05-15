@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import re
 import shlex
 import subprocess
@@ -14,6 +15,8 @@ import time
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from functools import partial
 from pathlib import Path
+
+logging.basicConfig(level=logging.INFO, format="%(message)s")
 
 DEFAULT_RUNS = 3
 DEFAULT_THRESHOLD = 0.5
@@ -127,7 +130,7 @@ def print_progress(result: dict, index: int, runs: int, total_queries: int) -> N
     done = (index + 1) * runs
     pct = result["trigger_rate"] * 100
     status = "PASS" if result["passed"] else "FAIL"
-    print(f"  [{done}/{total_queries}] {result['id']}: {result['triggered_count']}/{runs} ({pct:.0f}%) {status}", file=sys.stderr)
+    logging.info(f"  [{done}/{total_queries}] {result['id']}: {result['triggered_count']}/{runs} ({pct:.0f}%) {status}")
 
 
 def evaluate_all(
@@ -148,7 +151,7 @@ def evaluate_all(
     if install_command and skill_path:
         error = execute_install(install_command, skill_path, timeout)
         if error:
-            print(f"  Warning: {error}", file=sys.stderr)
+            logging.warning(f"  Warning: {error}")
 
     try:
         for i, item in enumerate(eval_set):
@@ -169,7 +172,7 @@ def evaluate_all(
         if cleanup_command and skill_path:
             error = run_subprocess(cleanup_command, skill_path, timeout)
             if error:
-                print(f"  Warning: cleanup failed: {error}", file=sys.stderr)
+                logging.warning(f"  Warning: cleanup failed: {error}")
 
     return results
 
@@ -210,25 +213,25 @@ def main() -> int:
     args = parser.parse_args()
 
     if not args.eval_set.exists():
-        print(f"Eval set not found: {args.eval_set}", file=sys.stderr)
+        logging.error(f"Eval set not found: {args.eval_set}")
         return 1
 
     if args.install_command and not args.skill_path:
-        print("--skill-path is required when using --install-command", file=sys.stderr)
+        logging.error("--skill-path is required when using --install-command")
         return 1
 
     if "{query}" not in args.command:
-        print("--command must contain {query} placeholder", file=sys.stderr)
+        logging.error("--command must contain {query} placeholder")
         return 1
 
     eval_set = json.loads(args.eval_set.read_text())
 
-    print(f"Command:     {args.command}", file=sys.stderr)
-    print(f"Detect:      /{args.detect}/", file=sys.stderr)
-    print(f"Queries:     {len(eval_set)} ({args.runs} runs each, threshold={args.threshold})", file=sys.stderr)
+    logging.info(f"Command:     {args.command}")
+    logging.info(f"Detect:      /{args.detect}/")
+    logging.info(f"Queries:     {len(eval_set)} ({args.runs} runs each, threshold={args.threshold})")
     if args.install_command:
-        print(f"Install:     {args.install_command}", file=sys.stderr)
-    print(file=sys.stderr)
+        logging.info(f"Install:     {args.install_command}")
+    logging.info("")
 
     results = evaluate_all(
         eval_set, args.command, args.detect,
@@ -262,8 +265,8 @@ def main() -> int:
 
     output_path = args.output or Path("trigger-results.json")
     output_path.write_text(json.dumps(output, indent=2))
-    print(f"\nResults written to: {output_path}", file=sys.stderr)
-    print(f"Pass rate: {passed}/{total} ({pass_rate*100:.0f}%)", file=sys.stderr)
+    logging.info(f"\nResults written to: {output_path}")
+    logging.info(f"Pass rate: {passed}/{total} ({pass_rate*100:.0f}%)")
 
     return 0 if pass_rate >= EXIT_SUCCESS_THRESHOLD else 1
 

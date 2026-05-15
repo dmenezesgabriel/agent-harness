@@ -115,11 +115,21 @@ When each subagent completes, save the `total_tokens` and `duration_ms` from the
 {"total_tokens": 84852, "duration_ms": 23332, "total_duration_seconds": 23.3}
 ```
 
-### Step 3: Grade each run
+### Step 3: Run deterministic checks
 
-For each run, spawn a grader subagent. Read `agents/grader.md` for full instructions. The grader evaluates each assertion against the transcript and outputs, then writes `grading.json`.
+For each run, execute the check script before grading:
 
-### Step 4: Aggregate into benchmark
+```bash
+uv run scripts/check_assertions.py --evals-json evals/evals.json --outputs-dir <run>/outputs/ --run-dir <run>
+```
+
+This produces `checks.json` with auto-pass/fail for assertions that have executable checks. Only assertions that pass all their checks AND have no remaining subjective criteria need no grader attention.
+
+### Step 4: Grade remaining assertions
+
+For each run, spawn a grader subagent. Pass it only the assertions that were NOT resolved by checks.json. Read `agents/grader.md` for full instructions. The grader writes `grading.json`. After grading, merge checks.json + grading.json into the final grading.json (checks overwrite for their assertions).
+
+### Step 5: Aggregate into benchmark
 
 ```bash
 uv run scripts/aggregate_benchmark.py <workspace>/iteration-N --skill-name skill-builder
@@ -127,7 +137,7 @@ uv run scripts/aggregate_benchmark.py <workspace>/iteration-N --skill-name skill
 
 This reads all grading.json files and produces `benchmark.json` (structured) and `benchmark.md` (human-readable) with mean &plusmn; stddev per configuration and the delta.
 
-### Step 5: Generate review report
+### Step 6: Generate review report
 
 ```bash
 uv run eval-viewer/generate_review.py <workspace>/iteration-N --skill-name skill-builder --static <workspace>/iteration-N/review.html
@@ -135,7 +145,7 @@ uv run eval-viewer/generate_review.py <workspace>/iteration-N --skill-name skill
 
 Open the generated `review.html` in a browser to browse runs, see outputs, review assertion grades, and leave feedback.
 
-### Step 6: Iterate
+### Step 7: Iterate
 
 Read `feedback.json`, identify failures, improve the skill, then repeat from Step 1 in a new `iteration-<N+1>/` directory.
 

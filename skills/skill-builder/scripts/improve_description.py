@@ -6,11 +6,14 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import re
 import shlex
 import subprocess
 import sys
 from pathlib import Path
+
+logging.basicConfig(level=logging.INFO, format="%(message)s")
 
 MAX_DESCRIPTION_LENGTH = 1024
 DEFAULT_TIMEOUT = 60
@@ -166,7 +169,7 @@ def load_history(path: Path | None) -> list[str] | None:
 
 def truncate_long_description(description: str) -> str:
     if len(description) > MAX_DESCRIPTION_LENGTH:
-        print(f"Warning: description is {len(description)} chars (max {MAX_DESCRIPTION_LENGTH}). Truncating.", file=sys.stderr)
+        logging.warning(f"Warning: description is {len(description)} chars (max {MAX_DESCRIPTION_LENGTH}). Truncating.")
         return description[:MAX_DESCRIPTION_LENGTH]
     return description
 
@@ -189,41 +192,41 @@ def write_output(output: dict, output_path: Path) -> None:
 def main() -> int:
     args = parse_args()
     if not args.failures.exists():
-        print(f"Results file not found: {args.failures}", file=sys.stderr)
+        logging.error(f"Results file not found: {args.failures}")
         return 1
     if "{prompt}" not in args.command:
-        print("--command must contain {prompt} placeholder", file=sys.stderr)
+        logging.error("--command must contain {prompt} placeholder")
         return 1
     results = load_results(args.failures)
     all_queries = results.get("results", [])
     failed_queries = [q for q in all_queries if not q.get("passed", True)]
     if not failed_queries:
-        print("No failures found", file=sys.stderr)
+        logging.info("No failures found")
         return 0
     history = load_history(args.history)
     prompt = build_improvement_prompt(args.description, failed_queries, all_queries, history)
-    print(f"Improving description based on {len(failed_queries)} failed queries...", file=sys.stderr)
-    print(f"Prompt length: {len(prompt)} chars", file=sys.stderr)
+    logging.info(f"Improving description based on {len(failed_queries)} failed queries...")
+    logging.info(f"Prompt length: {len(prompt)} chars")
     response, error = call_llm(prompt, args.command, args.timeout)
     if error:
-        print(f"LLM call failed: {error}", file=sys.stderr)
+        logging.error(f"LLM call failed: {error}")
         if response:
-            print(f"Partial output: {response[:RESPONSE_TRUNCATION_LENGTH]}", file=sys.stderr)
+            logging.warning(f"Partial output: {response[:RESPONSE_TRUNCATION_LENGTH]}")
         return 1
     new_description = extract_description(response, args.extract)
     if not new_description:
-        print("Could not extract description from response.", file=sys.stderr)
-        print(f"Response (first 1000 chars): {response[:1000]}", file=sys.stderr)
+        logging.error("Could not extract description from response.")
+        logging.warning(f"Response (first 1000 chars): {response[:1000]}")
         return 1
     new_description = truncate_long_description(new_description)
     output = build_output(args.description, new_description, failed_queries)
     output_path = args.output or Path("improved-description.json")
     write_output(output, output_path)
-    print(f"\nImproved description written to: {output_path}", file=sys.stderr)
-    print(f"\nPrevious:", file=sys.stderr)
-    print(f"  {args.description}", file=sys.stderr)
-    print(f"\nImproved:", file=sys.stderr)
-    print(f"  {new_description}", file=sys.stderr)
+    logging.info(f"\nImproved description written to: {output_path}")
+    logging.info(f"\nPrevious:")
+    logging.info(f"  {args.description}")
+    logging.info(f"\nImproved:")
+    logging.info(f"  {new_description}")
     return 0
 
 

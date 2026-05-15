@@ -5,13 +5,33 @@ description: Use this skill when a user has an idea, bug, request, feature, impr
 
 ## Purpose
 
-Turn a request into a crisp, implementation-ready issue definition.
-
-Use this skill to define work for feature requests, bug reports, refactors, technical improvements, UX changes, backend work, frontend work, fullstack work, and unclear asks that need framing before coding.
+Turn ambiguous requests into implementation-ready issue definitions with clear scope, acceptance criteria, and task slices.
 
 This skill defines work. It does not implement code or run validation.
 
-After the issue is ready, implementation belongs in `skills/implementation-workflow`. Post-change verification and merge-readiness checks belong in `skills/change-validation`.
+## Workflow
+
+1. **Clarify the request.** Understand what the user is asking. Identify the work type — feature, bugfix, refactor, improvement, frontend, backend, fullstack, or unclear. Read `references/work-type-examples.md` if the type is unclear.
+   - **Frontend**: emphasize UI behavior, states, accessibility, and interaction flows
+   - **Backend**: emphasize domain rules, APIs, data flow, persistence, and failure handling
+   - **Fullstack**: emphasize end-to-end flow and frontend/backend contract boundaries
+   - **Bugfix**: emphasize current vs expected behavior, repro conditions, impact, and regression risk
+   - **Refactor**: emphasize preserved behavior, design problem, constraints, and safety boundaries
+   - If the type is still unclear after description-first routing, run `scripts/classify_issue.py` for lightweight signal extraction.
+
+2. **Frame the issue.** Write a precise title. State the problem or request in observable terms. Record context — who is affected, where it happens, why it matters now.
+
+3. **Set scope.** Define what is in scope and what is explicitly excluded. Record assumptions that shape the work. Note known dependencies or constraints.
+
+4. **Write requirements.** List functional requirements (what the system must do). Add non-functional requirements (performance, accessibility, security) only when they materially matter. Cover primary flows and edge cases — failure modes, empty states, invalid input, regression-sensitive paths.
+
+5. **Define completion gates.** Write acceptance criteria as observable outcomes (use Given/When/Then when it helps clarity). Set Definition of Ready (what must be true before implementation starts) and Definition of Done (what must be true for completion). State validation expectations — what tests, checks, demos, or review points should exist during implementation.
+
+6. **Slice the work.** Break the issue into the smallest meaningful implementation steps that can be built and verified independently.
+
+7. **Surface gaps.** If key information is missing, record it under assumptions, open questions, or Definition of Ready instead of guessing. List risks — product, technical, migration, UX, data, security, performance, delivery.
+
+8. **Write the output.** Use `assets/issue-template.md` as the default shape. Keep solution detail only as far as it is already decided. After the issue is ready, pass it to `skills/implementation-workflow` for coding or `skills/change-validation` for post-merge review.
 
 ## When to use / not use
 
@@ -19,36 +39,10 @@ Use it when the request is still ambiguous and needs a precise title, problem st
 
 Do not use it when the work is already clearly scoped and the next step is implementation, execution, or post-change verification.
 
-## Work-type routing
+## References
 
-Route by work type only when it improves clarity:
-
-- **Frontend**: emphasize UI behavior, states, accessibility, and interaction flows
-- **Backend**: emphasize domain rules, APIs, data flow, persistence, and failure handling
-- **Fullstack**: emphasize end-to-end flow and frontend/backend contract boundaries
-- **Bugfix**: emphasize current vs expected behavior, repro conditions, impact, and regression risk
-- **Refactor**: emphasize preserved behavior, design problem, constraints, and safety boundaries
-
-Do not force multiple tracks if one issue definition is enough.
-
-## Framing expectations
-
-Keep the issue concrete, observable, and safe to implement.
-
-At minimum, make the problem or request, goal, scope, non-goals, acceptance criteria, validation expectations, and task slices explicit. If key information is missing, record it as an assumption, open question, or Definition of Ready gap instead of guessing.
-
-Use the issue template as the default output shape. Keep solution detail only as far as it is already decided; the goal is to remove ambiguity, not pre-implement the work.
-
-## Assets, scripts, and references
-
-- Default template: `assets/issue-template.md`
-- Optional helper script: `scripts/classify_issue.py`
-  - Use only when issue typing is unclear or repeated often enough that lightweight automation helps.
-  - Description-first routing remains the default; the script is a helper, not the primary router.
-- References:
-  - `references/issue-quality-checklist.md`
-  - `references/issue-definition-process.md`
-  - `references/issue-writing-rules.md`
-  - `references/work-type-examples.md`
-
-Reach for the references when you need the deeper checklist, full process, stronger writing rules, or work-type-specific examples.
+- `references/issue-quality-checklist.md` — final pass before calling an issue ready
+- `references/issue-definition-process.md` — full sequence with 12 detailed steps
+- `references/issue-writing-rules.md` — observable language, anti-vague patterns, readiness-gap handling
+- `references/work-type-examples.md` — type-specific framing guidance
+- `assets/issue-template.md` — default output shape

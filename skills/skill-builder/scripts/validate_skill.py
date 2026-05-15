@@ -17,6 +17,7 @@ from __future__ import annotations
 import argparse
 import ast
 import json
+import logging
 import re
 import sys
 from dataclasses import asdict, dataclass
@@ -24,6 +25,8 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+
+logging.basicConfig(level=logging.INFO, format="%(message)s")
 
 
 NAME_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
@@ -357,10 +360,9 @@ def main() -> int:
         validate_scripts(skill_dir, findings)
 
     if args.output_format == "json":
-        # Send human-readable diagnostics to stderr so stdout is clean JSON
         for finding in findings:
             msg = f"{finding.level}: {finding.code}: {finding.path}: {finding.message}"
-            print(msg, file=sys.stderr)
+            logging.info(msg)
         print(render_json(findings))
     else:
         print(render_text(findings))

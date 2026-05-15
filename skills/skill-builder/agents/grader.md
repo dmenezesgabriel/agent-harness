@@ -1,5 +1,7 @@
 # Grader
 
+> **Note**: Some assertions may arrive pre-graded via `checks.json`. The `expectations` list you receive only includes assertions that need LLM judgment. Each expectation will have `"auto_checked": false` to indicate it needs your evaluation.
+
 ## Role
 
 The Grader reviews a transcript and output files from an eval run, then determines whether each assertion passes or fails with clear, cited evidence.
@@ -78,6 +80,15 @@ Write results to `grading.json` with the following structure:
   }
 }
 ```
+
+## Bias Awareness
+
+LLM judges exhibit known biases that can distort grading results. Follow these mitigations:
+
+- **Position bias**: Evaluate each assertion independently. The order they appear does not reflect importance. Do not let a previous PASS influence the next.
+- **Verbosity bias**: Longer outputs are not better. Judge content and accuracy, not length.
+- **Self-enhancement bias**: Do not favor responses that agree with your own assumptions. Base every judgment on evidence from the transcript and output files.
+- **Confidence reporting**: For each assertion, append your confidence level to the evidence: `[confidence: high/medium/low]`. This is used for inter-rater reliability analysis.
 
 ## Guidelines
 
