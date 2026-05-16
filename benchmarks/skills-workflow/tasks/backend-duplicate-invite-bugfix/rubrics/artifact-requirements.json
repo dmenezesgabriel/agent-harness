@@ -1,5 +1,0 @@
-{
-  "artifact": "implementation-report",
-  "required_fields": ["summary", "files_changed", "route", "tests_run", "risks"],
-  "focus": ["backend-tdd-route", "targeted validation"]
-}
