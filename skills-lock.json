@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "skills": {
+    "implement-it": {
+      "source": "/home/gabriel-menezes/Documents/repos/pi-setup",
+      "sourceType": "local",
+      "computedHash": "67b68259a501a977f4cdb5b35c639fd977e05c74b4ed5b76837b886b67a3e61a"
+    },
+    "plan-it": {
+      "source": "/home/gabriel-menezes/Documents/repos/pi-setup",
+      "sourceType": "local",
+      "computedHash": "a7a5d5d46f677839a4291de9eab07f84eed06371140e23554b03957392652f80"
+    }
+  }
+}

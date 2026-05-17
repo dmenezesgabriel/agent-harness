@@ -19,7 +19,7 @@ false
 mlruns
 experiments/variants
 __pycache__
-
+.venv
 
 *-workspace/
 test-results

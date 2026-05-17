@@ -1,0 +1,19 @@
+{
+  "id": "plan-it-005",
+  "skill": "plan-it",
+  "title": "Row-Level Multi-Tenancy",
+  "complexity": "multi-file",
+  "language": "python",
+  "instruction": "Plan the refactor to add row-level multi-tenancy to an existing single-tenant Django application. Every model must be scoped to a Tenant, all queries must automatically filter by the current tenant (no per-view boilerplate), cross-tenant data leaks must be impossible, and migrations must be backwards-compatible with existing single-tenant data.",
+  "codebase_context": "```\n# Django 5, ~15 models, single-tenant today\napp/\n  tenants/       # does not exist yet\n  users/\n    models.py    # User, Profile\n  billing/\n    models.py    # Invoice, Payment\n  projects/\n    models.py    # Project, Task, Comment\nmiddleware.py   # currently only does auth\n```",
+  "gold_standard": {
+    "required_sections": [
+      "Context",
+      "Requirements",
+      "Acceptance Criteria",
+      "Tests"
+    ]
+  },
+  "evaluator": "plan_evaluator",
+  "tags": ["architecture", "security", "refactor", "multi-task", "adr-required"]
+}

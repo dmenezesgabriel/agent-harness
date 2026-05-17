@@ -1,0 +1,17 @@
+{
+  "id": "implement-it-005",
+  "skill": "implement-it",
+  "title": "Merkle Tree for Data Integrity",
+  "complexity": "single-file",
+  "language": "python",
+  "instruction": "Implement a MerkleTree class in Python. Constructor takes a list of strings (leaves). Expose: root_hash -> str (hex digest), get_proof(index: int) -> list[dict] where each dict has 'hash' and 'direction' ('left'|'right'), verify_proof(leaf: str, proof: list[dict], root: str) -> bool. Use SHA-256. Handle odd number of leaves by duplicating the last one. No external dependencies.",
+  "codebase_context": "",
+  "gold_standard": {
+    "required_sections": [],
+    "test_commands": [
+      "python3 -c \"\nfrom solution_0 import MerkleTree\nimport hashlib\n\n# deterministic root\nleaves = ['a', 'b', 'c', 'd']\ntree = MerkleTree(leaves)\nassert len(tree.root_hash) == 64  # sha256 hex\nassert tree.root_hash == MerkleTree(leaves).root_hash  # deterministic\nprint('deterministic root: PASS')\n\n# proof and verify\nfor i in range(len(leaves)):\n    proof = tree.get_proof(i)\n    assert tree.verify_proof(leaves[i], proof, tree.root_hash), f'proof failed for index {i}'\nprint('proof verify: PASS')\n\n# tampered leaf fails\nproof0 = tree.get_proof(0)\nassert not tree.verify_proof('tampered', proof0, tree.root_hash)\nprint('tamper detection: PASS')\n\n# odd number of leaves\ntree_odd = MerkleTree(['x', 'y', 'z'])\nassert len(tree_odd.root_hash) == 64\nproof_z = tree_odd.get_proof(2)\nassert tree_odd.verify_proof('z', proof_z, tree_odd.root_hash)\nprint('odd leaves: PASS')\n\nprint('ALL PASS')\n\""
+    ]
+  },
+  "evaluator": "code_evaluator",
+  "tags": ["cryptography", "data-structure", "single-file"]
+}

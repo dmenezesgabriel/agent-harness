@@ -1,0 +1,19 @@
+{
+  "id": "plan-it-002",
+  "skill": "plan-it",
+  "title": "Audit Log for Data Mutations",
+  "complexity": "multi-file",
+  "language": "python",
+  "instruction": "Plan the implementation of an audit log system that records all create, update, and delete operations on User and Order entities. Each log entry must capture: who performed the action, what changed (before/after diff), when, and from which IP. Logs must be queryable by entity type, entity ID, and actor. The system uses SQLAlchemy with a PostgreSQL backend.",
+  "codebase_context": "```\n# Existing stack: FastAPI + SQLAlchemy 2.x + PostgreSQL\n# Current models use SQLAlchemy ORM with event listeners already set up for soft deletes.\napp/\n  models/\n    base.py        # DeclarativeBase, SoftDeleteMixin\n    user.py        # User(SoftDeleteMixin)\n    order.py       # Order(SoftDeleteMixin)\n  services/\n    user_service.py\n    order_service.py\n  db.py            # async session factory\n```",
+  "gold_standard": {
+    "required_sections": [
+      "Context",
+      "Requirements",
+      "Acceptance Criteria",
+      "Tests"
+    ]
+  },
+  "evaluator": "plan_evaluator",
+  "tags": ["database", "observability", "feature", "multi-task"]
+}

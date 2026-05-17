@@ -1,0 +1,17 @@
+{
+  "id": "implement-it-002",
+  "skill": "implement-it",
+  "title": "LRU Cache",
+  "complexity": "single-file",
+  "language": "python",
+  "instruction": "Implement an LRUCache class in Python with O(1) get and put operations. Constructor takes capacity (int). get(key) returns the value or -1 if not found. put(key, value) inserts or updates; if at capacity, evict the least recently used entry. Use only stdlib (no OrderedDict shortcuts — implement with a doubly-linked list + dict).",
+  "codebase_context": "",
+  "gold_standard": {
+    "required_sections": [],
+    "test_commands": [
+      "python3 -c \"\nfrom solution_0 import LRUCache\n\ncache = LRUCache(2)\ncache.put(1, 1)\ncache.put(2, 2)\nassert cache.get(1) == 1\ncache.put(3, 3)  # evicts key 2\nassert cache.get(2) == -1\ncache.put(4, 4)  # evicts key 1\nassert cache.get(1) == -1\nassert cache.get(3) == 3\nassert cache.get(4) == 4\n\n# capacity=1 edge case\nc2 = LRUCache(1)\nc2.put(1, 1)\nc2.put(2, 2)\nassert c2.get(1) == -1\nassert c2.get(2) == 2\nprint('ALL PASS')\n\""
+    ]
+  },
+  "evaluator": "code_evaluator",
+  "tags": ["data-structure", "algorithm", "single-file"]
+}
