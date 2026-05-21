@@ -109,6 +109,7 @@ def _print_summary(summary: ExperimentSummary, skill_dir: str | None) -> None:
 @click.option("--judge/--no-judge", default=False, help="Run LLM judge (uses claude-haiku, different model = no self-enhancement bias)")
 @click.option("--task-ids", default=None, help="Comma-separated task IDs (default: all tasks for the skill)")
 @click.option("--skill-dir", default=None, help="Path to a skill variant directory (for fine-tuning experiments)")
+@click.option("--with-skill-only", is_flag=True, default=False, help="Skip without-skill condition (saves ~half the runs when comparing variants)")
 @click.option("--tracking-uri", default=None, help="MLflow tracking URI override")
 def main(
     skill: str,
@@ -118,6 +119,7 @@ def main(
     judge: bool,
     task_ids: str | None,
     skill_dir: str | None,
+    with_skill_only: bool,
     tracking_uri: str | None,
 ):
     """Run a paired benchmark: with-skill vs without-skill, log everything to MLflow."""
@@ -136,7 +138,8 @@ def main(
     tracker = MLflowTracker(tracking_uri=tracking_uri)
 
     console.print(f"\n[bold]Benchmark:[/bold] {skill} on {platform} ({model})")
-    console.print(f"[bold]Trials:[/bold] {trials} per task × 2 conditions (with / without skill)")
+    conditions_label = "1 condition (with skill only)" if with_skill_only else "2 conditions (with / without skill)"
+    console.print(f"[bold]Trials:[/bold] {trials} per task × {conditions_label}")
     if skill_dir:
         console.print(f"[bold]Skill variant:[/bold] {skill_dir}")
     console.print(f"[bold]LLM judge:[/bold] {'enabled (claude-haiku)' if judge else 'disabled'}\n")
@@ -150,6 +153,7 @@ def main(
         tracker=tracker,
         task_ids=task_id_list,
         skill_dir=skill_dir,
+        with_skill_only=with_skill_only,
     )
 
     _print_summary(summary, skill_dir)

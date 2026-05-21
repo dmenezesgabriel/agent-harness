@@ -80,6 +80,7 @@ def run_experiment(
     tracker: MLflowTracker | None = None,
     task_ids: list[str] | None = None,
     skill_dir: str | None = None,
+    with_skill_only: bool = False,
 ) -> ExperimentSummary:
     tasks = _load_tasks(tasks_dir, skill)
     if task_ids:
@@ -114,10 +115,11 @@ def run_experiment(
             for trial in range(n_trials):
                 progress.update(outer, description=f"[cyan]{task.id} trial {trial+1}/{n_trials}")
 
-                for condition, bucket in [
-                    (Condition.WITH_SKILL, with_results),
-                    (Condition.WITHOUT_SKILL, without_results),
-                ]:
+                conditions = [(Condition.WITH_SKILL, with_results)]
+                if not with_skill_only:
+                    conditions.append((Condition.WITHOUT_SKILL, without_results))
+
+                for condition, bucket in conditions:
                     result = adapter.run(task, condition, trial)
                     result = evaluator.evaluate(result, task)
                     result = _BEHAVE.evaluate(result)

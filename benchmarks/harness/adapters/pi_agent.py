@@ -41,6 +41,20 @@ def _approx_tokens(text: str) -> int:
     return len(_ENC.encode(text))
 
 
+def _skill_prompt_tokens(skill_path: Path) -> int:
+    """Count tokens the skill system prompt adds: SKILL.md + references/*.md + assets/*.md."""
+    total = 0
+    skill_md = skill_path / "SKILL.md"
+    if skill_md.exists():
+        total += _approx_tokens(skill_md.read_text())
+    for subdir in ("references", "assets"):
+        d = skill_path / subdir
+        if d.is_dir():
+            for f in sorted(d.glob("*.md")):
+                total += _approx_tokens(f.read_text())
+    return total
+
+
 def _collect_workspace_output(workspace: Path) -> str:
     """Concatenate all skill-output files for text evaluation."""
     parts: list[str] = []
@@ -108,6 +122,10 @@ class PiAgentAdapter(AgentAdapter):
                 raw_output = workspace_output if workspace_output else stdout
                 snapshot = snapshot_workspace(workspace)
 
+                input_tokens = _approx_tokens(prompt)
+                if condition == Condition.WITH_SKILL:
+                    input_tokens += _skill_prompt_tokens(skill_path)
+
                 return TrialResult(
                     task_id=task.id,
                     skill=task.skill,
@@ -116,7 +134,7 @@ class PiAgentAdapter(AgentAdapter):
                     trial_index=trial_index,
                     raw_output=raw_output,
                     latency_ms=latency_ms,
-                    input_tokens=_approx_tokens(prompt),
+                    input_tokens=input_tokens,
                     output_tokens=_approx_tokens(raw_output),
                     workspace_snapshot=snapshot,
                     error=error,

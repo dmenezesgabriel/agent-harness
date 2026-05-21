@@ -42,28 +42,46 @@ class CodeEvaluator(Evaluator):
             result.test_pass_rate = 0.0
             return result
 
-        code_blocks = _extract_code_blocks(result.raw_output)
-        has_code = len(code_blocks) > 0
+        # Prefer actual code files from workspace snapshot (written by file-based skills
+        # like implement-it) over code blocks extracted from markdown summaries.
+        snapshot_py = [
+            content
+            for path, content in sorted((result.workspace_snapshot or {}).items())
+            if path.endswith(".py") and not path.startswith("scripts/")
+        ]
 
-        if not has_code:
-            result.accuracy = 0.0
-            result.test_pass_rate = 0.0
-            result.evaluator_details = {"has_code": False}
-            return result
+        if snapshot_py:
+            code_sources = snapshot_py
+            source_label = "snapshot"
+        else:
+            code_blocks = _extract_code_blocks(result.raw_output)
+            if not code_blocks:
+                result.accuracy = 0.0
+                result.test_pass_rate = 0.0
+                result.evaluator_details = {"has_code": False}
+                return result
+            code_sources = [code for _, code in code_blocks]
+            source_label = "code_blocks"
 
         test_commands = task.gold_standard.test_commands
         if not test_commands:
-            # no test commands defined — score on presence only
-            result.accuracy = 1.0 if has_code else 0.0
-            result.test_pass_rate = result.accuracy
-            result.evaluator_details = {"has_code": True, "note": "no test commands defined"}
+            result.accuracy = 1.0
+            result.test_pass_rate = 1.0
+            result.evaluator_details = {"has_code": True, "note": "no test commands defined", "source": source_label}
             return result
 
         with tempfile.TemporaryDirectory() as workspace:
-            # write code blocks to files for evaluation
-            for i, (lang, code) in enumerate(code_blocks):
-                ext = {"python": ".py", "typescript": ".ts", "javascript": ".js"}.get(lang, ".txt")
-                Path(workspace, f"solution_{i}{ext}").write_text(code)
+            # Write full snapshot so original filenames are importable too
+            for path, content in (result.workspace_snapshot or {}).items():
+                if not path.endswith(".py") or path.startswith("scripts/"):
+                    continue
+                dest = Path(workspace) / path
+                dest.parent.mkdir(parents=True, exist_ok=True)
+                dest.write_text(content)
+
+            # Write solution_N.py aliases — test commands import from these
+            for i, code in enumerate(code_sources):
+                Path(workspace, f"solution_{i}.py").write_text(code)
 
             passed = 0
             details: list[dict] = []
@@ -79,5 +97,10 @@ class CodeEvaluator(Evaluator):
         result.precision = rate
         result.recall = rate
         result.f1 = rate
-        result.evaluator_details = {"test_results": details, "passed": passed, "total": len(test_commands)}
+        result.evaluator_details = {
+            "test_results": details,
+            "passed": passed,
+            "total": len(test_commands),
+            "source": source_label,
+        }
         return result
