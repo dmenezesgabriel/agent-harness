@@ -40,7 +40,7 @@ Do not use review-it when:
 11. Classify each finding as **Blocking**, **Non-blocking**, or **Suggestion**. Read [review-rules.md — Finding classification](references/review-rules.md#finding-classification) for the exact criteria.
 12. Determine the overall verdict: **Pass** if there are zero Blocking findings; **Fail** if there is one or more.
 13. Write the review report in `tasks/reviews/`. Read [output-rules.md](references/output-rules.md) before writing. Use [assets/review-report-template.md](assets/review-report-template.md) as the exact structure.
-14. If domain terms were defined or clarified during review, add them to `CONTEXT.md` at the project root using the format in the existing entries.
+14. If domain terms were defined or clarified during review, add them to `CONTEXT.md` at the project root using the format in the existing entries or [assets/context-template.md](assets/context-template.md) if it exists.
 
 ## Output requirement
 
@@ -63,14 +63,7 @@ The numeric prefix matches the related issue number.
 
 ## Before marking complete
 
-- [ ] Issue file was read and all FRs, NFRs, ACs, OBS, and Required Tests were extracted
-- [ ] Code changes were inspected directly (not only via implementation summary)
-- [ ] Every AC is evaluated as Pass or Fail with a concrete reason
-- [ ] Every required test category is evaluated as Present or Missing
-- [ ] Every Blocking finding references a specific FR, NFR, AC, OBS, or OT ID
-- [ ] Overall verdict is **Pass** or **Fail** — no ambiguous or partial verdicts
-- [ ] Review report created in `tasks/reviews/` using the template structure
-- [ ] No source files were modified
+- [ ] No source files were modified — this skill is read-only.
 
 ## If output fails
 
@@ -94,12 +87,4 @@ If files cannot be created:
 
 ## Final response
 
-After writing the review report, summarize:
-
-- issue reviewed
-- overall verdict (Pass or Fail)
-- count of Blocking, Non-blocking, and Suggestion findings
-- ACs that failed, if any
-- test categories missing, if any
-- ADR compliance status, if relevant
-- unresolved assumptions, if any
+After writing the review report, summarize as specified in [output-rules.md — Final response](references/output-rules.md#final-response-after-file-generation).

@@ -26,7 +26,7 @@ Three low-risk changes to the review-it skill. All three are text-only edits wit
 
 - **R-1** (`SKILL.md:64–71`): The `Before marking complete` checklist has 8 items. Seven directly restate steps 3, 5, 7, 8, 11, 12, and 13 of the workflow the agent just executed. The one non-obvious item — "No source files were modified" — enforces the read-only invariant that has no equivalent workflow step.
 - **R-2** (`SKILL.md:95–106`): The `Final response` bullet list is identical in substance to the `Final response after file generation` section in `references/output-rules.md`. Since `output-rules.md` is always read at step 13, the SKILL.md version is loaded twice. Replace with a single-line pointer.
-- **X-4** (`SKILL.md:43`): The reference to `../plan-it/assets/context-template.md` is a cross-skill relative path. Replace with `assets/context-template.md` and create `skills/review-it/assets/context-template.md` as a copy.
+- **X-4** (`SKILL.md:43`): Step 14 has no template reference, unlike the equivalent step in implement-it which links `../plan-it/assets/context-template.md` (a cross-skill relative path). Add a local reference `assets/context-template.md` and create `skills/review-it/assets/context-template.md` as a copy of `skills/plan-it/assets/context-template.md`.
 
 **Note on missing benchmark coverage**: review-it has no task JSON files in `benchmarks/tasks/review-it/`, no `review-it.feature`, and no `review_evaluator.py`. Automated quality regression detection is not possible for this task. Validation relies on code review and a manual invocation spot-check. Adding full benchmark coverage for review-it is a separate follow-up.
 
