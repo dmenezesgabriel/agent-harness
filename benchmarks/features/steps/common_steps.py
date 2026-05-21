@@ -160,6 +160,42 @@ def step_contains_any_keyword(context, pattern, keywords):
     )
 
 
+# ── Content pattern matching ──────────────────────────────────────────────────
+
+@then('every file in "{pattern}" has content matching "{regex}"')
+def step_content_matches_regex(context, pattern, regex):
+    files = sorted(context.ws.glob(pattern))
+    if not files:
+        return  # vacuously true — file-existence scenarios catch missing files
+    compiled = re.compile(regex)
+    bad = [f.name for f in files if not compiled.search(f.read_text(errors="replace"))]
+    assert not bad, (
+        f"Regex '{regex}' not found in: {bad}\nWorkspace: {context.ws}"
+    )
+
+
+@then('every file in "{pattern}" has frontmatter key "{key}" with value "{value}"')
+def step_frontmatter_key_value(context, pattern, key, value):
+    files = sorted(context.ws.glob(pattern))
+    if not files:
+        return  # vacuously true
+    kv_re = re.compile(rf"^{re.escape(key)}:\s*{re.escape(value)}\s*$", re.MULTILINE)
+    no_fm, wrong_val = [], []
+    for f in files:
+        text = f.read_text(errors="replace")
+        fm_match = re.match(r"^---\r?\n(.*?)\r?\n---", text, re.DOTALL)
+        if not fm_match:
+            no_fm.append(f.name)
+        elif not kv_re.search(fm_match.group(1)):
+            wrong_val.append(f.name)
+    parts = []
+    if no_fm:
+        parts.append(f"no frontmatter block: {no_fm}")
+    if wrong_val:
+        parts.append(f"key '{key}' not '{value}': {wrong_val}")
+    assert not parts, f"Frontmatter check failed ({context.ws}): " + "; ".join(parts)
+
+
 # ── JSON validation ───────────────────────────────────────────────────────────
 
 @then('"{filepath}" is valid JSON')

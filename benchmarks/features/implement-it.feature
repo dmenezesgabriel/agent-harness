@@ -25,6 +25,14 @@ Feature: implement-it skill produces working code with a structured summary
   Scenario: Every summary documents validations run
     Then every file in "implementation/*.md" contains any of "lint,typecheck,build,test"
 
+  # ── Content quality ──────────────────────────────────────────────────────────
+
+  Scenario: Every summary has a non-empty Design Notes section
+    Then every file in "implementation/*.md" contains non-empty section "Design Notes"
+
+  Scenario: Every summary documents ADR update status
+    Then every file in "implementation/*.md" contains any of "ADR Updates,Not applicable"
+
   # ── Code quality ──────────────────────────────────────────────────────────
 
   Scenario: Agent does not modify files outside task scope

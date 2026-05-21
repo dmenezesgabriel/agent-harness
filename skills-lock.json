@@ -2,9 +2,9 @@
   "version": 1,
   "skills": {
     "data-quality-audit": {
-      "source": "/home/gabriel-menezes/Documents/repos",
+      "source": "/data/data/com.termux/files/home/Documents/repos/agent-harness",
       "sourceType": "local",
-      "computedHash": "f0d047962eb4b7477f791f8b45e1f26899d883ffafac50682805deb4c03a65c1"
+      "computedHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     "dataviz": {
       "source": "/home/gabriel-menezes/Documents/repos",
@@ -12,14 +12,14 @@
       "computedHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     "explore-codebase": {
-      "source": "/home/gabriel-menezes/Documents/repos",
+      "source": "/data/data/com.termux/files/home/Documents/repos/agent-harness",
       "sourceType": "local",
-      "computedHash": "81b4653803417d2fe3e1dd1c239b5e12e170377569e371a77db855d9b8217abc"
+      "computedHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     "frontend-cdd-bdt": {
-      "source": "/home/gabriel-menezes/Documents/repos",
+      "source": "/data/data/com.termux/files/home/Documents/repos/agent-harness",
       "sourceType": "local",
-      "computedHash": "335daf2d9e1a5da643a6cecd412089abdc7797ae8d8e8a08e49c21fe1eddbb95"
+      "computedHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     "frontend-design": {
       "source": "/home/gabriel-menezes/Documents/repos",
@@ -27,9 +27,9 @@
       "computedHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     "frontend-design-audit": {
-      "source": "/home/gabriel-menezes/Documents/repos",
+      "source": "/data/data/com.termux/files/home/Documents/repos/agent-harness",
       "sourceType": "local",
-      "computedHash": "24bf965d4bcf6f95749e209a4eb1e7d547b1893c2297e387242611aab03d0805"
+      "computedHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     "grill-me": {
       "source": "/home/gabriel-menezes/Documents/repos",
@@ -42,27 +42,27 @@
       "computedHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     "implement-it": {
-      "source": "/home/gabriel-menezes/Documents/repos",
+      "source": "/data/data/com.termux/files/home/Documents/repos/agent-harness",
       "sourceType": "local",
       "computedHash": "27fc00e88c187a14be0344e20681ce761b35e2722173719e6f73d9e82d6b1978"
     },
     "naming-design-refactor": {
-      "source": "/home/gabriel-menezes/Documents/repos",
+      "source": "/data/data/com.termux/files/home/Documents/repos/agent-harness",
       "sourceType": "local",
-      "computedHash": "a302bfc84956d9f9afd84d0d47f5c56e906dc4599655313d54395d2425cabc63"
+      "computedHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     "next-best-practices": {
-      "source": "/home/gabriel-menezes/Documents/repos",
+      "source": "/data/data/com.termux/files/home/Documents/repos/agent-harness",
       "sourceType": "local",
-      "computedHash": "25b8cd35fc50638d7a605227bd4c9931e0c5ec3fbfe481f43dae39a7a0365194"
+      "computedHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     "performance-scalability-audit": {
-      "source": "/home/gabriel-menezes/Documents/repos",
+      "source": "/data/data/com.termux/files/home/Documents/repos/agent-harness",
       "sourceType": "local",
-      "computedHash": "3453e6c3a0d2ad07861b8c42080b5c16cc1b393aab75d5263b59d7a6dc44fff5"
+      "computedHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     "plan-it": {
-      "source": "/home/gabriel-menezes/Documents/repos",
+      "source": "/data/data/com.termux/files/home/Documents/repos/agent-harness",
       "sourceType": "local",
       "computedHash": "2655f6b6066847530d54d01dae70e3ea6f6aa32536627392c324873dfccf322e"
     },
@@ -72,14 +72,14 @@
       "computedHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     "review-it": {
-      "source": "/home/gabriel-menezes/Documents/repos",
+      "source": "/data/data/com.termux/files/home/Documents/repos/agent-harness",
       "sourceType": "local",
-      "computedHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      "computedHash": "b063e39825b75b1481fef979c8e843cb90f05675fa918f5c92d9d607882a97c5"
     },
     "security-vulnerability-audit": {
-      "source": "/home/gabriel-menezes/Documents/repos",
+      "source": "/data/data/com.termux/files/home/Documents/repos/agent-harness",
       "sourceType": "local",
-      "computedHash": "fffd2dcdd736ce9869459fa2c9b8a24928da9120f66fd240987e36e273c5c55a"
+      "computedHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     "setup-pre-commit": {
       "source": "/home/gabriel-menezes/Documents/repos",
@@ -87,24 +87,24 @@
       "computedHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     "software-design-audit": {
-      "source": "/home/gabriel-menezes/Documents/repos",
+      "source": "/data/data/com.termux/files/home/Documents/repos/agent-harness",
       "sourceType": "local",
-      "computedHash": "eb36b163022085f046a28e2de42b4bef82a390e6c719b8496cfcd464497f7d6b"
+      "computedHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     "software-feature-planning": {
-      "source": "/home/gabriel-menezes/Documents/repos",
+      "source": "/data/data/com.termux/files/home/Documents/repos/agent-harness",
       "sourceType": "local",
-      "computedHash": "3fe3ac9a4d68847f42c312b66ec9974792733b1cfce2cbcba6770bbc4d9ee507"
+      "computedHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     "tdd": {
-      "source": "/home/gabriel-menezes/Documents/repos",
+      "source": "/data/data/com.termux/files/home/Documents/repos/agent-harness",
       "sourceType": "local",
-      "computedHash": "32843c6357a3148bcb6c6caea05077d925afaac57322c064955c29469a4d9775"
+      "computedHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     "test-quality-audit": {
-      "source": "/home/gabriel-menezes/Documents/repos",
+      "source": "/data/data/com.termux/files/home/Documents/repos/agent-harness",
       "sourceType": "local",
-      "computedHash": "d0e9480ca3d3a60313aa16843d6ee35a5052d33babc8a0c959d37e9ca98be3bf"
+      "computedHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     }
   }
 }

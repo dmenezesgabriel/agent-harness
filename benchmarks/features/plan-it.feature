@@ -49,6 +49,20 @@ Feature: plan-it skill produces structured, file-based planning output
   Scenario: Every issue file has a Dependencies section
     Then every file in "issues/*.md" contains non-empty section "Dependencies"
 
+  # ── Content quality ──────────────────────────────────────────────────────────
+
+  Scenario: Every issue file contains at least one properly formatted functional requirement
+    Then every file in "issues/*.md" has content matching "FR-\d{3}:"
+
+  Scenario: Every issue file acceptance criteria contain observable Gherkin language
+    Then every file in "issues/*.md" contains any of "Given,When,Then"
+
+  Scenario: Every issue file has active status in frontmatter
+    Then every file in "issues/*.md" has frontmatter key "status" with value "active"
+
+  Scenario: Every issue file contains test IDs linked to requirement IDs
+    Then every file in "issues/*.md" has content matching "Covers (FR|AC|NFR|OBS)-\d{3}"
+
   # ── ADR stubs (optional but valid when present) ───────────────────────────
 
   Scenario: If docs/adrs directory exists it contains only .md files
