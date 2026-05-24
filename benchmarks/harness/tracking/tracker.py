@@ -1,10 +1,10 @@
 """MLflow tracking integration.
 
 Each experiment = one (skill, platform) combination.
-Each run = one (task_id, condition, trial_index) triple.
+Each run = one task_id.
 
 Tags capture the full experimental cell for faceted SQL queries:
-  skill, platform, condition, task_id, complexity, language, trial
+  skill, platform, task_id, complexity, language
 """
 from __future__ import annotations
 
@@ -14,7 +14,9 @@ from pathlib import Path
 
 import mlflow
 
-from harness.models import ExperimentSummary, Task, TrialResult
+from harness.models import Finding, RunSummary, Task, TaskResult
+from harness.tracking.base import Tracker
+from harness.tracking.findings import log_finding as _log_finding
 
 _MLRUNS_DIR = str(Path(__file__).parent.parent.parent / "mlruns")
 
@@ -23,26 +25,24 @@ def _experiment_name(skill: str, platform: str) -> str:
     return f"{skill}__{platform}"
 
 
-class MLflowTracker:
+class MLflowTracker(Tracker):
     def __init__(self, tracking_uri: str | None = None):
         uri = tracking_uri or os.environ.get("MLFLOW_TRACKING_URI", f"file://{_MLRUNS_DIR}")
         mlflow.set_tracking_uri(uri)
 
-    def log_trial(self, result: TrialResult, task: Task, skill_dir: str | None = None, skill_content_hash: str | None = None) -> str:
-        """Log one trial result. Returns the run_id."""
+    def log_result(self, result: TaskResult, task: Task, skill_dir: str | None = None, skill_content_hash: str | None = None) -> str:
+        """Log one task result. Returns the run_id."""
         exp_name = _experiment_name(result.skill, result.platform)
         mlflow.set_experiment(exp_name)
 
-        with mlflow.start_run(run_name=f"{result.task_id}__{result.condition}__trial{result.trial_index}") as run:
+        with mlflow.start_run(run_name=result.task_id) as run:
             tags = {
                 "skill": result.skill,
                 "platform": result.platform,
-                "condition": result.condition,
                 "task_id": result.task_id,
                 "task_title": task.title,
                 "complexity": task.complexity,
                 "language": task.language,
-                "trial": str(result.trial_index),
                 "evaluator": task.evaluator,
             }
             if skill_dir:
@@ -81,36 +81,30 @@ class MLflowTracker:
 
             return run.info.run_id
 
-    def log_summary(self, summary: ExperimentSummary, skill_content_hash: str | None = None, skill_snapshot_dir: Path | None = None) -> None:
-        """Log aggregated experiment summary as a separate MLflow run."""
+    def log_summary(self, summary: RunSummary, skill_content_hash: str | None = None, skill_snapshot_dir: Path | None = None) -> None:
+        """Log aggregated run summary as a separate MLflow run."""
         exp_name = _experiment_name(summary.skill, summary.platform)
         mlflow.set_experiment(exp_name)
 
-        with mlflow.start_run(run_name=f"__summary__n{summary.n_tasks}_t{summary.n_trials}"):
+        with mlflow.start_run(run_name=f"__summary__n{summary.n_tasks}"):
             mlflow.set_tags({
                 "skill": summary.skill,
                 "platform": summary.platform,
                 "run_type": "summary",
                 "n_tasks": str(summary.n_tasks),
-                "n_trials": str(summary.n_trials),
             })
             if skill_content_hash:
                 mlflow.set_tag("skill_content_hash", skill_content_hash)
-            for metric_name, (mean, std) in summary.with_skill.items():
-                mlflow.log_metric(f"with_skill__{metric_name}__mean", mean)
-                mlflow.log_metric(f"with_skill__{metric_name}__std", std)
-            for metric_name, (mean, std) in summary.without_skill.items():
-                mlflow.log_metric(f"without_skill__{metric_name}__mean", mean)
-                mlflow.log_metric(f"without_skill__{metric_name}__std", std)
-            for metric_name, pval in summary.p_values.items():
-                mlflow.log_metric(f"p_value__{metric_name}", pval)
-            for metric_name, eff in summary.effect_sizes.items():
-                mlflow.log_metric(f"effect_size__{metric_name}", eff)
-            # behave summary
-            for condition_label, agg in [("with_skill", summary.with_skill), ("without_skill", summary.without_skill)]:
-                if "behave_pass_rate" in agg:
-                    mean, std = agg["behave_pass_rate"]
-                    mlflow.log_metric(f"{condition_label}__behave_pass_rate__mean", mean)
-                    mlflow.log_metric(f"{condition_label}__behave_pass_rate__std", std)
+            for metric_name, (mean, std) in summary.metrics.items():
+                mlflow.log_metric(f"metrics__{metric_name}__mean", mean)
+                mlflow.log_metric(f"metrics__{metric_name}__std", std)
             if skill_snapshot_dir and skill_snapshot_dir.is_dir():
                 mlflow.log_artifacts(str(skill_snapshot_dir), artifact_path="skill_snapshot")
+
+    def log_finding(self, finding: Finding) -> None:
+        _log_finding(
+            finding.category,
+            finding.message,
+            run_id=finding.run_id,
+            append_note=finding.append_note,
+        )

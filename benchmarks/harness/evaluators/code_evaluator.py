@@ -11,7 +11,7 @@ import tempfile
 from pathlib import Path
 
 from harness.evaluators.base import Evaluator
-from harness.models import Task, TrialResult
+from harness.models import Task, TaskResult
 
 
 def _extract_code_blocks(text: str) -> list[tuple[str, str]]:
@@ -36,7 +36,7 @@ def _run_command(cmd: str, cwd: str, timeout: int = 30) -> tuple[bool, str]:
 class CodeEvaluator(Evaluator):
     name = "code_evaluator"
 
-    def evaluate(self, result: TrialResult, task: Task) -> TrialResult:
+    def evaluate(self, result: TaskResult, task: Task) -> TaskResult:
         if result.error or not result.raw_output:
             result.accuracy = 0.0
             result.test_pass_rate = 0.0
@@ -94,13 +94,13 @@ class CodeEvaluator(Evaluator):
         rate = passed / len(test_commands)
         result.test_pass_rate = rate
         result.accuracy = 1.0 if rate == 1.0 else rate
-        result.precision = rate
-        result.recall = rate
-        result.f1 = rate
+        # precision/recall/f1 intentionally omitted — code evaluation has no
+        # meaningful true/false-positive distinction for test pass/fail results.
         result.evaluator_details = {
             "test_results": details,
             "passed": passed,
             "total": len(test_commands),
             "source": source_label,
+            "note": "precision/recall/f1 are not computed for code evaluation tasks",
         }
         return result

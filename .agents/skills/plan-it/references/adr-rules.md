@@ -39,7 +39,6 @@ Planning phase:
 - Identify that an ADR is needed.
 - Create a lightweight ADR stub.
 - Capture context, options, recommendation, and open questions.
-- Link the ADR to affected task files.
 
 ## ADR status
 
@@ -117,7 +116,6 @@ Tasks should not silently depend on unrecorded architecture decisions.
 
 Good:
 - The task references the ADR in Dependencies.
-- The ADR references the related task file.
 - The task Definition of Ready says the ADR stub exists.
 - The task Definition of Done says the ADR is accepted or explicitly left proposed with open questions.
 

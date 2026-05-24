@@ -14,6 +14,16 @@
       "Tests"
     ]
   },
-  "evaluator": "plan_evaluator",
-  "tags": ["async", "queue", "feature", "typescript", "multi-task"]
+  "evaluator": "plan",
+  "evaluators": [
+    "plan",
+    "behave"
+  ],
+  "tags": [
+    "async",
+    "queue",
+    "feature",
+    "typescript",
+    "multi-task"
+  ]
 }

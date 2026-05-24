@@ -12,6 +12,14 @@
       "python3 -c \"\nimport time\nfrom solution_0 import TokenBucket\n\n# basic consume\nbucket = TokenBucket(capacity=5, refill_rate=1.0)\nassert bucket.consume(3) == True\nassert bucket.consume(3) == False  # not enough tokens\nprint('basic consume: PASS')\n\n# full capacity respected\nbucket2 = TokenBucket(capacity=3, refill_rate=100.0)\nassert bucket2.consume(3) == True\nassert bucket2.consume(1) == False\ntime.sleep(0.05)  # 100 t/s * 0.05s = 5 tokens, but cap is 3\nassert bucket2.consume(3) == True\nprint('capacity cap: PASS')\n\nprint('ALL PASS')\n\""
     ]
   },
-  "evaluator": "code_evaluator",
-  "tags": ["algorithm", "concurrency", "single-file"]
+  "evaluator": "code",
+  "evaluators": [
+    "code",
+    "behave"
+  ],
+  "tags": [
+    "algorithm",
+    "concurrency",
+    "single-file"
+  ]
 }

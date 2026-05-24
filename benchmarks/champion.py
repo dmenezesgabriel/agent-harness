@@ -111,10 +111,10 @@ def compare(skill: str, tracking_uri: str | None):
             "champion": is_champ,
             "platform": platforms,
             "trials": trials,
-            "behave_pass_rate": _mean(group, "with_skill__behave_pass_rate__mean"),
-            "f1": _mean(group, "with_skill__f1__mean"),
-            "quality_score": _mean(group, "with_skill__quality_score__mean"),
-            "latency_ms": _mean(group, "with_skill__latency_ms__mean"),
+            "behave_pass_rate": _mean(group, "metrics__behave_pass_rate__mean"),
+            "f1": _mean(group, "metrics__f1__mean"),
+            "quality_score": _mean(group, "metrics__quality_score__mean"),
+            "latency_ms": _mean(group, "metrics__latency_ms__mean"),
         })
 
     # sort: champion first, then by f1 descending

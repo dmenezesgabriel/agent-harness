@@ -8,10 +8,6 @@
 
 <YYYY-MM-DD>
 
-## Related Tasks
-
-- `tasks/issues/001-example-task.md`
-
 ## Context
 
 <Short explanation of the problem, constraints, and why this decision matters.>

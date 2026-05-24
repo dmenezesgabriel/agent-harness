@@ -41,6 +41,20 @@ Usability tests verify clarity, accessibility, validation placement, empty state
 
 Observability tests verify logs, metrics, traces, analytics events, correlation IDs, and sensitive-data exclusion.
 
+## Test isolation
+
+When specifying unit tests that interact with collaborators, note what the test needs to verify:
+
+- If the test verifies behavior given a fixed response from a dependency, no annotation is needed — the implementer will use a Stub.
+- If the test must verify that a side effect occurred (e.g., an email was sent, an event was emitted), state that explicitly — the implementer will use a Spy.
+- Do not specify call-count or argument expectations in a task spec — those are implementation detail, not requirements.
+
+When specifying integration tests, state the expected infrastructure level:
+
+- Write "against a real database" when the task risk is the database boundary itself.
+- Write "against an in-memory store" when the task risk is service behavior and real infrastructure is not the concern — the implementer will use a Fake.
+- Do not write "mock the service" in an integration test — an integration test where all boundaries are replaced by Mocks is a unit test and gives none of the boundary confidence.
+
 ## Unit tests
 
 Use unit tests for isolated logic.

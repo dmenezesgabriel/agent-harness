@@ -1,12 +1,10 @@
-"""Experiment runner: orchestrates adapters, evaluators, and MLflow tracking.
+"""Benchmark runner: orchestrates adapters, evaluators, and tracking.
 
 For each task:
-  - run N trials under WITH_SKILL condition
-  - run N trials under WITHOUT_SKILL condition
-  - evaluate each trial
-  - optionally run LLM judge pairwise on one pair per task
-  - log all results to MLflow
-  - aggregate and return ExperimentSummary with statistical tests
+  - run once with the skill
+  - apply task.evaluators pipeline in declaration order
+  - log the result to the tracker
+  - aggregate and return RunSummary
 """
 from __future__ import annotations
 
@@ -16,27 +14,18 @@ from pathlib import Path
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
 
+import harness.evaluators  # registers built-in evaluators in evaluator_registry
+
 from harness.adapters.base import AgentAdapter
 from harness.skill_hash import compute_skill_hash
-from harness.evaluators.base import Evaluator
-from harness.evaluators.behave_evaluator import BehaveEvaluator
-from harness.evaluators.code_evaluator import CodeEvaluator
-from harness.evaluators.llm_judge import LLMJudge
-from harness.evaluators.metrics import cohens_d, mean_std
-from harness.evaluators.plan_evaluator import PlanEvaluator
-from harness.models import Condition, ExperimentSummary, Task, TrialResult
-from harness.tracking.tracker import MLflowTracker
+from harness.evaluators.metrics import mean_std
+from harness.models import RunSummary, Task, TaskResult
+from harness.registry import evaluator_registry
+from harness.tracking.base import Tracker
 
 console = Console()
 
 _REPO_ROOT = Path(__file__).parent.parent.parent
-
-_EVALUATORS: dict[str, Evaluator] = {
-    "plan_evaluator": PlanEvaluator(),
-    "code_evaluator": CodeEvaluator(),
-}
-
-_BEHAVE = BehaveEvaluator()
 
 _SCALAR_METRICS = [
     "accuracy", "precision", "recall", "f1",
@@ -56,32 +45,14 @@ def _load_tasks(tasks_dir: Path, skill: str) -> list[Task]:
     return tasks
 
 
-def _statistical_test(a: list[float], b: list[float]) -> tuple[float, float]:
-    """Wilcoxon signed-rank test. Returns (p_value, cohen_d)."""
-    try:
-        from scipy.stats import wilcoxon
-        if len(a) < 2 or len(a) != len(b):
-            return 1.0, 0.0
-        _, p = wilcoxon(a, b, zero_method="wilcox", alternative="two-sided")
-        ma, sa = mean_std(a)
-        mb, sb = mean_std(b)
-        d = cohens_d(ma, mb, sa, sb)
-        return float(p), d
-    except Exception:
-        return 1.0, 0.0
-
-
 def run_experiment(
     adapter: AgentAdapter,
     skill: str,
     tasks_dir: Path,
-    n_trials: int = 3,
-    use_judge: bool = False,
-    tracker: MLflowTracker | None = None,
+    tracker: Tracker,
     task_ids: list[str] | None = None,
     skill_dir: str | None = None,
-    with_skill_only: bool = False,
-) -> ExperimentSummary:
+) -> RunSummary:
     tasks = _load_tasks(tasks_dir, skill)
     if task_ids:
         tasks = [t for t in tasks if t.id in task_ids]
@@ -92,11 +63,7 @@ def run_experiment(
     _skill_dir = Path(skill_dir) if skill_dir else _REPO_ROOT / "skills" / skill
     skill_content_hash = compute_skill_hash(_skill_dir) if _skill_dir.is_dir() else None
 
-    tracker = tracker or MLflowTracker()
-    judge = LLMJudge() if use_judge else None
-
-    all_with: dict[str, list[float]] = {m: [] for m in _SCALAR_METRICS}
-    all_without: dict[str, list[float]] = {m: [] for m in _SCALAR_METRICS}
+    all_metrics: dict[str, list[float]] = {m: [] for m in _SCALAR_METRICS}
 
     with Progress(
         SpinnerColumn(),
@@ -107,65 +74,28 @@ def run_experiment(
         outer = progress.add_task(f"[cyan]{skill} on {adapter.name}", total=len(tasks))
 
         for task in tasks:
-            evaluator = _EVALUATORS.get(task.evaluator, PlanEvaluator())
+            progress.update(outer, description=f"[cyan]{task.id}")
 
-            with_results: list[TrialResult] = []
-            without_results: list[TrialResult] = []
+            result = adapter.run(task)
+            for ev_name in task.evaluators:
+                ev = evaluator_registry.resolve(ev_name)
+                result = ev.evaluate(result, task)
 
-            for trial in range(n_trials):
-                progress.update(outer, description=f"[cyan]{task.id} trial {trial+1}/{n_trials}")
+            tracker.log_result(result, task, skill_dir=skill_dir, skill_content_hash=skill_content_hash)
 
-                conditions = [(Condition.WITH_SKILL, with_results)]
-                if not with_skill_only:
-                    conditions.append((Condition.WITHOUT_SKILL, without_results))
-
-                for condition, bucket in conditions:
-                    result = adapter.run(task, condition, trial)
-                    result = evaluator.evaluate(result, task)
-                    result = _BEHAVE.evaluate(result)
-
-                    if judge:
-                        score, reason = judge.pointwise(result, task.title, task.instruction)
-                        result.judge_score = score
-                        result.judge_verdict = reason
-
-                    tracker.log_trial(result, task, skill_dir=skill_dir, skill_content_hash=skill_content_hash)
-                    bucket.append(result)
-
-            # pairwise judge on first trial pair
-            if judge and with_results and without_results:
-                winner, reason = judge.pairwise(
-                    with_results[0], without_results[0],
-                    task.title, task.instruction,
-                )
-                console.print(f"  [dim]judge pairwise: {winner} — {reason}[/dim]")
-
-            for result, bucket in [(r, all_with) for r in with_results] + [(r, all_without) for r in without_results]:
-                target = all_with if result.condition == Condition.WITH_SKILL.value else all_without
-                for m in _SCALAR_METRICS:
-                    target[m].append(getattr(result, m, 0.0))
+            for m in _SCALAR_METRICS:
+                all_metrics[m].append(getattr(result, m, 0.0))
 
             progress.advance(outer)
 
     # aggregate
-    with_agg = {m: mean_std(all_with[m]) for m in _SCALAR_METRICS}
-    without_agg = {m: mean_std(all_without[m]) for m in _SCALAR_METRICS}
-    p_values = {}
-    effect_sizes = {}
-    for m in ["accuracy", "precision", "recall", "f1", "quality_score", "test_pass_rate", "behave_pass_rate"]:
-        p, d = _statistical_test(all_with[m], all_without[m])
-        p_values[m] = p
-        effect_sizes[m] = d
+    metrics_agg = {m: mean_std(all_metrics[m]) for m in _SCALAR_METRICS}
 
-    summary = ExperimentSummary(
+    summary = RunSummary(
         skill=skill,
         platform=adapter.name,
         n_tasks=len(tasks),
-        n_trials=n_trials,
-        with_skill=with_agg,
-        without_skill=without_agg,
-        p_values=p_values,
-        effect_sizes=effect_sizes,
+        metrics=metrics_agg,
     )
     tracker.log_summary(
         summary,
@@ -173,3 +103,25 @@ def run_experiment(
         skill_snapshot_dir=_skill_dir if _skill_dir.is_dir() else None,
     )
     return summary
+
+
+class BenchmarkRunner:
+    def __init__(self, tracker: Tracker) -> None:
+        self._tracker = tracker
+
+    def run_experiment(
+        self,
+        adapter: AgentAdapter,
+        skill: str,
+        tasks_dir: Path,
+        task_ids: list[str] | None = None,
+        skill_dir: str | None = None,
+    ) -> RunSummary:
+        return run_experiment(
+            adapter=adapter,
+            skill=skill,
+            tasks_dir=tasks_dir,
+            tracker=self._tracker,
+            task_ids=task_ids,
+            skill_dir=skill_dir,
+        )

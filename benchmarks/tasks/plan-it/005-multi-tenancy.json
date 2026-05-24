@@ -14,6 +14,16 @@
       "Tests"
     ]
   },
-  "evaluator": "plan_evaluator",
-  "tags": ["architecture", "security", "refactor", "multi-task", "adr-required"]
+  "evaluator": "plan",
+  "evaluators": [
+    "plan",
+    "behave"
+  ],
+  "tags": [
+    "architecture",
+    "security",
+    "refactor",
+    "multi-task",
+    "adr-required"
+  ]
 }

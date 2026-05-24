@@ -36,19 +36,59 @@ def mean_std(values: list[float]) -> tuple[float, float]:
     return m, math.sqrt(variance)
 
 
+_FILLER = {"n/a", "tbd", "todo", "see above", "see requirements", "see below", "none", "pending", "wip"}
+
+
+def _is_substantive(text: str) -> bool:
+    """True if text has meaningful content (not just filler words or whitespace)."""
+    stripped = text.strip()
+    if not stripped:
+        return False
+    if len(stripped) < 20:
+        # Short text passes only if it isn't a known filler phrase
+        return stripped.lower() not in _FILLER
+    return True
+
+
 def section_present(text: str, section_name: str) -> bool:
-    """Check whether a markdown section heading is present and has non-empty content."""
+    """Check whether a markdown section heading is present and has substantive content.
+
+    A section fails if its only content is filler text ("N/A", "TBD", etc.) or is
+    shorter than 20 characters, preventing trivially empty sections from scoring.
+    """
     lines = text.splitlines()
     in_section = False
-    has_content = False
+    content_lines: list[str] = []
     for line in lines:
         stripped = line.strip()
         if stripped.startswith("#") and section_name.lower() in stripped.lower():
             in_section = True
+            content_lines = []
             continue
         if in_section:
             if stripped.startswith("#"):
                 break
             if stripped:
-                has_content = True
-    return in_section and has_content
+                content_lines.append(stripped)
+    if not in_section or not content_lines:
+        return False
+    full_content = " ".join(content_lines)
+    return _is_substantive(full_content)
+
+
+def extract_section(text: str, section_name: str) -> str:
+    """Return the body text of a named markdown section, or empty string."""
+    lines = text.splitlines()
+    in_section = False
+    body: list[str] = []
+    for line in lines:
+        stripped = line.strip()
+        if stripped.startswith("#") and section_name.lower() in stripped.lower():
+            in_section = True
+            body = []
+            continue
+        if in_section:
+            if stripped.startswith("#"):
+                break
+            body.append(line)
+    return "\n".join(body)

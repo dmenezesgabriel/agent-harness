@@ -1,9 +1,8 @@
 """Pi coding agent adapter.
 
-With skill:    pi --print --model <m> --skill <skills/plan-it> "<instruction>"
-Without skill: pi --print --model <m> --no-skills "<instruction>"
+Invokes: pi --print --model <m> --skill <skills/plan-it> "<instruction>"
 
-Workspace: pi runs in a fresh temp directory per trial. For file-writing skills
+Workspace: pi runs in a fresh temp directory per task. For file-writing skills
 (plan-it, implement-it) the temp dir includes the repo's scripts/ so the skill
 can call ensure-issues-dir.sh etc. After pi exits, any files written to the
 workspace are collected and used as the primary output for evaluation.
@@ -16,15 +15,14 @@ from __future__ import annotations
 
 import shutil
 import subprocess
-import tempfile
 import time
 from pathlib import Path
 
 import tiktoken
 
-from harness.adapters._workspace import init_workspace, snapshot_workspace
 from harness.adapters.base import AgentAdapter
-from harness.models import Condition, Task, TrialResult
+from harness.adapters.workspace import TempWorkspaceManager, WorkspaceManager
+from harness.models import Task, TaskResult
 
 _REPO_ROOT = Path(__file__).parent.parent.parent.parent
 _DEFAULT_MODEL = "openai-codex/gpt-5.4-mini"
@@ -68,87 +66,85 @@ def _collect_workspace_output(workspace: Path) -> str:
 class PiAgentAdapter(AgentAdapter):
     name = "pi-agent"
 
-    def __init__(self, model: str = _DEFAULT_MODEL, skill_dir: str | None = None):
+    def __init__(
+        self,
+        model: str = _DEFAULT_MODEL,
+        skill_dir: str | None = None,
+        workspace_manager: WorkspaceManager = TempWorkspaceManager(),
+    ):
         if not shutil.which("pi"):
             raise RuntimeError("pi CLI not found in PATH")
         self.model = model
         self._skill_dir = Path(skill_dir) if skill_dir else None
+        self.workspace_manager = workspace_manager
 
-    def run(self, task: Task, condition: Condition, trial_index: int) -> TrialResult:
+    def run(self, task: Task) -> TaskResult:
         prompt = task.instruction
         if task.codebase_context:
             prompt = f"{task.instruction}\n\n## Codebase Context\n\n{task.codebase_context}"
 
-        with tempfile.TemporaryDirectory() as tmp:
-            workspace = Path(tmp)
+        workspace: Path | None = None
+        t0 = time.perf_counter()
+        try:
+            workspace = self.workspace_manager.init_workspace(task)
 
-            # initialise an isolated git root with pre-created output dirs so the
-            # skill can write files without walking up to the real repo
-            init_workspace(workspace)
+            skill_path = self._skill_dir or (_REPO_ROOT / "skills" / task.skill)
+            skill_scripts = skill_path / "scripts"
+            if skill_scripts.exists():
+                shutil.copytree(skill_scripts, workspace / "scripts")
 
-            # copy the skill's own scripts/ into workspace/scripts/ first,
-            # then overlay repo scripts/ — skill-specific scripts take precedence
-            # because SKILL.md was written against them
-            if condition == Condition.WITH_SKILL:
-                skill_path = self._skill_dir or (_REPO_ROOT / "skills" / task.skill)
-                skill_scripts = skill_path / "scripts"
-                if skill_scripts.exists():
-                    shutil.copytree(skill_scripts, workspace / "scripts")
+            cmd = [
+                "pi", "--print", "--model", self.model, "--no-session",
+                "--skill", str(skill_path),
+                prompt,
+            ]
 
-            cmd = ["pi", "--print", "--model", self.model, "--no-session"]
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                cwd=str(workspace),
+                timeout=300,
+            )
+            latency_ms = (time.perf_counter() - t0) * 1000
 
-            if condition == Condition.WITH_SKILL:
-                cmd += ["--skill", str(skill_path)]
+            stdout = result.stdout.strip()
+            error = f"exit {result.returncode}" if result.returncode != 0 else ""
+
+            workspace_output = _collect_workspace_output(workspace)
+            raw_output = workspace_output if workspace_output else stdout
+            snapshot = self.workspace_manager.snapshot_workspace(workspace)
+
+            input_tokens = _approx_tokens(prompt) + _skill_prompt_tokens(skill_path)
+
+            if snapshot:
+                output_tokens = sum(_approx_tokens(v) for v in snapshot.values())
             else:
-                cmd += ["--no-skills"]
+                output_tokens = _approx_tokens(raw_output)
 
-            cmd.append(prompt)
-
-            t0 = time.perf_counter()
-            try:
-                result = subprocess.run(
-                    cmd,
-                    capture_output=True,
-                    text=True,
-                    cwd=str(workspace),
-                    timeout=300,
-                )
-                latency_ms = (time.perf_counter() - t0) * 1000
-
-                stdout = result.stdout.strip()
-                error = f"exit {result.returncode}" if result.returncode != 0 else ""
-
-                workspace_output = _collect_workspace_output(workspace)
-                raw_output = workspace_output if workspace_output else stdout
-                snapshot = snapshot_workspace(workspace)
-
-                input_tokens = _approx_tokens(prompt)
-                if condition == Condition.WITH_SKILL:
-                    input_tokens += _skill_prompt_tokens(skill_path)
-
-                return TrialResult(
-                    task_id=task.id,
-                    skill=task.skill,
-                    platform=self.name,
-                    condition=condition.value,
-                    trial_index=trial_index,
-                    raw_output=raw_output,
-                    latency_ms=latency_ms,
-                    input_tokens=input_tokens,
-                    output_tokens=_approx_tokens(raw_output),
-                    workspace_snapshot=snapshot,
-                    error=error,
-                    evaluator_details={
-                        "approx_tokens": True,
-                        "wrote_files": bool(workspace_output),
-                        "stdout_len": len(stdout),
-                    },
-                )
-            except subprocess.TimeoutExpired:
-                latency_ms = (time.perf_counter() - t0) * 1000
-                return TrialResult(
-                    task_id=task.id, skill=task.skill, platform=self.name,
-                    condition=condition.value, trial_index=trial_index,
-                    raw_output="", latency_ms=latency_ms,
-                    input_tokens=0, output_tokens=0, error="timeout",
-                )
+            return TaskResult(
+                task_id=task.id,
+                skill=task.skill,
+                platform=self.name,
+                raw_output=raw_output,
+                latency_ms=latency_ms,
+                input_tokens=input_tokens,
+                output_tokens=output_tokens,
+                workspace_snapshot=snapshot,
+                error=error,
+                evaluator_details={
+                    "approx_tokens": True,
+                    "wrote_files": bool(workspace_output),
+                    "stdout_len": len(stdout),
+                },
+            )
+        except subprocess.TimeoutExpired:
+            latency_ms = (time.perf_counter() - t0) * 1000
+            return TaskResult(
+                task_id=task.id, skill=task.skill, platform=self.name,
+                raw_output="", latency_ms=latency_ms,
+                input_tokens=0, output_tokens=0, error="timeout",
+            )
+        finally:
+            if workspace is not None:
+                self.workspace_manager.cleanup(workspace)

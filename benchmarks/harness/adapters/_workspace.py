@@ -40,3 +40,15 @@ def snapshot_workspace(workspace: Path) -> dict[str, str]:
         except OSError:
             pass
     return snapshot
+
+
+def diff_workspace(
+    before: dict[str, str], after: dict[str, str]
+) -> dict[str, str]:
+    """Return only files the agent created or modified.
+
+    Files present in ``before`` with identical content are excluded
+    (scaffolding). Files absent from ``before`` or with changed content
+    are kept.
+    """
+    return {k: v for k, v in after.items() if k not in before or before[k] != v}

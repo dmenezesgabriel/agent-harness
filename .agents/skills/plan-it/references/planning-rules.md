@@ -33,6 +33,44 @@ Bad:
 - Build all API endpoints first.
 - Build all UI screens before connecting real behavior.
 
+## Narrow scope rule
+
+One cohesive concern per task. A concern is cohesive when its changes can be described in one sentence and affect one module or component boundary.
+
+Good:
+- Add the narrow-scope rule to `planning-rules.md`. (One sentence, one file.)
+
+Bad:
+- Update the planning rules, revise the implement-it context template, and fix a typo in the review skill. (Three unrelated concerns bundled — cannot be described in one sentence.)
+
+Change tasks and validation tasks are always separate. Applying an edit and running a benchmark to validate it are different tasks.
+
+Good:
+- Task 1: Apply text edits to `SKILL.md` to update the narrow-scope guidance.
+- Task 2: Run the benchmark against the updated `SKILL.md` and promote the champion if it improves.
+
+Bad:
+- A single task that edits `SKILL.md` and also runs a benchmark to validate the change.
+
+If a task would touch unrelated modules for different reasons, split by concern.
+
+Good:
+- Task A: Update `planning-rules.md` to add the system integrity rule.
+- Task B: Update `implement-it/SKILL.md` to reference the new rule.
+
+Bad:
+- A single task that modifies three skill directories for independent reasons, requiring the whole bundle to pass before any change ships.
+
+## System integrity rule
+
+After implementing a task in isolation, the system must remain fully functional. No task may be a partial implementation that requires a subsequent task to restore basic operation.
+
+Good:
+- A task adds a new rule to `planning-rules.md`. After the task is applied, the file is independently readable and the new rule takes effect immediately — no follow-up task is required.
+
+Bad:
+- A task removes an existing behavior from `SKILL.md` with the expectation that a follow-up task will replace it. Between tasks, the skill is missing that behavior and is partially broken.
+
 ## Keep decisions open
 
 Keep irreversible decisions open as long as practical: plan around stable behavior, boundaries, and contracts before locking in frameworks, databases, vendors, protocols, or infrastructure details.

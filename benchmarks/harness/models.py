@@ -5,11 +5,6 @@ from enum import Enum
 from typing import Any
 
 
-class Condition(str, Enum):
-    WITH_SKILL = "with_skill"
-    WITHOUT_SKILL = "without_skill"
-
-
 class Platform(str, Enum):
     API = "api"            # direct Anthropic API — controlled experiments
     CLAUDE_CODE = "claude-code"
@@ -37,6 +32,7 @@ class Task:
     codebase_context: str = ""
     gold_standard: GoldStandard = field(default_factory=GoldStandard)
     tags: list[str] = field(default_factory=list)
+    evaluators: list[str] = field(default_factory=list)
 
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> Task:
@@ -47,27 +43,27 @@ class Task:
             test_commands=gs_raw.get("test_commands", []),
             rubric=gs_raw.get("rubric", {}),
         )
+        evaluator = d["evaluator"]
         return cls(
             id=d["id"],
             skill=d["skill"],
             title=d["title"],
             instruction=d["instruction"],
-            evaluator=d["evaluator"],
+            evaluator=evaluator,
             complexity=d.get("complexity", "single-file"),
             language=d.get("language", "python"),
             codebase_context=d.get("codebase_context", ""),
             gold_standard=gold_standard,
             tags=d.get("tags", []),
+            evaluators=d.get("evaluators", [evaluator]),
         )
 
 
 @dataclass
-class TrialResult:
+class TaskResult:
     task_id: str
     skill: str
     platform: str
-    condition: str
-    trial_index: int
     raw_output: str
     latency_ms: float
     input_tokens: int
@@ -94,14 +90,17 @@ class TrialResult:
 
 
 @dataclass
-class ExperimentSummary:
+class RunSummary:
     skill: str
     platform: str
     n_tasks: int
-    n_trials: int
     # aggregate metrics: mean ± std
-    with_skill: dict[str, tuple[float, float]] = field(default_factory=dict)
-    without_skill: dict[str, tuple[float, float]] = field(default_factory=dict)
-    # statistical test results
-    p_values: dict[str, float] = field(default_factory=dict)
-    effect_sizes: dict[str, float] = field(default_factory=dict)
+    metrics: dict[str, tuple[float, float]] = field(default_factory=dict)
+
+
+@dataclass
+class Finding:
+    category: str
+    message: str
+    run_id: str | None = None
+    append_note: bool = False

@@ -14,22 +14,13 @@ Use the existing project language, framework, architecture, commands, style, and
 
 Implementation must satisfy the task requirements without introducing unnecessary complexity, broad rewrites, hidden workarounds, or unrelated changes.
 
-Use design principles selectively.
-Avoid overengineering and workarounds.
-Do not apply every design principle by default.
-Prefer the simplest implementation that satisfies the task, preserves existing architecture, and keeps likely change points safe.
-
-Use SOLID, design patterns, Ports and Adapters, Clean Architecture, Component-Driven Development, semantic HTML, accessibility, and Atomic Design as decision tools, not mandatory ceremonies.
-
-Apply a principle only when it reduces current risk, clarifies responsibility, protects a volatile boundary, improves testability, improves accessibility, or follows existing project architecture.
-
-Do not introduce abstractions, layers, adapters, factories, ports, design-system structure, or architectural patterns just because they are considered good practice.
+Use design principles selectively — read [design-rules.md](references/design-rules.md) when a design decision arises.
 
 ## When NOT to use this skill
 
 Do not use implement-it when:
 
-- There is no defined task, issue, or story — use plan-it to create one first.
+- There is no defined task, issue, or story with acceptance criteria — create one first.
 - The request is exploratory or the acceptance criteria are undefined.
 - The user wants a quick one-off answer or a prototype without production quality.
 - The work is purely architectural review or documentation with no code changes.
@@ -52,32 +43,21 @@ Do not use implement-it when:
 13. Update ADRs when implementation confirms, changes, or rejects architectural assumptions. Read [adr-implementation-rules.md](references/adr-implementation-rules.md) only when touching an ADR-backed decision.
 14. Validate with the relevant test, lint, typecheck, build, accessibility, and runtime checks. If validation fails, fix the root cause — do not disable linting, skip tests, or use `--force` flags. If a failure is pre-existing and out of scope, document it in the summary under "Unresolved assumptions". See [implementation-rules.md — Validation loop](references/implementation-rules.md#validation-loop).
 15. Write a short implementation summary. Read [output-rules.md](references/output-rules.md) before writing.
-16. If domain terms were defined or clarified during implementation, add them to `CONTEXT.md` at the project root using the format in the existing entries or [assets/context-template.md](../plan-it/assets/context-template.md) if it exists.
+16. If domain terms were defined or clarified during implementation, add them to `CONTEXT.md` at the project root using the format in the existing entries or [assets/context-template.md](assets/context-template.md) if it exists.
 
-## Output requirement
+## Output files
 
-When implementation changes are complete, create or update an implementation summary in `tasks/implementation/`.
-
-Before writing implementation output, run:
+Create an implementation summary in `tasks/implementation/` when changes are complete.
 
 ```bash
 mkdir -p tasks/implementation
 ```
 
-Use this naming format:
-
-```text
-tasks/implementation/001-create-project-summary.md
-tasks/implementation/002-invite-project-member-summary.md
-```
+See [output-rules.md](references/output-rules.md) for naming and report structure.
 
 ## Before marking complete
 
-- [ ] Implementation summary created in `tasks/implementation/` using the template structure
-- [ ] All required tests added or updated and passing
-- [ ] Lint, typecheck, and build pass (or pre-existing failures documented)
 - [ ] Accessibility checks completed if any UI was touched
-- [ ] ADRs updated only where implementation confirmed, changed, or rejected a decision
 - [ ] No unrelated files modified
 
 ## If validation fails

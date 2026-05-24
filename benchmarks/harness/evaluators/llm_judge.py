@@ -14,7 +14,7 @@ import random
 
 import anthropic
 
-from harness.models import TrialResult
+from harness.models import TaskResult
 
 _JUDGE_MODEL = "claude-haiku-4-5-20251001"
 
@@ -77,7 +77,7 @@ class LLMJudge:
         self.model = model
         self._client = anthropic.Anthropic()
 
-    def pointwise(self, result: TrialResult, task_title: str, instruction: str,
+    def pointwise(self, result: TaskResult, task_title: str, instruction: str,
                   rubric: str = _DEFAULT_RUBRIC) -> tuple[float, str]:
         """Score a single output. Returns (score_0_to_10, reason)."""
         if not result.raw_output:
@@ -105,8 +105,8 @@ class LLMJudge:
 
     def pairwise(
         self,
-        with_skill: TrialResult,
-        without_skill: TrialResult,
+        with_skill: TaskResult,
+        without_skill: TaskResult,
         task_title: str,
         instruction: str,
         rubric: str = _DEFAULT_RUBRIC,

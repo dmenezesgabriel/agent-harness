@@ -12,18 +12,21 @@ import sys
 import tempfile
 from pathlib import Path
 
-from harness.models import TrialResult
+from harness.evaluators.base import Evaluator
+from harness.models import Task, TaskResult
 
 _FEATURES_DIR = Path(__file__).parent.parent.parent / "features"
 
 
-class BehaveEvaluator:
+class BehaveEvaluator(Evaluator):
     """Run Gherkin feature assertions against a workspace snapshot."""
+
+    name = "behave"
 
     def __init__(self, features_dir: Path | None = None):
         self._features_dir = features_dir or _FEATURES_DIR
 
-    def evaluate(self, result: TrialResult) -> TrialResult:
+    def evaluate(self, result: TaskResult, task: Task | None = None) -> TaskResult:
         feature_file = self._features_dir / f"{result.skill}.feature"
         if not feature_file.exists():
             return result

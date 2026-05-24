@@ -18,25 +18,25 @@ def mlflow_backend(tmp_path):
     mlflow.set_experiment("plan-it__pi-agent")
 
     # run A
-    with mlflow.start_run(run_name="__summary__n5_t3") as run_a:
+    with mlflow.start_run(run_name="__summary__n5") as run_a:
         mlflow.set_tags({
             "run_type": "summary", "skill": "plan-it", "platform": "pi-agent",
-            "n_tasks": "5", "n_trials": "3",
+            "n_tasks": "5",
             "skill_content_hash": "sha256:aaaa000000000000",
         })
-        mlflow.log_metrics({"with_skill__f1__mean": 0.8, "with_skill__behave_pass_rate__mean": 0.9,
-                            "with_skill__quality_score__mean": 7.0, "with_skill__latency_ms__mean": 1200.0})
+        mlflow.log_metrics({"metrics__f1__mean": 0.8, "metrics__behave_pass_rate__mean": 0.9,
+                            "metrics__quality_score__mean": 7.0, "metrics__latency_ms__mean": 1200.0})
         run_a_id = run_a.info.run_id
 
     # run B
-    with mlflow.start_run(run_name="__summary__n5_t3") as run_b:
+    with mlflow.start_run(run_name="__summary__n5") as run_b:
         mlflow.set_tags({
             "run_type": "summary", "skill": "plan-it", "platform": "pi-agent",
-            "n_tasks": "5", "n_trials": "3",
+            "n_tasks": "5",
             "skill_content_hash": "sha256:bbbb000000000000",
         })
-        mlflow.log_metrics({"with_skill__f1__mean": 0.7, "with_skill__behave_pass_rate__mean": 0.8,
-                            "with_skill__quality_score__mean": 6.5, "with_skill__latency_ms__mean": 1100.0})
+        mlflow.log_metrics({"metrics__f1__mean": 0.7, "metrics__behave_pass_rate__mean": 0.8,
+                            "metrics__quality_score__mean": 6.5, "metrics__latency_ms__mean": 1100.0})
         run_b_id = run_b.info.run_id
 
     yield {"uri": uri, "run_a_id": run_a_id, "run_b_id": run_b_id}

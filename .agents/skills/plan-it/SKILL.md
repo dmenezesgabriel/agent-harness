@@ -40,45 +40,15 @@ Do not use plan-it when:
 13. Write ADR stubs in `docs/adrs/` only when architecture decisions are needed. Use [assets/adr-template.md](assets/adr-template.md) as the exact structure.
 14. If domain terms were defined or clarified during planning, add them to `CONTEXT.md` at the project root using the format in [assets/context-template.md](assets/context-template.md).
 
-## Issue output requirement
+## Output files
 
-After all tasks are defined, create one Markdown file per task in `tasks/issues/`.
-
-Before writing issue files, run:
+Create one issue file per task in `tasks/issues/` and one ADR stub per decision in `docs/adrs/`.
 
 ```bash
-mkdir -p tasks/issues
+mkdir -p tasks/issues docs/adrs
 ```
 
-Then write task files using priority and dependency order:
-
-```text
-tasks/issues/001-create-project.md
-tasks/issues/002-invite-project-member.md
-tasks/issues/003-protect-project-settings.md
-```
-
-## ADR output requirement
-
-During planning, identify whether any task needs an Architectural Decision Record.
-
-Create an ADR stub when a task depends on a decision that is hard to reverse, cross-cutting, or affects architecture boundaries, data, infrastructure, security, scalability, protocols, vendors, or external dependencies.
-
-Do not create ADRs for ordinary implementation details.
-
-Before writing ADR files, run:
-
-```bash
-mkdir -p docs/adrs
-```
-
-Then write ADR files using chronological numeric order:
-
-```text
-docs/adrs/001-use-notification-port.md
-docs/adrs/002-store-project-events.md
-docs/adrs/003-use-opentelemetry.md
-```
+See [output-files.md](references/output-files.md) for numbering, naming, and ordering rules.
 
 ## Before marking complete
 
@@ -107,6 +77,10 @@ If files cannot be created:
 **Test padding**: Do not mark a test type as applicable unless the task genuinely requires it. Padding the test list wastes implementation effort and devalues the meaningful tests.
 
 **Blocking-unaware ordering**: Task priority order must reflect dependencies. A task that unblocks others must come first, regardless of perceived importance.
+
+**Partial implementations**: Do not create a task that removes or disables existing behavior without replacing it in the same task. The system must be fully functional after each task is applied independently.
+
+**Bundled change and validation**: Do not put code or text changes and their benchmark or promotion steps in the same task. Apply the change in one task and measure or promote in a subsequent task.
 
 ## Final response
 

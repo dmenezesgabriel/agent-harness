@@ -2,13 +2,13 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
-from harness.models import Condition, Task, TrialResult
+from harness.models import Task, TaskResult
 
 
 class AgentAdapter(ABC):
     name: str
 
     @abstractmethod
-    def run(self, task: Task, condition: Condition, trial_index: int) -> TrialResult:
-        """Run one trial of a task under the given condition and return a TrialResult."""
+    def run(self, task: Task) -> TaskResult:
+        """Run a task and return a TaskResult."""
         ...

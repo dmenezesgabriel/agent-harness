@@ -1,6 +1,6 @@
 # Project Context
 
-This file defines the domain vocabulary for this project. Both plan-it and implement-it read it at session start to use consistent terminology in task names, requirements, acceptance criteria, test names, and code.
+This file defines the domain vocabulary for this project. Skills read it at session start to use consistent terminology in task names, requirements, acceptance criteria, test names, and code.
 
 Update this file when a domain term is first defined or clarified. Do not batch updates — add terms as they emerge.
 

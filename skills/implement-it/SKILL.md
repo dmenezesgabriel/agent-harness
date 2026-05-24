@@ -20,7 +20,7 @@ Use design principles selectively — read [design-rules.md](references/design-r
 
 Do not use implement-it when:
 
-- There is no defined task, issue, or story — use plan-it to create one first.
+- There is no defined task, issue, or story with acceptance criteria — create one first.
 - The request is exploratory or the acceptance criteria are undefined.
 - The user wants a quick one-off answer or a prototype without production quality.
 - The work is purely architectural review or documentation with no code changes.
@@ -45,22 +45,15 @@ Do not use implement-it when:
 15. Write a short implementation summary. Read [output-rules.md](references/output-rules.md) before writing.
 16. If domain terms were defined or clarified during implementation, add them to `CONTEXT.md` at the project root using the format in the existing entries or [assets/context-template.md](assets/context-template.md) if it exists.
 
-## Output requirement
+## Output files
 
-When implementation changes are complete, create or update an implementation summary in `tasks/implementation/`.
-
-Before writing implementation output, run:
+Create an implementation summary in `tasks/implementation/` when changes are complete.
 
 ```bash
 mkdir -p tasks/implementation
 ```
 
-Use this naming format:
-
-```text
-tasks/implementation/001-create-project-summary.md
-tasks/implementation/002-invite-project-member-summary.md
-```
+See [output-rules.md](references/output-rules.md) for naming and report structure.
 
 ## Before marking complete
 

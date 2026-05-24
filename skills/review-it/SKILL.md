@@ -19,9 +19,9 @@ This skill is read-only. It does not modify source files. It writes only the rev
 
 Do not use review-it when:
 
-- There is no issue or task file — use plan-it to create one first.
-- The request is a general open-ended code critique with no task contract to evaluate against — use the built-in `review` skill for PR-level code review instead.
-- The implementation has not started — use implement-it first.
+- There is no issue or task file — create one first.
+- The request is a general open-ended code critique with no task contract to evaluate against — use a PR-level code review instead.
+- The implementation has not started — complete it first.
 - The user is asking how the code works, not whether it satisfies a task.
 - The task acceptance criteria are undefined or unresolved.
 
@@ -42,24 +42,15 @@ Do not use review-it when:
 13. Write the review report in `tasks/reviews/`. Read [output-rules.md](references/output-rules.md) before writing. Use [assets/review-report-template.md](assets/review-report-template.md) as the exact structure.
 14. If domain terms were defined or clarified during review, add them to `CONTEXT.md` at the project root using the format in the existing entries or [assets/context-template.md](assets/context-template.md) if it exists.
 
-## Output requirement
+## Output files
 
-When the review is complete, create a review report in `tasks/reviews/`.
-
-Before writing, run:
+Create one review report in `tasks/reviews/` when the review is complete.
 
 ```bash
 mkdir -p tasks/reviews
 ```
 
-Use this naming format:
-
-```text
-tasks/reviews/001-create-project-review.md
-tasks/reviews/002-invite-project-member-review.md
-```
-
-The numeric prefix matches the related issue number.
+See [output-rules.md](references/output-rules.md) for naming, numbering, and report structure.
 
 ## Before marking complete
 

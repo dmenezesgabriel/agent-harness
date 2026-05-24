@@ -42,9 +42,9 @@
       "computedHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     "implement-it": {
-      "source": "/data/data/com.termux/files/home/Documents/repos/agent-harness",
+      "source": "/home/gabriel-menezes/Documents/repos/agent-harness",
       "sourceType": "local",
-      "computedHash": "27fc00e88c187a14be0344e20681ce761b35e2722173719e6f73d9e82d6b1978"
+      "computedHash": "6b4975810d82c373df963803a61797416c8adb102a0820f2dae30fd731693cef"
     },
     "naming-design-refactor": {
       "source": "/data/data/com.termux/files/home/Documents/repos/agent-harness",
@@ -62,9 +62,9 @@
       "computedHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     "plan-it": {
-      "source": "/data/data/com.termux/files/home/Documents/repos/agent-harness",
+      "source": "/home/gabriel-menezes/Documents/repos/agent-harness",
       "sourceType": "local",
-      "computedHash": "2655f6b6066847530d54d01dae70e3ea6f6aa32536627392c324873dfccf322e"
+      "computedHash": "aa86ecacb29fd067a0ee53d23ebd1696e111529e3bfa6ad6240290ad2015fd8f"
     },
     "playwright-cli": {
       "source": "/home/gabriel-menezes/Documents/repos",
@@ -72,9 +72,9 @@
       "computedHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     "review-it": {
-      "source": "/data/data/com.termux/files/home/Documents/repos/agent-harness",
+      "source": "/home/gabriel-menezes/Documents/repos/agent-harness",
       "sourceType": "local",
-      "computedHash": "b063e39825b75b1481fef979c8e843cb90f05675fa918f5c92d9d607882a97c5"
+      "computedHash": "3745c439f4e010ea1b6010865481ee293b8d0230f6288855bde8b7619eda5611"
     },
     "security-vulnerability-audit": {
       "source": "/data/data/com.termux/files/home/Documents/repos/agent-harness",
