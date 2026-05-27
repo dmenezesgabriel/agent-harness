@@ -38,12 +38,13 @@ Do not use implement-it when:
 8. Use semantic HTML and native controls before ARIA for frontend work. Treat accessibility as part of component behavior, not final polish. See [implementation-rules.md — Semantic HTML and accessibility](references/implementation-rules.md#semantic-html-and-accessibility).
 9. Apply design principles selectively — read [design-rules.md](references/design-rules.md) when a design decision arises.
 10. Preserve architecture boundaries and dependency direction.
-11. Add or update only meaningful tests. Read [testing-rules.md](references/testing-rules.md) before adding or changing any test type.
-12. Add or update logs, metrics, traces, and analytics only when required by the task or risk.
+11. Add or update only meaningful tests. Every new test must run with the project's single test command (e.g. `pytest`, `npm test`) without manual setup or interactive input. If a test requires infrastructure that is not yet automated, automating it is part of this task — not a follow-up. Read [testing-rules.md](references/testing-rules.md) before adding or changing any test type.
+12. Add or update logs, metrics, traces, and analytics only when required by the task or risk. When adding logs, use structured format with named fields (JSON or key=value) — not prose sentences. Prose logs require heuristic parsing and degrade the signal-to-noise ratio for future debugging. This applies only to logs added or modified in the current task. Example: `log(event="validation_failed", field="email", value=value)` not `log(f"Validation failed for {value}")`.
 13. Update ADRs when implementation confirms, changes, or rejects architectural assumptions. Read [adr-implementation-rules.md](references/adr-implementation-rules.md) only when touching an ADR-backed decision.
 14. Validate with the relevant test, lint, typecheck, build, accessibility, and runtime checks. If validation fails, fix the root cause — do not disable linting, skip tests, or use `--force` flags. If a failure is pre-existing and out of scope, document it in the summary under "Unresolved assumptions". See [implementation-rules.md — Validation loop](references/implementation-rules.md#validation-loop).
-15. Write a short implementation summary. Read [output-rules.md](references/output-rules.md) before writing.
-16. If domain terms were defined or clarified during implementation, add them to `CONTEXT.md` at the project root using the format in the existing entries or [assets/context-template.md](assets/context-template.md) if it exists.
+15. Re-read the issue and verify every AC-*, FR-*, NFR-*, and OBS-* item against the actual code — not the intended design. For each item, state explicitly whether the code satisfies it. Fix any that do not before writing the summary.
+16. Write a short implementation summary. Read [output-rules.md](references/output-rules.md) before writing.
+17. If domain terms were defined or clarified during implementation, add them to `CONTEXT.md` at the project root using the format in the existing entries or [assets/context-template.md](assets/context-template.md) if it exists.
 
 ## Output files
 
@@ -57,6 +58,7 @@ See [output-rules.md](references/output-rules.md) for naming and report structur
 
 ## Before marking complete
 
+- [ ] Every AC-*, FR-*, NFR-*, OBS-* from the issue verified against actual code
 - [ ] Accessibility checks completed if any UI was touched
 - [ ] No unrelated files modified
 
@@ -80,6 +82,14 @@ If a validation check (test, lint, build) fails after implementation:
 **Unjustified "not applicable"**: Do not mark a test type as not applicable unless you have a concrete reason. State the reason in the summary.
 
 **Convention override**: If the codebase uses a different convention than what you would normally choose, follow the codebase convention. Consistency outranks personal preference.
+
+**Unannotated interfaces**: In typed languages (TypeScript, Python with type hints, Go, Java, Kotlin, Rust), every new and modified public function signature, return type, and class field must carry an explicit type annotation. Omitting annotations forces every reader to infer types from usage context, increasing the risk of misuse. Does not apply to dynamically typed languages without type hint conventions. Example: `def run(tasks, config)` is wrong; `def run(tasks: list[Task], config: RunConfig) -> RunSummary` is right.
+
+**Generic naming**: Do not use generic names such as `data`, `handler`, `result`, `item`, or `Manager`; use names drawn from the project's domain vocabulary. Generic names produce false positives in symbol searches and make code harder to navigate. Example: prefer `task_result` over `result`, `run_summary` over `data`.
+
+**Deep nesting**: Do not nest conditionals or loops beyond 2–3 levels in new code. Use guard clauses and early returns to handle errors and edge cases at the top, leaving the core logic flat. Example: replace `if valid: if active: process()` with `if not valid or not active: return; process()`.
+
+**Vague error messages**: Every exception and error response must include the offending value and the expected constraint — not just a label. Label-only messages force the reader to trace back through code and state to understand what failed. Example: raise `ValueError(f"Unknown adapter {name!r}; expected one of {list(registry)}")` not `ValueError("Invalid adapter")`.
 
 **Routine ADR update**: Do not update ADRs for routine changes. Update only when implementation confirms, changes, or rejects an architectural assumption.
 
