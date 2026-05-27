@@ -47,6 +47,32 @@ Bad:
 - Skip component state tests and rely only on manual clicking.
 - Skip accessibility tests after changing a form or dialog.
 
+## Test doubles
+
+Use the lightest double that gives the test the confidence it needs.
+
+**Dummy** — passed to satisfy a required parameter but never used. The test does not care about this collaborator at all.
+
+**Stub** — returns a fixed value from a dependency. Use when the test verifies how the subject handles a collaborator's response, not whether the collaborator was called.
+
+**Spy** — a stub that also records how it was called. Use when the test must verify a side effect occurred: an email was sent, an event was emitted, a metric was recorded.
+
+**Mock** — pre-programmed with exact call expectations verified after the act step. Use only when the interaction itself is the behavior under test and argument order or call count is a correctness constraint — not a style preference.
+
+**Fake** — a working lightweight implementation that takes shortcuts not suitable for production (e.g., InMemoryTestDatabase, in-process message bus). Use in integration tests when the task risk is behavior, not the real infrastructure.
+
+Good:
+- Stub the payment gateway to return a fixed declined response — the test verifies the service surfaces the correct error, not how many times the gateway was called.
+- Spy on the email service to assert exactly one invitation email was sent — the side effect is the behavior under test.
+- Fake the repository with an in-memory store when testing the service layer and the task risk is business logic, not database behavior.
+- Pass a Dummy logger when the subject requires one but logging is not part of the test scenario.
+
+Bad:
+- Mock every collaborator in a unit test — the test becomes a specification of call order, not behavior; any refactor that changes internal wiring breaks it.
+- Use a Mock where a Stub suffices — the test will fail on any refactor that touches call count or argument shape without changing visible behavior.
+- Replace all integration test boundaries with Mocks — that is a unit test pretending to be an integration test and gives none of the boundary confidence.
+- Use a Fake when the task risk is the real infrastructure — the shortcut removes the exact confidence the test was meant to give.
+
 ## Unit tests
 
 Use unit tests for isolated rules, validators, mappers, permissions, reducers, hooks, components, and domain logic.

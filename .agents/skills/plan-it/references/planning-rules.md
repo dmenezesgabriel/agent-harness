@@ -430,11 +430,16 @@ Define observable pass/fail outcomes.
 Prefer Gherkin.
 Do not duplicate the use cases word-for-word.
 
-Good:
+For any AC that encodes a non-obvious constraint — a business rule, a compliance requirement, a workaround for an upstream bug, or a concurrency constraint — include a brief WHY clause embedded inside the AC text. Straightforward ACs whose intent is self-evident do not require a WHY clause.
+
+Good (self-evident — no WHY clause needed):
 - `AC-001`: **Given** a signed-in user, **When** they submit a valid project form, **Then** the project appears on the dashboard.
 - `AC-002`: **Given** a project name with 81 characters, **When** the user submits the form, **Then** the name field shows a validation error.
 - `AC-003`: **Given** an invalid email, **When** the owner sends an invitation, **Then** the email field shows “Enter a valid email.”
 - `AC-004`: **Given** a member without owner permission, **When** they open project settings, **Then** they see an access-denied message.
+
+Good (non-obvious constraint — WHY clause embedded inside the AC):
+- `AC-005`: **Given** an active session, **When** a user submits a project form while another request is in flight, **Then** the second write is rejected — prevents partial records under concurrent write.
 
 Bad:
 - The form should work.
