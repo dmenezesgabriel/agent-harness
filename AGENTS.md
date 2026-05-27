@@ -1,3 +1,14 @@
+## Behavior
+
+- State assumptions before implementing. If uncertain, ask — don't guess through it.
+- If multiple interpretations exist, name them. Don't pick silently.
+- If a simpler approach exists, say so. Push back when warranted.
+- Minimum code that solves the problem. No speculative features, no unrequested abstractions.
+- Touch only what you must. Don't improve adjacent code that isn't broken.
+- Match existing style even if you'd do it differently.
+- Remove imports/vars/functions that YOUR changes made unused. Leave pre-existing dead code alone unless asked.
+- If you write 200 lines and it could be 50, rewrite it first.
+
 ## Code style
 
 - Functions: 4-20 lines. Split if longer.
