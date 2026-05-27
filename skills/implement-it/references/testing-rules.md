@@ -51,15 +51,7 @@ Bad:
 
 Use the lightest double that gives the test the confidence it needs.
 
-**Dummy** — passed to satisfy a required parameter but never used. The test does not care about this collaborator at all.
-
-**Stub** — returns a fixed value from a dependency. Use when the test verifies how the subject handles a collaborator's response, not whether the collaborator was called.
-
-**Spy** — a stub that also records how it was called. Use when the test must verify a side effect occurred: an email was sent, an event was emitted, a metric was recorded.
-
-**Mock** — pre-programmed with exact call expectations verified after the act step. Use only when the interaction itself is the behavior under test and argument order or call count is a correctness constraint — not a style preference.
-
-**Fake** — a working lightweight implementation that takes shortcuts not suitable for production (e.g., InMemoryTestDatabase, in-process message bus). Use in integration tests when the task risk is behavior, not the real infrastructure.
+**Dummy** — satisfies a required parameter; test doesn't use it. **Stub** — returns a fixed response; use when verifying how the subject handles a dependency's output, not whether it was called. **Spy** — stub that records calls; use when verifying a side effect occurred (email sent, event emitted, metric recorded). **Mock** — pre-programmed with exact call expectations; use only when interaction order/count is itself the behavior under test. **Fake** — lightweight working implementation (e.g., `InMemoryTestDatabase`); use in integration tests when risk is behavior, not real infrastructure.
 
 Good:
 - Stub the payment gateway to return a fixed declined response — the test verifies the service surfaces the correct error, not how many times the gateway was called.
@@ -81,7 +73,6 @@ Good:
 - Validate that `project.name` accepts 1–80 characters.
 - Validate that duplicate invitations are rejected for the same project and email.
 - Validate that only owners can update project settings.
-- Validate that `ProjectForm` disables submit while saving.
 - Validate that an invalid email shows the expected field error.
 
 Bad:
@@ -217,10 +208,8 @@ Good:
 - Create button prevents duplicate submissions while request is pending.
 - Empty dashboard explains how to create the first project.
 - Keyboard user can submit the form and read validation errors.
-- Focus moves to the first invalid field after failed submit when that is the project convention.
 - Required inputs have accessible names.
 - Navigation uses links, and actions use buttons.
-- Dialog focus moves inside on open and returns to the trigger on close.
 
 Bad:
 - Say “make it user friendly.”

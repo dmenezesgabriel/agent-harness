@@ -34,7 +34,7 @@ Do not use implement-it when:
 4. Identify relevant existing architecture, tests, conventions, components, services, boundaries, accessibility patterns, and ADRs.
 5. Implement the smallest safe vertical slice that satisfies the task. See [implementation-rules.md — Vertical-slice implementation](references/implementation-rules.md#vertical-slice-implementation).
 6. Use TDD for logic, APIs, services, domain rules, data flows, permissions, and regressions when practical. See [implementation-rules.md — TDD workflow](references/implementation-rules.md#tdd-workflow).
-7. Use Component-Driven Development for frontend UI work when practical. See [implementation-rules.md — CDD workflow](references/implementation-rules.md#component-driven-development-workflow).
+7. For frontend UI work, use CDD: identify component boundary → define props/states/a11y → implement semantic HTML first → verify isolated states (loading, error, disabled, success) → compose into the page. See [implementation-rules.md — CDD workflow](references/implementation-rules.md#component-driven-development-workflow) for full patterns and examples.
 8. Use semantic HTML and native controls before ARIA for frontend work. Treat accessibility as part of component behavior, not final polish. See [implementation-rules.md — Semantic HTML and accessibility](references/implementation-rules.md#semantic-html-and-accessibility).
 9. Apply design principles selectively — read [design-rules.md](references/design-rules.md) when a design decision arises.
 10. Preserve architecture boundaries and dependency direction.
