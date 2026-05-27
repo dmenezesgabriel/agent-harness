@@ -177,31 +177,9 @@ Bad:
 
 ## Semantic HTML and accessibility
 
-For frontend work, accessibility is part of implementation, not a final polish step.
+Accessibility is part of implementation, not final polish. Use semantic HTML before ARIA; native controls before custom widgets; ARIA only when native semantics fall short.
 
-Use semantic HTML before ARIA.
-Use native elements before custom widgets.
-Use ARIA only when native semantics are not enough.
-
-Good:
-- Use `<button>` for actions.
-- Use `<a href="...">` for navigation.
-- Use `<label>` associated with each form control.
-- Use field-level error text connected to the invalid input.
-- Use headings in logical order.
-- Use lists, tables, forms, and landmarks when they match the content.
-- Keep focus visible and predictable.
-- Ensure dialogs move focus in, trap focus when open, and restore focus when closed.
-- Announce async validation or save errors when needed.
-
-Bad:
-- Use `<div onClick>` as a button.
-- Use `<span>` as a link.
-- Remove focus outlines without replacement.
-- Add ARIA roles that conflict with native semantics.
-- Use placeholders as the only label.
-- Render form errors far from the related field.
-- Hide interactive controls from keyboard users.
+See [design-rules.md — Semantic HTML and accessibility](design-rules.md#semantic-html-and-accessibility), [Keyboard and focus behavior](design-rules.md#keyboard-and-focus-behavior), and [Forms and validation accessibility](design-rules.md#forms-and-validation-accessibility) for the full rules and good/bad examples.
 
 ## Atomic Design guidance
 
@@ -327,22 +305,7 @@ Bad:
 
 ## Error handling
 
-Handle expected failures explicitly.
-
-Good:
-- Return `400` with `{ code, message, field }` for validation errors.
-- Return `403` when a member changes owner-only settings.
-- Show inline form errors next to the related field.
-- Associate form errors with the related input.
-- Preserve focus or announce errors when a form submission fails.
-- Log unexpected failures with request ID and safe context.
-
-Bad:
-- Catch and ignore errors.
-- Return generic `500` for validation failures.
-- Show “Something went wrong” for every error.
-- Log tokens, passwords, email bodies, or personal secrets.
-- Disable a broken button instead of fixing the failing state.
+Handle expected failures explicitly: return structured errors (`{ code, message, field }`) with the correct HTTP status code; show inline field-level errors; preserve focus or announce failures on form submission; log with safe context only (never tokens, passwords, or raw payloads). Never catch-and-ignore, return generic `500` for validation failures, or use UI hiding as a fix.
 
 ## Observability during implementation
 
@@ -356,11 +319,7 @@ Good:
 - Exclude descriptions, email bodies, tokens, passwords, and secrets from logs.
 
 Bad:
-- Add logs everywhere.
-- Track every click by default.
-- Log raw request bodies.
-- Add metrics without names, tags, or usage.
-- Add analytics that duplicates existing events.
+- Add logs, metrics, or analytics without specificity — no raw payloads, no indiscriminate click tracking, no unnamed metrics, no duplicate events.
 
 ## Completion rule
 

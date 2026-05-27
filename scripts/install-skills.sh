@@ -4,18 +4,18 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 
-# Uninstall skills that have been moved to _deprecated or _on_revision
+# Uninstall skills that have been moved to _deprecated or _on_revision (Claude Code only)
 for subdir in _deprecated _on_revision; do
   if [[ -d "$PROJECT_DIR/skills/$subdir" ]]; then
     mapfile -t stale < <(find "$PROJECT_DIR/skills/$subdir" -maxdepth 1 -mindepth 1 -type d -exec basename {} \;)
     if [[ ${#stale[@]} -gt 0 ]]; then
-      npx skills remove "${stale[@]}" -y 2>/dev/null || true
+      npx skills remove "${stale[@]}" --agent 'claude-code' -y 2>/dev/null || true
     fi
   fi
 done
 
-# Install skills; npx skills add only discovers root-level skills (excludes _* dirs by convention)
-npx skills add "$PROJECT_DIR" --skill '*' -y
+# Install skills to Claude Code only; opencode.json and .pi/settings.json consume skills/* directly
+npx skills add "$PROJECT_DIR" --skill '*' --agent 'claude-code' -y
 
 # Copy skill scripts to scripts/ so agents can call them as
 # `bash scripts/<name>.sh` from the project root.

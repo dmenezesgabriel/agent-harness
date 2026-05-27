@@ -31,26 +31,6 @@ Bad:
 - Add Clean Architecture layers to a small script or isolated utility.
 - Introduce a pattern to look “enterprise-ready.”
 
-## Follow the existing architecture first
-
-Use SOLID, design patterns, Ports and Adapters, Clean Architecture, Component-Driven Development, semantic HTML, accessibility, or Atomic Design only when they improve the current task.
-
-Do not introduce a new architecture style just because this skill mentions it.
-
-Good:
-- Follow the existing feature-folder convention for frontend code.
-- Use the existing service and repository boundary for backend code.
-- Add a port for email delivery because the task touches a volatile provider.
-- Add component states using the project’s existing story or test pattern.
-- Follow the project’s existing accessibility helpers and form patterns.
-
-Bad:
-- Restructure the whole app into Clean Architecture.
-- Add Atomic Design directories to a project with a clear feature-based UI structure.
-- Add interfaces for every class.
-- Add design patterns before there is real variation.
-- Replace native controls with custom widgets without a need.
-
 ## SOLID principles
 
 Apply SOLID as design pressure, not ceremony.

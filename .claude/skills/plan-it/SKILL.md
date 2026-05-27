@@ -26,7 +26,7 @@ Do not use plan-it when:
 ## Core workflow
 
 1. If `CONTEXT.md` exists at the project root, read it to load the project's domain vocabulary. Use this vocabulary consistently in all task names, requirements, and acceptance criteria.
-2. Identify unresolved decisions, hidden assumptions, and missing constraints. If an assumption cannot be resolved and blocks task sequencing, flag it and pause — do not plan around an unresolved blocker. If scope changes mid-planning, stop and clarify the new scope before continuing. (See [planning-rules.md — Planning clarification rule](references/planning-rules.md#planning-clarification-rule).)
+2. Identify unresolved decisions, hidden assumptions, and missing constraints. If an assumption blocks sequencing, ask one question at a time with numbered alternatives (one marked `recommended`) until resolved — inspect the codebase before asking, delegating exploration to a sub-agent if needed. If scope changes mid-planning, stop and clarify before continuing. See [planning-rules.md — Planning clarification rule](references/planning-rules.md#planning-clarification-rule) for the full decision tree.
 3. Clarify only what cannot be discovered from the codebase. Inspect first; ask only what inspection cannot answer.
 4. Prefer tracer-bullet vertical slices over horizontal layer work. (See [planning-rules.md — Tracer-bullet planning](references/planning-rules.md#tracer-bullet-planning).)
 5. Keep irreversible architecture decisions open as long as practical. (See [planning-rules.md — Keep decisions open](references/planning-rules.md#keep-decisions-open).)
@@ -66,21 +66,11 @@ If files cannot be created:
 
 ## Anti-patterns to avoid
 
-**Artificial task splitting**: Do not create tiny tasks to appear thorough. If work is atomic, bundle it.
+**Scope and composition**: Do not artificially split atomic work, duplicate content across sections (Context explains *why*, Use Cases describe *who/when*, Requirements define *what must be true*), or bundle a change with its validation step. Each task must leave the system fully functional — no task may remove behavior without replacing it in the same task.
 
-**Cross-section duplication**: Context, Use Cases, and Requirements serve distinct purposes — context explains *why*, use cases describe *who and when*, requirements define *what must be true*. Restating the same fact in all three teaches the reader to skip sections.
+**Inspect before asking; order by blocker**: Never ask the requester for information the codebase can answer. Inspect first. Dependency order takes precedence — a task that unblocks others must be numbered first.
 
-**Asking questions the codebase can answer**: Never ask the requester for information available by codebase inspection. Inspect first. Asking questions you could answer yourself is slower and reveals you haven't read the code.
-
-**ADR inflation**: ADRs are for decisions that are hard to reverse, cross-cutting, or architecture-level — not routine implementation details.
-
-**Test padding**: Do not mark a test type as applicable unless the task genuinely requires it. Padding the test list wastes implementation effort and devalues the meaningful tests.
-
-**Blocking-unaware ordering**: Dependency order takes precedence — a task that unblocks others must be numbered first.
-
-**Partial implementations**: Do not create a task that removes or disables existing behavior without replacing it in the same task. The system must be fully functional after each task is applied independently.
-
-**Bundled change and validation**: Do not put code or text changes and their benchmark or promotion steps in the same task. Apply the change in one task and measure or promote in a subsequent task.
+**Right-size tests and decisions**: Mark a test category applicable only when the task genuinely requires it. Create an ADR only for decisions that are hard to reverse, cross-cutting, or architecture-level — not routine implementation details.
 
 ## Final response
 

@@ -6,17 +6,7 @@ Use these rules to create implementation plans that are concrete, sequenced, tes
 
 Create one or more tasks.
 
-Each task must be:
-
-- short
-- concrete
-- testable
-- self-contained
-- ordered by priority and dependency
-- understandable without previous conversation context
-
-Do not create artificial tiny tasks.
-Do not create bureaucratic sections with duplicated content.
+Each task must be short, concrete, testable, self-contained, ordered by priority and dependency, and understandable without prior context. No artificial splitting; no cross-section duplication.
 
 ## Tracer-bullet planning
 
@@ -52,15 +42,6 @@ Good:
 Bad:
 - A single task that edits `SKILL.md` and also runs a benchmark to validate the change.
 
-If a task would touch unrelated modules for different reasons, split by concern.
-
-Good:
-- Task A: Update `planning-rules.md` to add the system integrity rule.
-- Task B: Update `implement-it/SKILL.md` to reference the new rule.
-
-Bad:
-- A single task that modifies three skill directories for independent reasons, requiring the whole bundle to pass before any change ships.
-
 ## System integrity rule
 
 After implementing a task in isolation, the system must remain fully functional. No task may be a partial implementation that requires a subsequent task to restore basic operation.
@@ -78,93 +59,28 @@ Keep irreversible decisions open as long as practical: plan around stable behavi
 Good:
 - Define the project creation contract before choosing the final database migration strategy.
 - Hide email delivery behind a notification port before choosing the provider.
-- Keep analytics behind an event interface before choosing the analytics tool.
 
 Bad:
 - Couple domain logic directly to the database client.
 - Put provider-specific API calls inside UI components.
-- Choose a queue, cache, or vendor before the task proves the need.
 
 ## ADR planning
 
-During planning, identify whether any task needs an ADR.
-
-Create a lightweight ADR stub when a task depends on a decision that is:
-
-- hard to reverse
-- cross-cutting
-- architecture-shaping
-- security-sensitive
-- infrastructure-related
-- data-model-related
-- scalability-related
-- vendor-related
-- protocol-related
-- boundary-defining
-
-Do not create ADRs for ordinary implementation details.
-
-Good:
-- Create an ADR stub before tasks depend on a notification port.
-- Create an ADR stub before choosing how project audit events are stored.
-- Create an ADR stub before adopting OpenTelemetry across services.
-
-Bad:
-- Create an ADR for renaming a component.
-- Create an ADR for moving a helper function.
-- Create an ADR for changing CSS spacing.
-
-Good rule:
-- Plan phase: identify ADR needed.
-- Implementation phase: decide, validate, and complete ADR.
-
-When ADR options differ in topology, data flow, or system boundaries, a single `flowchart` or `sequenceDiagram` in the Options Considered section may clarify the comparison — see [diagram-rules.md](diagram-rules.md) for when and how.
+During planning, identify whether any task needs an ADR. See [adr-rules.md — When to create an ADR](adr-rules.md#when-to-create-an-adr) for criteria and examples. When ADR options differ in topology, data flow, or system boundaries, a single `flowchart` or `sequenceDiagram` in the Options Considered section may clarify the comparison — see [diagram-rules.md](diagram-rules.md) for when and how.
 
 ## Planning clarification rule
 
-Before finalizing the plan, identify unresolved decisions, hidden assumptions, and missing constraints.
+Ask one question at a time. Each question must include numbered alternatives, one marked `(recommended)`, short, concrete, and mutually exclusive. Resolve decision dependencies before planning dependent tasks.
 
-Ask one question at a time until the plan is clear enough to execute.
+Walk the design tree in this order: product behavior → data → API → UI → tests → security → observability → rollout.
 
-Each question must include numbered alternatives.
-Mark the recommended alternative with `(recommended)`.
-Keep each alternative short, concrete, and mutually exclusive.
-
-Resolve dependencies between decisions before planning dependent tasks.
-
-Walk the design tree from:
-
-1. product behavior
-2. data
-3. API
-4. UI
-5. tests
-6. security
-7. observability
-8. rollout
-
-If a question can be answered by inspecting the codebase, delegate codebase exploration to a sub-agent instead of asking the requester.
-
-The sub-agent must return only:
-
-- decision-relevant findings
-- file paths
-- existing behavior
-- constraints
-- uncertainty
-
-Do not ask questions already answered by existing code, tests, documentation, configuration, or sub-agent findings.
+If a question can be answered by inspecting the codebase, delegate to a sub-agent instead of asking the requester. Do not ask what existing code, tests, docs, config, or sub-agent findings already answer.
 
 Good:
 - Question: Should project names be unique per owner?
   1. Yes, enforce uniqueness per owner. `(recommended)`
   2. Allow duplicate names with different IDs.
   3. Enforce global uniqueness across all users.
-
-- Question: Should invitations expire?
-  1. Expire pending invitations after 7 days. `(recommended)`
-  2. Never expire pending invitations.
-  3. Expire pending invitations after 24 hours.
 
 - Question: Which task must come first?
   1. Create project first because invitations require `projectId`. `(recommended)`
@@ -174,32 +90,10 @@ Good:
 Bad:
 - What should we do?
 - Any other requirements?
-- Should this be good?
-- Is everything clear?
 
 ## Gherkin rule
 
-Use Gherkin language for:
-
-- Use Cases
-- Integration Tests
-- Smoke Tests
-- End-to-End Tests
-- Regression Tests
-
-Highlight Gherkin reserved words in bold:
-
-- **Feature**
-- **Rule**
-- **Scenario**
-- **Given**
-- **When**
-- **Then**
-- **And**
-- **But**
-- **Background**
-- **Scenario Outline**
-- **Examples**
+Use Gherkin for Use Cases, Integration Tests, Smoke Tests, End-to-End Tests, and Regression Tests. Highlight Gherkin reserved words in bold.
 
 ## Requirement and test IDs
 

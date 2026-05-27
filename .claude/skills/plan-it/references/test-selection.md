@@ -113,13 +113,6 @@ Good:
   **Then** the dashboard loads without a client-side crash  
   Covers release confidence for `FR-001`.
 
-Good:
-- `SMK-002`: **Scenario**: Project creation page opens after deployment  
-  **Given** a signed-in user is on the dashboard  
-  **When** the user opens the create project page  
-  **Then** the project form is visible  
-  Covers critical path availability.
-
 Not applicable example:
 - `SMK-001`: Not applicable — this task changes only a backend validation helper and does not affect deploy availability.
 
@@ -138,13 +131,6 @@ Good:
   **When** they create a project named “Acme Migration”  
   **Then** “Acme Migration” appears in the project list  
   Covers `FR-001`, `AC-001`.
-
-Good:
-- `E2E-002`: **Scenario**: Member is blocked from project settings  
-  **Given** Bruno is a member of “Acme Migration”  
-  **When** Bruno opens the project settings page  
-  **Then** Bruno sees the access-denied page  
-  Covers `AC-004`.
 
 Not applicable example:
 - `E2E-001`: Not applicable — this task changes an isolated validation helper and no complete user journey changes.
