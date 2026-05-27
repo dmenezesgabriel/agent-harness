@@ -21,6 +21,10 @@ If a test category is not relevant, write:
 Not applicable — <specific reason>
 ```
 
+Every specified test must be runnable headlessly with the project's existing single test command, with no manual setup or interactive input. This constraint applies to all test types: unit, integration, smoke, E2E, regression, performance, security, usability, and observability.
+
+If a specified test requires infrastructure that is not yet automated (for example, a running database or a started service), the task must include a functional requirement to automate that setup. A test that cannot run headlessly is not a valid specification.
+
 ## Test type distinction
 
 Unit tests verify isolated rules, functions, validators, mappers, permissions, reducers, hooks, and components.

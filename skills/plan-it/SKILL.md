@@ -66,17 +66,17 @@ If files cannot be created:
 
 ## Anti-patterns to avoid
 
-**Artificial task splitting**: Do not create tiny tasks to appear thorough. If the work is atomic, bundle it. A task that blocks nothing and delivers no independent behavior is a horizontal slice pretending to be vertical.
+**Artificial task splitting**: Do not create tiny tasks to appear thorough. If work is atomic, bundle it.
 
 **Cross-section duplication**: Context, Use Cases, and Requirements serve distinct purposes — context explains *why*, use cases describe *who and when*, requirements define *what must be true*. Restating the same fact in all three teaches the reader to skip sections.
 
 **Asking questions the codebase can answer**: Never ask the requester for information available by codebase inspection. Inspect first. Asking questions you could answer yourself is slower and reveals you haven't read the code.
 
-**ADR inflation**: Do not create an ADR for an ordinary implementation detail. ADRs are for decisions that are hard to reverse, cross-cutting, or architecture-level. Routine choices do not need a record.
+**ADR inflation**: ADRs are for decisions that are hard to reverse, cross-cutting, or architecture-level — not routine implementation details.
 
 **Test padding**: Do not mark a test type as applicable unless the task genuinely requires it. Padding the test list wastes implementation effort and devalues the meaningful tests.
 
-**Blocking-unaware ordering**: Task priority order must reflect dependencies. A task that unblocks others must come first, regardless of perceived importance.
+**Blocking-unaware ordering**: Dependency order takes precedence — a task that unblocks others must be numbered first.
 
 **Partial implementations**: Do not create a task that removes or disables existing behavior without replacing it in the same task. The system must be fully functional after each task is applied independently.
 

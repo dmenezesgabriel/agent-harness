@@ -32,7 +32,7 @@ Do not use review-it when:
 3. Read the issue file and extract: FRs, NFRs, ACs, OBS requirements, Required Tests, and any ADR dependencies listed under Dependencies.
 4. Read the implementation summary in `tasks/implementation/` if one exists for this issue. It records what the implementer believed was done.
 5. Inspect the actual code changes using `git diff` against the base branch, or explicit file paths provided by the user. Do not rely solely on the implementation summary — verify against the code. (See [review-rules.md — Code inspection](references/review-rules.md#code-inspection).) Implementation sessions are subject to attention pressure: a requirement that was read early in the session may have been silently dropped rather than consciously descoped. Treat a requirement that is absent from the code as a candidate finding to be classified — not a silent pass.
-6. Inspect existing project conventions by reading comparable files: similar services, components, tests, or configuration files. Evaluate whether the implementation follows established patterns. Also evaluate naming clarity: flag new identifiers that use generic names (`data`, `handler`, `result`, `item`, `Manager`, and similar) as Non-blocking findings — generic names produce excessive grep noise and degrade lexical navigability for future sessions. Naming findings are always Non-blocking unless the task's acceptance criteria explicitly required a specific name. For typed languages (TypeScript, Python with type hints, Go, Java, Kotlin, Rust), also evaluate type annotation completeness: flag missing type annotations on new or modified public function signatures and return types as Non-blocking findings. This dimension applies only to typed languages — do not apply it to dynamically typed languages without type hint conventions. Type annotation findings are always Non-blocking unless the task's acceptance criteria explicitly required typed interfaces.
+6. Inspect project conventions by reading comparable files (similar services, components, tests). Flag generic names (`data`, `handler`, `result`, `item`, `Manager`) as Non-blocking. For typed languages, flag missing type annotations on new/modified public signatures as Non-blocking. Both are Non-blocking unless an AC explicitly required otherwise.
 7. Evaluate each acceptance criterion (`AC-*`): determine Pass or Fail based on what the code actually does.
 8. Evaluate test coverage: for each required test category in the issue, determine whether matching tests exist and cover the linked requirement IDs.
 9. Evaluate observability: for each `OBS-*` requirement, determine whether the implementation includes the required log, metric, trace, or analytics call.
@@ -40,7 +40,7 @@ Do not use review-it when:
 11. Classify each finding as **Blocking**, **Non-blocking**, or **Suggestion**. Read [review-rules.md — Finding classification](references/review-rules.md#finding-classification) for the exact criteria.
 12. Determine the overall verdict: **Pass** if there are zero Blocking findings; **Fail** if there is one or more.
 13. Write the review report in `tasks/reviews/`. Read [output-rules.md](references/output-rules.md) before writing. Use [assets/review-report-template.md](assets/review-report-template.md) as the exact structure.
-14. If domain terms were defined or clarified during review, add them to `CONTEXT.md` at the project root using the format in the existing entries or [assets/context-template.md](assets/context-template.md) if it exists.
+14. If domain terms were defined or clarified during review, add them to `CONTEXT.md` at the project root using the format in the existing entries.
 
 ## Output files
 
@@ -64,7 +64,7 @@ If files cannot be created:
 
 ## Anti-patterns to avoid
 
-**Summary-only review**: Do not rely on the implementation summary alone. Summaries describe what the implementer believed they did, not what the code actually does. Always inspect the code.
+**Summary-only review**: Summaries describe what the implementer believed they did — not what the code does. Always inspect the code.
 
 **Vague finding classification**: Do not write Blocking findings without linking a specific requirement or acceptance criterion ID. A finding that says "code quality is poor" is not actionable. A finding that says "AC-003 fails: style inconsistency appears as Blocking, but should be Suggestion per NFR-002" is.
 
