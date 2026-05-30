@@ -1,7 +1,6 @@
 {
   "skills": [
     "../skills/*",
-    "!../skills/*workspace*",
-    "!../skills/*workspace*/**"
+    "!../skills/_on_revision/*"
   ]
 }

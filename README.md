@@ -12,19 +12,14 @@ npx skills add <owner/repo> --skill <skill-name>
 
 The skills in `skills/` are not picked up by Claude Code automatically — the `skills` CLI must register them explicitly. This is because Claude Code uses its own discovery path (`.agents/skills/` or `.claude/skills/`) rather than the project root `skills/` directory.
 
-Run the helper script to register all skills in this repo for Claude Code (and other supported agents):
+## Usage
 
-```sh
-./scripts/install-skills.sh
-```
-
-This is equivalent to:
-
-```sh
-npx skills add . --skill '*' -y
-```
-
-Re-run after adding or renaming skills.
+0. Setup [AGENTS.md](AGENTS.md)
+1. /architect-it (optional)
+2. /plan-it
+3. /implement-it
+4. /review-it
+5. /commit-it
 
 ## LLama.cpp
 

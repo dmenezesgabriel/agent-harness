@@ -1,0 +1,3 @@
+- https://github.com/mattpocock/skills/tree/main/skills/engineering
+- https://github.com/mattpocock/skills/tree/main/skills/productivity
+- https://github.com/mattpocock/skills/tree/main/skills/misc

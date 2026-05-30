@@ -24,3 +24,6 @@ __pycache__
 *-workspace/
 test-results
 .workspaces
+
+# Symlink to skills/ — excluded to avoid double grep results
+.claude/skills

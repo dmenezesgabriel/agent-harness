@@ -1,0 +1,8 @@
+- https://agentskills.io/home
+- https://agentskills.io/specification
+- https://agentskills.io/clients
+- https://agentskills.io/skill-creation/quickstart
+- https://agentskills.io/skill-creation/best-practices
+- https://agentskills.io/skill-creation/optimizing-descriptions
+- https://agentskills.io/skill-creation/evaluating-skills
+- https://agentskills.io/skill-creation/using-scripts
