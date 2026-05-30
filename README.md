@@ -8,79 +8,124 @@ From an external repository:
 npx skills add <owner/repo> --skill <skill-name>
 ```
 
-### Installing this repo's own skills into Claude Code
+## Skills
 
-The skills in `skills/` are not picked up by Claude Code automatically — the `skills` CLI must register them explicitly. This is because Claude Code uses its own discovery path (`.agents/skills/` or `.claude/skills/`) rather than the project root `skills/` directory.
+| Skill | Purpose | Output |
+|---|---|---|
+| `/prd-it` | Product requirements — what to build and why | `docs/prd/<slug>.md` |
+| `/architect-it` | System structure — layers, ports, adapters, ADR stubs | `docs/architecture/<slug>.md` |
+| `/contract-it` | Interface contracts — typed signatures, API schemas, event shapes | source stubs or `docs/contracts/<slug>.md` |
+| `/plan-it` | Implementation tasks — sequenced, testable, self-contained | `tasks/issues/` |
+| `/implement-it` | Code — TDD, vertical slices, project conventions | source files + `tasks/implementation/` |
+| `/review-it` | Review implementation against task requirements | `tasks/reviews/` |
+| `/commit-it` | Structured commit message and git commit | git commit |
 
-## Usage
+Each skill is self-contained and usable on its own. Combine them based on the work at hand.
 
-0. Setup [AGENTS.md](AGENTS.md)
-1. /architect-it (optional)
-2. /plan-it
-3. /implement-it
-4. /review-it
-5. /commit-it
+---
 
-## LLama.cpp
+## Workflows
 
-- **get llama.cpp release**:
+### Bug fix
 
-```sh
-mkdir -p llama && \
-curl -L "https://github.com/ggml-org/llama.cpp/releases/download/b9093/llama-b9093-bin-ubuntu-vulkan-x64.tar.gz" \
-  | tar -xz -C llama --strip-components=1
+```
+/plan-it → /implement-it → /review-it
 ```
 
-- **check version**:
+No PRD or architecture needed. Write the task, fix it, verify it.
 
-```sh
-./llama/llama-cli --version
+---
+
+### Small feature on a known codebase
+
+```
+/plan-it → /implement-it → /review-it
 ```
 
-- **See if works**:
+The codebase already has structure. Skip architecture when no new layers, ports, or boundaries are introduced.
 
+---
 
-```sh
-./llama/llama-cli \
-  -hf ggml-org/gemma-3-1b-it-GGUF \
-  -ngl 999 \
-  -p "Explain llama.cpp in one paragraph"
+### Feature with new behavior, no structural change
+
+```
+/prd-it → /plan-it → /implement-it → /review-it
 ```
 
-## References
+Capture what and why before writing tasks. Use when the problem is clear but the scope needs to be written down before implementation discussions begin.
 
-### **Articles and Model Repositories**
-- [Claude Skills and skill.md for Developers: VS Code, JetBrains, Cursor](https://medium.com/@rosgluk/claude-skills-and-skill-md-for-developers-vs-code-jetbrains-cursor-775d96effe58) — A guide on implementing `skill.md` for AI-assisted development.
-- [LiquidAI LFM2 1.2B RAG GGUF](https://huggingface.co/LiquidAI/LFM2-1.2B-RAG-GGUF) — A compact, RAG-optimized Large Foundation Model from Liquid AI.
-- [Fallow Tools Documentation](https://docs.fallow.tools) — Documentation for Fallow, a toolset likely focused on developer productivity or data management.
+---
 
-### **GitHub Projects**
-- [mattpocock/ai-engineer-workshop-2026-project](https://github.com/mattpocock/ai-engineer-workshop-2026-project) — Project repository for Matt Pocock's 2026 AI Engineer Workshop.
-- [vercel-labs/agent-browser](https://github.com/vercel-labs/agent-browser) — A Vercel Labs project for running browser-based AI agents.
-- [steipete/mcporter](https://github.com/steipete/mcporter) — A utility by Peter Steinberger for converting and managing Model Context Protocol (MCP) data.
-- [amosblomqvist/pi-config](https://github.com/amosblomqvist/pi-config/) — Configuration files and scripts for Raspberry Pi setups.
-- [nicobailon (Nico Bailon)](https://github.com/nicobailon) — GitHub profile for developer Nico Bailon.
-- [Open WebUI](https://github.com/open-webui/open-webui) — A user-friendly self-hosted WebUI for LLMs (formerly Ollama WebUI).
+### Feature that introduces new boundaries
 
-### **Platforms and Specifications**
-- [LM Studio](https://lmstudio.ai/) — A desktop application for discovering and running local LLMs.
-- [Skills.sh](https://www.skills.sh/) — A platform for sharing and discovering AI agent capabilities.
-- [Agent Skills Specification](https://agentskills.io/specification) — The official technical specification for the "Skills" standard for AI agents.
+```
+/prd-it → /architect-it → /contract-it → /plan-it → /implement-it → /review-it
+```
 
-### **Video Content**
-- [The Rise of the AI Engineer (2025)](https://www.youtube.com/watch?v=5LTDuOg9DVo)
-- [How to Build Your Own AI Agent with Browser Use](https://www.youtube.com/watch?v=wJEP4CuR6a4)
-- [Claude's New "Skills" Feature: A Technical Deep Dive](https://www.youtube.com/watch?v=rcRS8-7OgBo)
+Full workflow for features that add new ports, adapters, or integration points. Each skill produces an artifact the next one reads: PRD → architecture decisions → typed interfaces → implementation tasks.
 
-### **Scientific Research Papers (arXiv)**
-- [Meta Prompting for AI Systems](https://arxiv.org/abs/2311.11482) (Zhang et al., 2023/2025) — A framework for elevating LLM reasoning using modular, task-agnostic prompts.
-- [A Practical Guide for Evaluating LLMs and LLM-Reliant Systems](https://arxiv.org/abs/2506.13023) (Rudd et al., 2025) — Guidelines for real-world evaluation of generative AI.
-- [Benchmark^2: Systematic Evaluation of LLM Benchmarks](https://arxiv.org/abs/2601.03986) (Qian et al., 2026) — A framework for assessing the quality and consistency of existing LLM benchmarks.
-- [FinAuditing: A Financial Taxonomy-Structured Multi-Document Benchmark for Evaluating LLMs](https://arxiv.org/abs/2412.05579) (Wang et al., 2025) — Evaluating model performance on complex, structured financial auditing tasks.
-- [Unveiling LLM Evaluation Focused on Metrics: Challenges and Solutions](https://arxiv.org/abs/2404.09135) (Hu & Zhou, 2024) — A comprehensive guide to the mathematical formulations and interpretations of LLM evaluation metrics.
+---
 
-## Pi used extensions
+### Greenfield project
 
-- [pi-mcp-adapter](https://github.com/nicobailon/pi-mcp-adapter)
-- [pi-subagents](https://github.com/nicobailon/pi-subagents)
-- [pi-web-access](https://github.com/nicobailon/pi-web-access)
+```
+/prd-it → /architect-it → /contract-it → /plan-it → /implement-it → /review-it
+```
+
+Same as above. Both PRD and architecture are needed when starting from scratch with no prior codebase or domain model.
+
+---
+
+### Parallel team development
+
+```
+/prd-it → /architect-it → /contract-it → /plan-it (×N, parallel) → /implement-it → /review-it
+```
+
+Define contracts before splitting work. Frontend and backend (or two backend teams) can develop in parallel once the shared interfaces are written and agreed on.
+
+---
+
+### Refactor (no new behavior)
+
+```
+/plan-it → /implement-it → /review-it
+```
+
+No new boundaries. Plan what to refactor, implement it, and verify nothing regressed.
+
+---
+
+### API design spike
+
+```
+/contract-it
+```
+
+Use standalone to define or review interface contracts for an integration point — without a full architecture or planning phase. Useful when two teams need to agree on an API shape before either starts coding.
+
+---
+
+### Architecture review of existing code
+
+```
+/architect-it
+```
+
+Use standalone to document the architecture of an existing codebase, identify boundary violations, or create ADR stubs for undocumented decisions.
+
+---
+
+### Requirements clarification only
+
+```
+/prd-it
+```
+
+Use standalone when the problem space is unclear — before any technical discussion. Produces a structured brief that stakeholders can agree on before architecture or planning begins.
+
+---
+
+## Setup
+
+0. Set up [AGENTS.md](AGENTS.md)
