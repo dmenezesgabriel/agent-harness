@@ -1,6 +1,7 @@
 import subprocess  # nosec B404
 from pathlib import Path
 from typing import cast
+from unittest.mock import Mock
 
 import pytest
 from pydantic import ValidationError
@@ -43,11 +44,13 @@ def test_adapter_init_fails_when_claude_cli_is_missing(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     # Arrange
-    monkeypatch.setattr("runner.adapters.claude_code.shutil.which", lambda _name: None)
+    which = Mock(return_value=None)
+    monkeypatch.setattr("runner.adapters.claude_code.shutil.which", which)
 
     # Act / Assert
     with pytest.raises(RuntimeError, match="claude CLI not found"):
         ClaudeCodeAdapter(skill_root=tmp_path)
+    which.assert_called_once_with("claude")
 
 
 def test_load_skill_md_reads_expected_skill_file(tmp_path: Path) -> None:
@@ -83,10 +86,8 @@ def test_judge_defaults_passed_from_score(
     # Arrange
     adapter = _adapter_without_init(tmp_path)
 
-    def fake_run_in_dir(*_args: object, **_kwargs: object) -> str:
-        return '{"score": 0.8, "reasoning": "meets rubric"}'
-
-    monkeypatch.setattr(adapter, "_run_in_dir", fake_run_in_dir)
+    run_in_dir = Mock(return_value='{"score": 0.8, "reasoning": "meets rubric"}')
+    monkeypatch.setattr(adapter, "_run_in_dir", run_in_dir)
 
     # Act
     verdict = adapter.judge("artifact", "rubric", rubric_id="quality")
@@ -95,6 +96,19 @@ def test_judge_defaults_passed_from_score(
     assert verdict.passed is True
     assert verdict.score == 0.8
     assert verdict.rubric_id == "quality"
+    run_in_dir.assert_called_once_with(
+        "Rubric:\nrubric\n\nArtifact:\nartifact",
+        system=(
+            "You are an expert evaluator of AI-generated software artifacts. "
+            "Respond ONLY with a JSON object — no prose, no markdown fences: "
+            '{"passed": <bool>, "score": <float 0.0-1.0>, '
+            '"reasoning": <one sentence>}'
+        ),
+        model="sonnet",
+        workdir=None,
+        tools=None,
+        append_system=False,
+    )
 
 
 def test_run_in_dir_raises_with_subprocess_preview(
@@ -103,21 +117,23 @@ def test_run_in_dir_raises_with_subprocess_preview(
     # Arrange
     adapter = _adapter_without_init(tmp_path)
 
-    def fake_run(*_args: object, **_kwargs: object) -> subprocess.CompletedProcess[str]:
-        return subprocess.CompletedProcess(
+    run = Mock(
+        return_value=subprocess.CompletedProcess(
             args=["claude"],
             returncode=_FAILURE_CODE,
             stdout="bad stdout",
             stderr="bad stderr",
         )
+    )
 
-    monkeypatch.setattr("runner.adapters.claude_code.subprocess.run", fake_run)
+    monkeypatch.setattr("runner.adapters.claude_code.subprocess.run", run)
 
     # Act / Assert
     with pytest.raises(RuntimeError, match="claude exited 2"):
         adapter._run_in_dir(
             "prompt", system="system", model="haiku", workdir=None, tools=None
         )
+    assert run.call_count == 1
 
 
 def test_run_in_dir_passes_allowed_tools_and_workdir(

@@ -120,4 +120,4 @@ forbidden_modules = ["runner.adapters", "runner.run"]
 name = "Adapters do not import orchestration"
 type = "forbidden"
 source_modules = ["runner.adapters"]
-forbidden_modules = ["runner.run"]
+forbidden_modules = ["runner.run", "runner.evaluation"]

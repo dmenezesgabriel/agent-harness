@@ -5,6 +5,8 @@ from typing import Protocol
 
 from pydantic import BaseModel, Field
 
+from runner.models import JudgeReport, Mode, ScenarioResult
+
 
 class ArtifactSet(BaseModel):
     """Files produced by one skill invocation.
@@ -55,3 +57,41 @@ class JudgePort(Protocol):
     def judge(
         self, artifact_content: str, rubric: str, rubric_id: str
     ) -> JudgeVerdict: ...
+
+
+class StructuralCheckPort(Protocol):
+    """Run structural checks for one eval directory.
+
+    Usage:
+        results = structural_runner.run(evals_dir, artifacts_dir)
+    """
+
+    def run(self, evals_dir: Path, artifacts_dir: Path) -> list[ScenarioResult]: ...
+
+
+class SkillInputSizerPort(Protocol):
+    """Measure skill input sizes used for quality comparison.
+
+    Usage:
+        sizes = input_sizer.measure(Path('skills/dataviz/evals'))
+    """
+
+    def measure(self, evals_dir: Path) -> dict[str, int]: ...
+
+
+class ReportWriterPort(Protocol):
+    """Write one skill evaluation report.
+
+    Usage:
+        report_path = writer.write('dataviz', evals_dir, 'all', [], [])
+    """
+
+    def write(
+        self,
+        skill_name: str,
+        evals_dir: Path,
+        mode: Mode,
+        structural_results: list[ScenarioResult],
+        judge_verdicts: list[JudgeReport],
+        input_sizes: dict[str, int] | None = None,
+    ) -> Path: ...
