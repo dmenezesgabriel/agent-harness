@@ -5,11 +5,17 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 Mode = Literal["invoke", "judge", "all"]
+AdapterName = Literal["claude", "opencode"]
 
 
 class CliArgs(BaseModel):
     skill: str | None = None
     mode: Mode = "invoke"
+    adapter: AdapterName = "claude"
+    opencode_invoke_provider: str = "openai-codex"
+    opencode_invoke_model: str = "gpt-5.4-mini"
+    opencode_judge_provider: str = "openai-codex"
+    opencode_judge_model: str = "chatgpt-5.5"
 
 
 class ScenarioResult(BaseModel):

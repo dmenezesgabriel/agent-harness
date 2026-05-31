@@ -46,3 +46,35 @@ def test_build_app_does_not_construct_adapter_for_unused_mode(
 
     # Assert
     adapter_constructor.assert_called_once_with(skill_root=_SKILLS_ROOT)
+
+
+def test_build_app_constructs_opencode_adapter_with_requested_models(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Arrange
+    claude_constructor = Mock(return_value=None)
+    opencode_constructor = Mock(return_value=None)
+    monkeypatch.setattr("runner.run.ClaudeCodeAdapter", claude_constructor)
+    monkeypatch.setattr("runner.run.OpenCodeAdapter", opencode_constructor)
+
+    # Act
+    _build_app(
+        CliArgs(
+            mode="invoke",
+            adapter="opencode",
+            opencode_invoke_provider="openai-codex",
+            opencode_invoke_model="gpt-5.4-mini",
+            opencode_judge_provider="openai-codex",
+            opencode_judge_model="chatgpt-5.5",
+        )
+    )
+
+    # Assert
+    claude_constructor.assert_not_called()
+    opencode_constructor.assert_called_once_with(
+        skill_root=_SKILLS_ROOT,
+        invoke_provider="openai-codex",
+        invoke_model="gpt-5.4-mini",
+        judge_provider="openai-codex",
+        judge_model="chatgpt-5.5",
+    )
