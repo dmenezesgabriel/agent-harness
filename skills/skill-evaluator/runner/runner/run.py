@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """Skill evaluator CLI entrypoint.
 
-Discovers skills/*/evals/, invokes the skill via the selected agent adapter,
-runs behave for structural checks on live output, and optionally runs
-LLM-as-judge on golden fixtures for qualitative rubric evaluation.
+Discovers skills/*/evals/, builds the requested evaluation mode strategy,
+and runs the evaluator. Modes: invoke (skill + structural), judge (LLM rubric),
+trigger (routing accuracy), all (invoke + judge).
 
 Usage:
-    uv run python -m runner.run [--skill <name>] [--mode invoke|judge|all]
+    uv run python -m runner.run [--skill <name>] [--mode invoke|judge|all|trigger]
     uv run python -m runner.run --skill plan-it
-    uv run python -m runner.run --skill dataviz --mode all
+    uv run python -m runner.run --skill dataviz --mode trigger
 """
 
 import argparse
@@ -18,15 +18,16 @@ from typing import Protocol, cast
 
 from runner.adapters.behave import BehaveStructuralRunner
 from runner.adapters.claude_code import ClaudeCodeAdapter
-from runner.log_setup import configure as _configure_logging
 from runner.adapters.opencode import OpenCodeAdapter
 from runner.discovery import SkillDiscovery
 from runner.evaluation import SkillEvaluationApp, SkillEvaluator
 from runner.invocation import SkillInvoker
 from runner.judging import RubricJudgeRunner
+from runner.log_setup import configure as _configure_logging
 from runner.models import CliArgs
-from runner.ports import AgentPort, JudgePort, TriggerClassifierPort
+from runner.ports import AgentPort, EvalModeStrategy, JudgePort, TriggerClassifierPort
 from runner.reporting import MarkdownReportWriter, SkillInputSizer
+from runner.strategies import AllStrategy, InvokeStrategy, JudgeStrategy, TriggerStrategy
 from runner.trigger import TriggerEvaluator
 
 _SKILLS_ROOT = Path(__file__).parent.parent.parent.parent  # agent-harness/skills/
@@ -45,31 +46,28 @@ def main() -> None:
 
 
 def _build_app(args: CliArgs) -> SkillEvaluationApp:
-    agent = (
-        cast(AgentPort, _build_adapter(args))
-        if args.mode in ("invoke", "all")
-        else None
-    )
-    judge = (
-        cast(JudgePort, _build_adapter(args)) if args.mode in ("judge", "all") else None
-    )
-    trigger_classifier = (
-        cast(TriggerClassifierPort, _build_adapter(args)) if args.mode == "trigger" else None
-    )
-    evaluator = SkillEvaluator(
-        invoker=SkillInvoker(),
-        structural_runner=BehaveStructuralRunner(),
-        judge_runner=RubricJudgeRunner(),
-        input_sizer=SkillInputSizer(),
-        report_writer=MarkdownReportWriter(),
-        agent=agent,
-        judge=judge,
-        trigger_evaluator=TriggerEvaluator(),
-        trigger_classifier=trigger_classifier,
-    )
-    return SkillEvaluationApp(
-        discovery=SkillDiscovery(_SKILLS_ROOT), evaluator=evaluator
-    )
+    adapter = _build_adapter(args)
+    strategy = _build_strategy(args, adapter)
+    evaluator = SkillEvaluator(strategy=strategy, report_writer=MarkdownReportWriter())
+    return SkillEvaluationApp(discovery=SkillDiscovery(_SKILLS_ROOT), evaluator=evaluator)
+
+
+def _build_strategy(args: CliArgs, adapter: _EvaluationAdapter) -> EvalModeStrategy:
+    sizer = SkillInputSizer()
+    match args.mode:
+        case "invoke":
+            return InvokeStrategy(SkillInvoker(), BehaveStructuralRunner(), cast(AgentPort, adapter), sizer)
+        case "judge":
+            return JudgeStrategy(RubricJudgeRunner(), cast(JudgePort, adapter), sizer)
+        case "trigger":
+            return TriggerStrategy(TriggerEvaluator(), cast(TriggerClassifierPort, adapter), sizer)
+        case "all":
+            return AllStrategy(
+                SkillInvoker(), BehaveStructuralRunner(), cast(AgentPort, adapter),
+                RubricJudgeRunner(), cast(JudgePort, adapter), sizer,
+            )
+        case _:
+            raise ValueError(f"Unknown mode {args.mode!r}; expected one of {_MODES}")
 
 
 def _build_adapter(args: CliArgs) -> _EvaluationAdapter:

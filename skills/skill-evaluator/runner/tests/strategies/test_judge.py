@@ -1,0 +1,85 @@
+from pathlib import Path
+from typing import cast
+
+from runner.judging import RubricJudgeRunner
+from runner.models import JudgeReport
+from runner.ports import JudgePort, JudgeVerdict, SkillInputSizerPort
+from runner.strategies.judge import JudgeStrategy
+
+
+class FakeJudgeRunner:
+    def __init__(self, captured: list[Path], verdicts: list[JudgeReport]) -> None:
+        self._captured = captured
+        self._verdicts = verdicts
+
+    def run(self, _evals_dir: Path, artifacts_dir: Path, _judge: object) -> list[JudgeReport]:
+        self._captured.append(artifacts_dir)
+        return self._verdicts
+
+
+class FakeJudge:
+    def judge(self, _content: str, _rubric: str, rubric_id: str) -> JudgeVerdict:
+        return JudgeVerdict(rubric_id=rubric_id, passed=True, score=0.9, reasoning="ok")
+
+
+class FakeSizer:
+    def measure(self, _evals_dir: Path) -> dict[str, int]:
+        return {"SKILL.md": 200}
+
+
+def test_judge_strategy_mode_is_judge() -> None:
+    strategy = JudgeStrategy(
+        cast(RubricJudgeRunner, FakeJudgeRunner([], [])),
+        cast(JudgePort, FakeJudge()),
+        cast(SkillInputSizerPort, FakeSizer()),
+    )
+    assert strategy.mode == "judge"
+
+
+def test_judge_strategy_prefers_generated_artifacts(tmp_path: Path) -> None:
+    evals_dir = tmp_path / "dataviz" / "evals"
+    generated_dir = evals_dir / "fixtures" / "_generated_artifacts"
+    generated_dir.mkdir(parents=True)
+    captured: list[Path] = []
+
+    strategy = JudgeStrategy(
+        cast(RubricJudgeRunner, FakeJudgeRunner(captured, [])),
+        cast(JudgePort, FakeJudge()),
+        cast(SkillInputSizerPort, FakeSizer()),
+    )
+    strategy.run("dataviz", evals_dir)
+
+    assert captured == [generated_dir]
+
+
+def test_judge_strategy_falls_back_to_golden(tmp_path: Path) -> None:
+    evals_dir = tmp_path / "dataviz" / "evals"
+    golden_dir = evals_dir / "fixtures" / "golden"
+    golden_dir.mkdir(parents=True)
+    captured: list[Path] = []
+
+    strategy = JudgeStrategy(
+        cast(RubricJudgeRunner, FakeJudgeRunner(captured, [])),
+        cast(JudgePort, FakeJudge()),
+        cast(SkillInputSizerPort, FakeSizer()),
+    )
+    strategy.run("dataviz", evals_dir)
+
+    assert captured == [golden_dir]
+
+
+def test_judge_strategy_returns_verdicts(tmp_path: Path) -> None:
+    evals_dir = tmp_path / "dataviz" / "evals"
+    (evals_dir / "fixtures" / "golden").mkdir(parents=True)
+    verdict = JudgeReport(rubric_id="quality", passed=True, score=0.9, reasoning="good")
+
+    strategy = JudgeStrategy(
+        cast(RubricJudgeRunner, FakeJudgeRunner([], [verdict])),
+        cast(JudgePort, FakeJudge()),
+        cast(SkillInputSizerPort, FakeSizer()),
+    )
+    outcome = strategy.run("dataviz", evals_dir)
+
+    assert outcome.mode == "judge"
+    assert outcome.judge_verdicts == [verdict]
+    assert outcome.structural_results == []

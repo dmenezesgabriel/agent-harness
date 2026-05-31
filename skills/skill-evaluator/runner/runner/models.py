@@ -59,3 +59,18 @@ class TriggerReport(BaseModel):
     results: list[TriggerResult]
     pass_rate: float
     passed: bool
+
+
+class EvalOutcome(BaseModel):
+    """Unified result bag returned by every evaluation mode strategy.
+
+    Usage:
+        outcome = strategy.run('dataviz', evals_dir)
+        assert outcome.mode == 'invoke'
+    """
+
+    mode: Mode
+    structural_results: list[ScenarioResult] = Field(default_factory=list)
+    judge_verdicts: list[JudgeReport] = Field(default_factory=list)
+    trigger_report: TriggerReport | None = None
+    input_sizes: dict[str, int] = Field(default_factory=dict)

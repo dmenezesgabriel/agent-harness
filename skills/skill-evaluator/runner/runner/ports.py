@@ -5,7 +5,7 @@ from typing import Protocol
 
 from pydantic import BaseModel, Field
 
-from runner.models import JudgeReport, Mode, ScenarioResult, TriggerReport
+from runner.models import EvalOutcome, JudgeReport, Mode, ScenarioResult, TriggerReport
 
 
 class ArtifactSet(BaseModel):
@@ -87,6 +87,19 @@ class SkillInputSizerPort(Protocol):
     """
 
     def measure(self, evals_dir: Path) -> dict[str, int]: ...
+
+
+class EvalModeStrategy(Protocol):
+    """Run one evaluation mode and return a unified outcome.
+
+    Usage:
+        outcome = strategy.run('dataviz', evals_dir)
+    """
+
+    @property
+    def mode(self) -> Mode: ...
+
+    def run(self, skill_name: str, evals_dir: Path) -> EvalOutcome: ...
 
 
 class ReportWriterPort(Protocol):

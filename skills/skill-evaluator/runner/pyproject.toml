@@ -123,3 +123,9 @@ name = "Adapters do not import orchestration"
 type = "forbidden"
 source_modules = ["runner.adapters"]
 forbidden_modules = ["runner.run", "runner.evaluation"]
+
+[[tool.importlinter.contracts]]
+name = "Strategies do not import orchestration"
+type = "forbidden"
+source_modules = ["runner.strategies"]
+forbidden_modules = ["runner.run", "runner.evaluation"]
