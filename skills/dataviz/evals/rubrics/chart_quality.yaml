@@ -1,0 +1,25 @@
+rubrics:
+  - id: chart_type_justification
+    artifact_file: valid_bar_chart.js
+    pass_threshold: 0.7
+    prompt: |
+      Evaluate whether the chart type chosen in this JavaScript chart code
+      is appropriate for the data it encodes.
+      A bar chart should be used for comparing discrete categories.
+      A line chart should be used for continuous time series.
+      A scatter chart should be used for exploring correlation between two numeric variables.
+      Score 1.0 if the chart type matches the data shape and a plausible analytical goal.
+      Score 0.0 if the chart type is clearly mismatched (e.g. pie chart for time series data).
+      Respond with JSON: {"passed": <bool>, "score": <float>, "reasoning": <one sentence>}
+
+  - id: color_palette_intentional
+    artifact_file: valid_bar_chart.js
+    pass_threshold: 0.7
+    prompt: |
+      Evaluate whether the color palette in this JavaScript chart code is intentional
+      and accessible. A good palette uses distinct, colorblind-safe colors.
+      Score 1.0 if colors are explicitly set, distinct, and limited to 7 or fewer.
+      Score 0.5 if colors are default or auto-assigned but inoffensive.
+      Score 0.0 if the palette uses rainbow/random colors with no semantic meaning,
+      or if more than 7 colors are used for a single chart.
+      Respond with JSON: {"passed": <bool>, "score": <float>, "reasoning": <one sentence>}

@@ -20,6 +20,7 @@ mlruns
 experiments/variants
 __pycache__
 .venv
+.coverage
 
 *-workspace/
 test-results

@@ -1,0 +1,18 @@
+rules:
+  - id: python-subprocess-shell-true
+    message: Avoid shell=True; pass argv as a list to prevent shell injection.
+    severity: ERROR
+    languages: [python]
+    pattern: subprocess.$FUNC(..., shell=True, ...)
+
+  - id: python-tempfile-mktemp
+    message: tempfile.mktemp is race-prone; use TemporaryDirectory or NamedTemporaryFile.
+    severity: ERROR
+    languages: [python]
+    pattern: tempfile.mktemp(...)
+
+  - id: python-unsafe-yaml-load
+    message: Use yaml.safe_load for untrusted YAML.
+    severity: ERROR
+    languages: [python]
+    pattern: yaml.load(...)

@@ -1,0 +1,49 @@
+rubrics:
+  - id: live_multiline_for_multiseries
+    artifact_file: _live_primary_
+    pass_threshold: 0.8
+    prompt: |
+      Evaluate whether this visualization correctly represents multi-series time-series data.
+      The dataset has 4 regions (Northeast, Southeast, Midwest, West) across 4 months of 2024.
+      Regardless of framework (Chart.js, Vega-Lite, Plotly, Altair, Matplotlib, D3, etc.), a correct
+      implementation uses a LINE chart (or area, connected scatter) with 4 separate series — one per region.
+      Score 1.0 if: line-type encoding is used, all 4 regions are represented as separate series,
+      and time (months) is the x-axis.
+      Score 0.5 if line type is used but fewer than 4 regions are shown, or data is aggregated.
+      Score 0.0 if a bar chart or pie chart is used for this continuous time-series data.
+      Respond with JSON: {"passed": <bool>, "score": <float>, "reasoning": <one sentence>}
+
+  - id: live_colorblind_safe_palette
+    artifact_file: _live_primary_
+    pass_threshold: 0.8
+    prompt: |
+      Evaluate whether the color palette in this visualization is accessible for colorblind users.
+      Do not require a specific palette — any palette is acceptable if it meets these criteria:
+        1. Every series has an explicit, hardcoded color (not auto-assigned or defaulted by the library).
+        2. Colors are perceptually distinct under deuteranopia (red-green colorblindness, ~8% of men).
+           The canonical failure: pairing pure red (#d62728, #ff0000, "red") with pure green
+           (#2ca02c, #00ff00, "green") — these collapse to identical gray under deuteranopia.
+        3. Colors are perceptually distinct under protanopia (reduced red sensitivity).
+        4. At most 7 colors are used.
+      Score 1.0 if all four criteria are met.
+      Score 0.5 if colors are explicit but the palette has a known colorblind failure
+        (e.g. pure red+green pairing that collapses under deuteranopia).
+      Score 0.0 if colors are auto-assigned, missing, or more than 7 are used.
+      In your reasoning: name the specific hex values used, identify any accessibility failure,
+      and state whether a deuteranopic user could distinguish all series.
+      Respond with JSON: {"passed": <bool>, "score": <float>, "reasoning": <one sentence>}
+
+  - id: live_design_rules_applied
+    artifact_file: _live_primary_
+    pass_threshold: 0.7
+    prompt: |
+      Evaluate whether the visualization applies the key design rules from good data visualization
+      practice, regardless of the framework used.
+      Check for: (1) zero baseline on the y-axis for the line chart; (2) a title or subtitle that
+      communicates the key takeaway; (3) a data source or time range note; (4) no chartjunk
+      (3D effects, excessive decoration, gradients with no meaning).
+      Score 1.0 if all four rules are satisfied.
+      Score 0.7 if three of four are satisfied.
+      Score 0.4 if only two are satisfied.
+      Score 0.0 if fewer than two are satisfied.
+      Respond with JSON: {"passed": <bool>, "score": <float>, "reasoning": <one sentence>}
