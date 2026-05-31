@@ -1,7 +1,12 @@
 from __future__ import annotations
 
 import sys
+import time
 from pathlib import Path
+
+import structlog
+
+_log = structlog.get_logger()
 
 from runner.discovery import SkillDiscovery
 from runner.invocation import SkillInvoker
@@ -70,13 +75,17 @@ class SkillEvaluator:
     def evaluate(self, evals_dir: Path, mode: Mode) -> bool:
         skill_name = evals_dir.parent.name
         _print_skill_header(skill_name, mode)
-        artifacts_dir = evals_dir / "fixtures"
+        artifacts_dir = evals_dir / "fixtures" / "golden"
         input_sizes = self._input_sizer.measure(evals_dir)
         structural_results: list[ScenarioResult] = []
 
         if mode in ("invoke", "all") and self._agent is not None:
+            t0 = time.monotonic()
             artifacts_dir = self._invoker.invoke(skill_name, evals_dir, self._agent)
+            _log.info("invocation_done", skill=skill_name, elapsed_s=round(time.monotonic() - t0, 1))
+            t0 = time.monotonic()
             structural_results = self._structural_runner.run(evals_dir, artifacts_dir)
+            _log.info("structural_done", skill=skill_name, elapsed_s=round(time.monotonic() - t0, 1))
 
         judge_verdicts = self._judge_verdicts(evals_dir, artifacts_dir, mode)
         report_path = self._report_writer.write(
@@ -95,7 +104,10 @@ class SkillEvaluator:
     ) -> list[JudgeReport]:
         if mode not in ("judge", "all") or self._judge is None:
             return []
-        return self._judge_runner.run(evals_dir, artifacts_dir, self._judge)
+        t0 = time.monotonic()
+        verdicts = self._judge_runner.run(evals_dir, artifacts_dir, self._judge)
+        _log.info("judge_phase_done", skill=evals_dir.parent.name, elapsed_s=round(time.monotonic() - t0, 1), verdicts=len(verdicts))
+        return verdicts
 
 
 def _print_skill_header(skill_name: str, mode: Mode) -> None:

@@ -5,7 +5,12 @@ import os
 import subprocess  # nosec B404
 import sys
 import tempfile
+import time
 from pathlib import Path
+
+import structlog
+
+_log = structlog.get_logger()
 from typing import Literal
 
 from runner.models import ScenarioResult
@@ -24,7 +29,7 @@ class BehaveStructuralRunner:
         static_dir = evals_dir / "fixtures"
         results = self._behave_pass(evals_dir, static_dir, tag="golden")
         if artifacts_dir != static_dir:
-            results += self._behave_pass(evals_dir, artifacts_dir, tag="live")
+            results += self._behave_pass(evals_dir, artifacts_dir, tag="generated")
         self._print_summary(results)
         return results
 
@@ -34,7 +39,10 @@ class BehaveStructuralRunner:
         env = {**os.environ, "EVAL_ARTIFACTS_DIR": str(artifacts_dir)}
         with tempfile.TemporaryDirectory(prefix="behave-result-") as tmp_dir:
             result_file = Path(tmp_dir) / "results.json"
+            _log.info("behave_start", tag=tag)
+            t0 = time.monotonic()
             proc = self._run_process(evals_dir, tag, result_file, env)
+            _log.info("behave_done", tag=tag, elapsed_s=round(time.monotonic() - t0, 1))
             return self.read_results(result_file, proc, tag)
 
     def _run_process(
