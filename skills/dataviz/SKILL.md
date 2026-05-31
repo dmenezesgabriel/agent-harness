@@ -1,11 +1,10 @@
 ---
 name: dataviz
 description: >
-  Guides the entire data visualization lifecycle: understanding the story, inspecting data, selecting charts, building dashboards, and iterating on design. Use when the user wants to visualize, chart, graph, plot, or dashboard their data — even if they don't explicitly say "visualization" or "dashboard". Use for chart type selection, color palette choices, visual encoding, layout design, and implementation. Also use when the user has a data file and wants insights shown visually. Handles local files (CSV, Parquet, JSON, Excel, DuckDB) via Python + DuckDB and outputs a Vite app or Jupyter notebook.
-compatibility: Designed for Claude Code. Requires Python 3.11+, uv, and DuckDB. Local Vite output requires Node.js.
+  Guides the entire data visualization lifecycle: understanding the story, inspecting data, selecting charts, building dashboards, and iterating on design. Use when the user wants to visualize, chart, graph, plot, or dashboard their data — even if they don't explicitly say "visualization" or "dashboard". Use for chart type selection, color palette choices, visual encoding, layout design, and implementation. Also use when the user has a data file and wants insights shown visually. Also use when the user says "show me trends", "compare these categories", "make this data presentable", "tell a story with data", or "I have a file and want to understand it visually" — even if they never say "chart" or "graph". Handles local files (CSV, Parquet, JSON, Excel, DuckDB) via Python + DuckDB and outputs a Vite app or Jupyter notebook.
 metadata:
   domain: data-visualization
-  version: "1.1"
+  version: "1.2"
 ---
 
 Build effective, well-designed dashboards from data. Follow the phases in order: understand the story first, inspect the data, then build.
@@ -72,19 +71,15 @@ Does this look right? I'll use this to guide every chart choice and design decis
 
 ## Phase 2: The Data
 
-Ask for the table name or file path. Inspect using `uv run python`:
+Ask for the table name or file path. Inspect using the bundled script:
 
-```python
-import duckdb
-con = duckdb.connect()
-print(con.execute("SELECT * FROM '[path]' LIMIT 5").df())
-print(con.execute("DESCRIBE SELECT * FROM '[path]'").df())
-print(con.execute("SELECT COUNT(*) FROM '[path]'").fetchone())
+```sh
+uv run scripts/inspect_data.py '[path]'
 ```
 
 Present findings before proceeding:
 
-```
+```txt
 Here's what I found:
 - [X] rows, [Y] columns
 - Key columns: [list with types]
@@ -100,69 +95,7 @@ Based on your questions and this data shape, here's my chart plan:
 
 ## Phase 3: Chart Selection
 
-For every chart, walk this tree top-down, state the path taken, and justify the leaf node.
-
-```
-What kind of data?
-│
-├── NUMERIC only
-│   ├── 1 variable
-│   │   └── → Histogram, Density Plot
-│   ├── 2 variables
-│   │   ├── ordered (one is time/sequence)
-│   │   │   └── → Line, Area, Connected Scatter
-│   │   └── unordered
-│   │       ├── few points (<2000) → Scatter, Box Plot, Violin
-│   │       └── many points       → 2D Density, Hex Bin, Violin
-│   ├── 3 variables
-│   │   ├── ordered   → Line, Stacked Area, Streamgraph
-│   │   └── unordered → Bubble, Violin, Box Plot
-│   └── several variables
-│       ├── ordered   → Stacked Area, Streamgraph, Heatmap, Ridgeline
-│       └── unordered → Heatmap, Correlogram, PCA, Ridgeline, Box/Violin
-│
-├── CATEGORIC only
-│   ├── 1 variable
-│   │   └── → Bar, Lollipop, Pie, Donut, Treemap, Word Cloud, Waffle
-│   └── 2+ variables
-│       ├── nested (hierarchy: continent > country > city)
-│       │   └── → Treemap, Sunburst, Dendrogram, Circular Packing
-│       ├── subgroup (every combination: gender × age)
-│       │   └── → Grouped Bar, Stacked Bar, Spider/Radar, Heatmap, Parallel Plot
-│       ├── two independent lists (overlap)
-│       │   └── → Venn Diagram
-│       └── adjacency (flows between lists)
-│           └── → Sankey, Chord, Arc Diagram, Network
-│
-├── NUMERIC + CATEGORIC (mixed)
-│   ├── one observation per group
-│   │   ├── 1 numeric
-│   │   │   └── → Bar, Lollipop, Pie, Donut, Treemap
-│   │   └── several numerics
-│   │       ├── one numeric is ordered → Line, Area, Stacked Area, Streamgraph
-│   │       └── none ordered          → Grouped Bar, Stacked Bar, Heatmap, Spider, Parallel
-│   └── several observations per group (distributions)
-│       └── → Violin, Box Plot, Ridgeline, Density, Histogram
-│
-├── TIME SERIES
-│   ├── 1 series  → Bar, Lollipop, Line, Area, Ridgeline, Box/Violin
-│   └── several series
-│       ├── few (<7)  → Multi-line, Stacked Area, Streamgraph
-│       └── many      → Heatmap, Ridgeline, Small Multiples
-│
-├── GEOGRAPHIC
-│   ├── points (lat/lon)     → Bubble Map, Hex Bin Map, Connection Map
-│   ├── regions (boundaries) → Choropleth Map
-│   └── structure only       → Basic Map
-│
-└── NETWORK / RELATIONAL
-    ├── non-hierarchical
-    │   └── → Network, Hive Plot, Heatmap (adj. matrix), Sankey, Arc/Chord
-    └── hierarchical (parent → child)
-        ├── values on edges  → Chord, Sankey, Dendrogram, Edge Bundling
-        ├── values on leaves → Treemap, Sunburst, Circular Packing, Sankey, Dendrogram
-        └── structure only   → Dendrogram, Sunburst, Circular Packing, Treemap
-```
+Read [decision-tree.md](references/decision-tree.md) and walk it top-down for every chart. State the path taken and justify the leaf node.
 
 For each chart type identified in the tree, read its reference file before finalizing the plan:
 

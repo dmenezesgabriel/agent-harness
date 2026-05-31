@@ -1,0 +1,87 @@
+{
+  "description": "Trigger accuracy queries for the dataviz skill description. ~20 queries split into should-trigger and should-not-trigger sets. Each query should be run 3 times; trigger rate >0.5 = pass for should-trigger, <0.5 = pass for should-not-trigger.",
+  "should_trigger": [
+    {
+      "query": "I have a CSV of monthly sales by region, can you make a chart?",
+      "note": "direct, explicit chart request"
+    },
+    {
+      "query": "Here's my data file — I want to visualize it for my manager",
+      "note": "implicit chart, formal"
+    },
+    {
+      "query": "can u make a dashboard from this parquet file lol",
+      "note": "casual, typo-adjacent, explicit dashboard"
+    },
+    {
+      "query": "I want to show trends in our quarterly revenue over the last 3 years",
+      "note": "implicit chart — 'show trends' trigger"
+    },
+    {
+      "query": "Help me compare these categories side by side",
+      "note": "implicit chart — 'compare categories' trigger"
+    },
+    {
+      "query": "My boss wants me to make this data presentable for a board meeting",
+      "note": "implicit chart — 'make data presentable' trigger"
+    },
+    {
+      "query": "I have a JSON file and I want to understand it visually",
+      "note": "implicit chart — 'understand visually' trigger"
+    },
+    {
+      "query": "What chart type should I use to compare 12 countries by GDP per capita?",
+      "note": "chart selection question"
+    },
+    {
+      "query": "Build me a Vite app that plots this Excel spreadsheet",
+      "note": "explicit output format + data file"
+    },
+    {
+      "query": "I need to tell a story with data about our user growth",
+      "note": "narrative/data story trigger"
+    }
+  ],
+  "should_not_trigger": [
+    {
+      "query": "Fix the colors in my CSS stylesheet",
+      "note": "near-miss: colors but no data/chart"
+    },
+    {
+      "query": "Analyze this CSV with pandas and show me the mean and std",
+      "note": "near-miss: CSV + analysis but no visualization output"
+    },
+    {
+      "query": "Update the Excel formulas in column D",
+      "note": "near-miss: Excel but spreadsheet editing, not visualization"
+    },
+    {
+      "query": "Write a Python script to clean and deduplicate this dataset",
+      "note": "near-miss: data + Python but no chart"
+    },
+    {
+      "query": "How do I connect to my PostgreSQL database from Python?",
+      "note": "database question, no visualization"
+    },
+    {
+      "query": "Generate a Figma mockup of our new landing page",
+      "note": "design tool but static infographic, not data chart"
+    },
+    {
+      "query": "My bar chart code is throwing a TypeError on line 42, can you fix it?",
+      "note": "near-miss: bar chart but it's a code debugging task, not visualization lifecycle"
+    },
+    {
+      "query": "I just want a quick SQL query to group sales by region",
+      "note": "near-miss: data analysis but no visualization output"
+    },
+    {
+      "query": "Can you review my D3.js code for performance issues?",
+      "note": "near-miss: charting library but code review, not visualization design"
+    },
+    {
+      "query": "What are the best color palettes for a mobile app UI?",
+      "note": "near-miss: colors/palettes but UI design, not data visualization"
+    }
+  ]
+}
