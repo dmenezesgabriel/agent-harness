@@ -9,11 +9,11 @@ class ArtifactContext(Protocol):
 
 def before_scenario(context: ArtifactContext, _scenario: object) -> None:
     base = os.environ.get("EVAL_ARTIFACTS_DIR")
-    fixtures_dir = Path(base) if base else Path(__file__).parent / "fixtures"
+    artifacts_dir = Path(base) if base else Path(__file__).parent / "fixtures" / "golden"
     context.artifacts = {
-        str(p.relative_to(fixtures_dir)): p.read_text(encoding="utf-8")
-        for p in fixtures_dir.rglob("*")
+        str(p.relative_to(artifacts_dir)): p.read_text(encoding="utf-8")
+        for p in artifacts_dir.rglob("*")
         if p.is_file()
-        and not p.name.startswith("input_")
-        and "_live" not in p.relative_to(fixtures_dir).parts
+        and "dist" not in p.relative_to(artifacts_dir).parts
+        and "node_modules" not in p.relative_to(artifacts_dir).parts
     }

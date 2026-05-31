@@ -17,15 +17,15 @@ class FakeRubricJudge:
         )
 
 
-def test_run_uses_live_primary_chart_for_live_rubric(tmp_path: Path) -> None:
+def test_run_resolves_generated_artifacts_primary_sentinel(tmp_path: Path) -> None:
     # Arrange
     evals_dir = tmp_path / "dataviz" / "evals"
     rubrics_dir = evals_dir / "rubrics"
-    artifacts_dir = evals_dir / "fixtures" / "_live"
+    artifacts_dir = evals_dir / "fixtures" / "_generated_artifacts"
     rubrics_dir.mkdir(parents=True)
     artifacts_dir.mkdir(parents=True)
     (rubrics_dir / "live.yaml").write_text(
-        "rubrics:\n  - id: live\n    artifact_file: _live_primary_\n    prompt: pass\n",
+        "rubrics:\n  - id: live\n    artifact_file: _generated_artifacts_primary_\n    prompt: pass\n",
         encoding="utf-8",
     )
     (artifacts_dir / "chart.js").write_text("new Chart();", encoding="utf-8")
@@ -51,17 +51,19 @@ def test_run_resolves_static_fixture_from_golden_dir_in_all_mode(
     evals_dir = tmp_path / "dataviz" / "evals"
     rubrics_dir = evals_dir / "rubrics"
     fixtures_dir = evals_dir / "fixtures"
-    live_dir = fixtures_dir / "_live"
+    generated_artifacts_dir = fixtures_dir / "_generated_artifacts"
+    golden_dir = fixtures_dir / "golden"
     rubrics_dir.mkdir(parents=True)
-    live_dir.mkdir(parents=True)
+    generated_artifacts_dir.mkdir(parents=True)
+    golden_dir.mkdir(parents=True)
     (rubrics_dir / "static.yaml").write_text(
         "rubrics:\n  - id: static\n    artifact_file: golden.md\n    prompt: pass\n",
         encoding="utf-8",
     )
-    (fixtures_dir / "golden.md").write_text("golden content", encoding="utf-8")
+    (golden_dir / "golden.md").write_text("golden content", encoding="utf-8")
 
     # Act
-    verdicts = RubricJudgeRunner().run(evals_dir, live_dir, FakeRubricJudge())
+    verdicts = RubricJudgeRunner().run(evals_dir, generated_artifacts_dir, FakeRubricJudge())
 
     # Assert
     assert verdicts[0].reasoning == "judged golden content"

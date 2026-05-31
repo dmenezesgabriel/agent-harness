@@ -13,10 +13,10 @@ def test_skill_input_sizer_counts_skill_and_input_fixture_chars(
 ) -> None:
     # Arrange
     evals_dir = tmp_path / "dataviz" / "evals"
-    fixtures_dir = evals_dir / "fixtures"
-    fixtures_dir.mkdir(parents=True)
+    inputs_dir = evals_dir / "fixtures" / "inputs"
+    inputs_dir.mkdir(parents=True)
     (tmp_path / "dataviz" / "SKILL.md").write_text("skill rules", encoding="utf-8")
-    (fixtures_dir / "input_timeseries.md").write_text("chart prompt", encoding="utf-8")
+    (inputs_dir / "input_timeseries.md").write_text("chart prompt", encoding="utf-8")
 
     # Act
     sizes = SkillInputSizer().measure(evals_dir)
@@ -24,7 +24,7 @@ def test_skill_input_sizer_counts_skill_and_input_fixture_chars(
     # Assert
     assert sizes == {
         "SKILL.md": len("skill rules"),
-        "fixtures/input_timeseries.md": len("chart prompt"),
+        "fixtures/inputs/input_timeseries.md": len("chart prompt"),
     }
 
 

@@ -20,8 +20,8 @@ class SkillInputSizer:
         sizes: dict[str, int] = {}
         skill_file = evals_dir.parent / "SKILL.md"
         _measure_file(skill_file, "SKILL.md", sizes)
-        for input_file in sorted((evals_dir / "fixtures").glob("input_*.md")):
-            _measure_file(input_file, f"fixtures/{input_file.name}", sizes)
+        for input_file in sorted((evals_dir / "fixtures" / "inputs").glob("*.md")):
+            _measure_file(input_file, f"fixtures/inputs/{input_file.name}", sizes)
         return sizes
 
 

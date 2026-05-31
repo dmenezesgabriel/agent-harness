@@ -1,6 +1,6 @@
 rubrics:
-  - id: live_multiline_for_multiseries
-    artifact_file: _live_primary_
+  - id: generated_multiline_for_multiseries
+    artifact_file: _generated_artifacts_primary_
     pass_threshold: 0.8
     prompt: |
       Evaluate whether this visualization correctly represents multi-series time-series data.
@@ -13,8 +13,8 @@ rubrics:
       Score 0.0 if a bar chart or pie chart is used for this continuous time-series data.
       Respond with JSON: {"passed": <bool>, "score": <float>, "reasoning": <one sentence>}
 
-  - id: live_colorblind_safe_palette
-    artifact_file: _live_primary_
+  - id: generated_colorblind_safe_palette
+    artifact_file: _generated_artifacts_primary_
     pass_threshold: 0.8
     prompt: |
       Evaluate whether the color palette in this visualization is accessible for colorblind users.
@@ -33,8 +33,8 @@ rubrics:
       and state whether a deuteranopic user could distinguish all series.
       Respond with JSON: {"passed": <bool>, "score": <float>, "reasoning": <one sentence>}
 
-  - id: live_design_rules_applied
-    artifact_file: _live_primary_
+  - id: generated_design_rules_applied
+    artifact_file: _generated_artifacts_primary_
     pass_threshold: 0.7
     prompt: |
       Evaluate whether the visualization applies the key design rules from good data visualization

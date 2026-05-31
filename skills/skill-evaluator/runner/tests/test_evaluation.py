@@ -30,7 +30,7 @@ class FakeEvaluator:
 
 class FakeInvoker:
     def invoke(self, _skill_name: str, evals_dir: Path, _agent: object) -> Path:
-        return evals_dir / "fixtures" / "_live"
+        return evals_dir / "fixtures" / "_generated_artifacts"
 
 
 class FakeStructuralRunner:

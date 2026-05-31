@@ -86,20 +86,20 @@ def test_read_results_reports_json_decode_failure(tmp_path: Path) -> None:
     )
 
     # Act
-    results = BehaveStructuralRunner().read_results(result_file, proc, tag="live")
+    results = BehaveStructuralRunner().read_results(result_file, proc, tag="generated")
 
     # Assert
     assert results == [
         ScenarioResult(
             feature="unknown",
-            scenario="behave (live)",
+            scenario="behave (generated)",
             status="failed",
             failure="stdout failure",
         )
     ]
 
 
-def test_run_skips_live_pass_when_live_dir_is_static(
+def test_run_skips_generated_pass_when_artifacts_dir_is_static(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     # Arrange

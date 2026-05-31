@@ -42,10 +42,15 @@ The runner reports character counts for `SKILL.md` and `fixtures/input_*.md` as 
 Plain text prompts used in `invoke` mode. The runner passes the first `input_*.md` found
 to the adapter. Name them descriptively: `input_crud_feature.md`, `input_timeseries.md`.
 
-### Live artifacts (`fixtures/_live/`)
+### Generated artifacts (`fixtures/_generated_artifacts/`)
 
-Written by the runner during `invoke` mode. Ignored by `environment.py` when
-`EVAL_ARTIFACTS_DIR` is not set. The `_live/` directory is gitignored.
+Written by the runner during `invoke` mode — these are the files the agent produced.
+Excluded by `environment.py` when `EVAL_ARTIFACTS_DIR` is not set (so golden fixture
+scenarios never accidentally load generated output). The `_generated_artifacts/` directory
+is gitignored.
+
+Use `_generated_artifacts_primary_` as the `artifact_file` value in a rubric to target
+the primary chart/visualization file the agent wrote.
 
 ---
 
