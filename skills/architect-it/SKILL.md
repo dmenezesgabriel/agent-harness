@@ -24,21 +24,21 @@ Do not invent requirements or assume scale constraints unless explicitly stated.
 
 1. **Load vocabulary.** If `CONTEXT.md` exists at the project root, read it. Use its entity names, boundary names, and layer names consistently throughout the output.
 
-2. **Classify project type.** Inspect existing source layout first (`ls src/`, `find . -name "package.json" -maxdepth 2`, `find . -name "pyproject.toml" -maxdepth 2`). If no code exists or the type is ambiguous, ask with numbered alternatives (one marked `recommended`). Types: `backend-api`, `frontend-spa`, `fullstack`, `data-pipeline`, `data-science`, `cli`, `library`. Read [architecture-rules.md — Project type patterns](references/architecture-rules.md#project-type-patterns) for canonical directory trees.
+2. **Classify project type.** Inspect existing source layout first (`ls src/`, `find . -name "package.json" -maxdepth 2`, `find . -name "pyproject.toml" -maxdepth 2`). If no code exists or the type is ambiguous, ask with numbered alternatives (one marked `recommended`). Types: `backend-api`, `frontend-spa`, `fullstack`, `data-pipeline`, `data-science`, `cli`, `library`. Use the decision tree in [dir-structure.md — Project type decision tree](references/dir-structure.md#project-type-decision-tree).
 
-3. **Confirm tech stack.** Inspect config files. Ask only for what inspection cannot answer — never ask for language, framework, or persistence when `package.json`, `pyproject.toml`, `pom.xml`, `go.mod`, or `Cargo.toml` already answer it.
+3. **Confirm tech stack.** Inspect config files. Ask only for what inspection cannot answer — never ask for language, framework, or persistence when `package.json`, `pyproject.toml`, `pom.xml`, `go.mod`, or `Cargo.toml` already answer it. If persistence technology is undecided, consult [database-selection.md](references/database-selection.md) and recommend based on stated requirements.
 
 4. **State the scope.** Decide and state at the top of the output whether this is a `full-project`, a `bounded-context: <name>`, or a `feature-slice: <name>`. If unclear, ask — scoping the wrong level wastes the entire document.
 
-5. **Build the directory structure.** Use the canonical hexagonal tree from [architecture-rules.md — Project type patterns](references/architecture-rules.md#project-type-patterns). Substitute actual domain entity names. Nest no deeper than 3 levels from `src/`. Annotate each non-obvious directory with a one-line inline comment (`# what lives here`).
+5. **Build the directory structure.** Use the canonical tree for the detected project type from [dir-structure.md — Canonical directory trees](references/dir-structure.md#canonical-directory-trees). Substitute actual domain entity names. Nest no deeper than 3 levels from `src/`. Annotate each non-obvious directory with a one-line inline comment (`# what lives here`).
 
-6. **Map all ports and adapters.** Name every inbound adapter and every outbound port+adapter pair. Apply the naming convention and the one-adapter-per-port-is-default rule in [architecture-rules.md — Port/adapter mapping rules](references/architecture-rules.md#portadapter-mapping-rules). Do not create a port interface when only one implementation exists and no test double is needed.
+6. **Map all ports and adapters.** Name every inbound adapter and every outbound port+adapter pair. Apply the naming convention and the one-adapter-per-port-is-default rule from [dir-structure.md — Port/adapter naming](references/dir-structure.md#portadapter-naming). Do not create a port interface when only one implementation exists and no test double is needed. When the adapter structure maps to a known pattern (Strategy for interchangeable adapters, Builder for complex domain construction, Chain of Responsibility for middleware), name the pattern explicitly — consult [design-patterns.md](../implement-it/references/design-patterns.md). Validate the layer map against [solid-principles.md](references/solid-principles.md).
 
 7. **Select diagrams.** Read [diagram-selection.md](references/diagram-selection.md). Always include the mandatory hexagonal layers `flowchart`. Add conditional diagrams only when their trigger conditions are met. Hard cap: 3 diagrams total per document.
 
 8. **Document cross-cutting concerns.** For each concern (auth, logging, error handling, config, tracing), state the approach and the layer it lives in. Omit concerns not implied by the project type or stated requirements.
 
-9. **Identify ADR-worthy decisions.** For each irreversible, cross-cutting, or vendor-specific decision, write an ADR stub in `docs/adrs/` using [plan-it's ADR template](../plan-it/assets/adr-template.md). Apply the threshold in [architecture-rules.md — ADR threshold](references/architecture-rules.md#adr-threshold).
+9. **Identify ADR-worthy decisions.** For each irreversible, cross-cutting, or vendor-specific decision, write an ADR stub in `docs/adrs/` using [plan-it's ADR template](../plan-it/assets/adr-template.md). Apply the threshold in [adr-guidelines.md](references/adr-guidelines.md).
 
 10. **Write the output document.** Run `bash scripts/ensure-architecture-dir.sh`, then write `docs/architecture/<feature-or-project-slug>.md` using [assets/architecture-template.md](assets/architecture-template.md) as the exact structure.
 
@@ -58,7 +58,7 @@ bash scripts/ensure-architecture-dir.sh
 - [ ] Directory tree uses actual domain names, not placeholder `<entity>` labels
 - [ ] Every node in the tree nests ≤3 levels from `src/`
 - [ ] Every outbound port is named as an interface; every outbound adapter is named as a concrete type
-- [ ] No layer contains a responsibility in its "Must NOT contain" column from [architecture-rules.md](references/architecture-rules.md#layer-rules)
+- [ ] No layer contains a responsibility in its "Must NOT contain" column from [dir-structure.md](references/dir-structure.md#layer-separation-invariants)
 - [ ] Hexagonal layers `flowchart` is present
 - [ ] Maximum 3 diagrams in the document
 - [ ] YAGNI row in "Principles Applied" names what was excluded and why

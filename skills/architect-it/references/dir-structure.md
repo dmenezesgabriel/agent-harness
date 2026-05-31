@@ -1,18 +1,29 @@
-# Architecture Rules for architect-it
+# Directory Structure Reference
 
-## Architectural principles
+## Project type decision tree
 
-These rules hold for every project type. Directory names differ by domain idiom; dependency direction and separation rules do not.
+```
+Building what?
+├── Has a user-facing UI?
+│   ├── UI + API in the same repo? → fullstack
+│   └── UI only (API is external)? → frontend-spa
+└── No UI?
+    ├── REST or GraphQL API?        → backend-api
+    ├── Command-line tool?          → cli
+    ├── Reusable library?           → library
+    ├── ETL / streaming pipeline?   → data-pipeline
+    └── ML model training/serving?  → data-science
+```
 
-### Dependency direction
+## Dependency direction
 
-Core logic never imports from I/O, frameworks, or infrastructure. The invariant across all project types:
+Core logic never imports from I/O, frameworks, or infrastructure:
 
 ```
 core ← orchestration ← adapters ← infrastructure
 ```
 
-Each project type expresses this with its own idiomatic names:
+Each project type uses its own idiomatic layer names:
 
 | Project type | Core | Orchestration | Adapters | Infrastructure |
 |---|---|---|---|---|
@@ -21,7 +32,7 @@ Each project type expresses this with its own idiomatic names:
 | `data-pipeline` | `domain/` | `pipelines/` | `sources/`, `sinks/` | `infrastructure/` |
 | `data-science` | `domain/` | `features/`, `models/` | `pipelines/` | `infrastructure/` |
 
-### Separation invariants (all project types)
+## Layer separation invariants
 
 | Layer role | Owns | Must NOT contain |
 |---|---|---|
@@ -30,9 +41,9 @@ Each project type expresses this with its own idiomatic names:
 | Adapters | I/O translation: HTTP, DB, cloud, UI rendering, file I/O | Business rules, domain construction, cross-adapter dependencies |
 | Infrastructure | DI wiring, config loading, bootstrap, scheduling | Business rules, adapter logic, domain logic |
 
-## Project type patterns
+## Canonical directory trees
 
-Use the canonical tree for the detected type. Replace `<entity>` with actual domain names. Replace file extensions with the project language (`.ts`, `.py`, `.go`, `.java`, etc.).
+Replace `<entity>` with actual domain names. Replace file extensions with the project language (`.ts`, `.py`, `.go`, `.java`, etc.).
 
 ---
 
@@ -80,7 +91,7 @@ tests/
 
 ### frontend-spa
 
-Single-page application. Framework-agnostic feature-based vertical slice structure, as adopted by the broader SPA community (React, Vue, Angular, Svelte, etc.).
+Single-page application. Framework-agnostic feature-based vertical slice structure.
 
 ```
 src/
@@ -108,7 +119,7 @@ tests/
 └── e2e/
 ```
 
-**Dependency rule**: `domain` ← `features` ← `pages` ← `app`. `shared` is imported by any layer but must not import from `features`, `pages`, or `app`. A feature must not import from another feature — cross-feature data flows through `domain/`.
+**Dependency rule**: `domain` ← `features` ← `pages` ← `app`. `shared` may be imported by any layer but must not import from `features`, `pages`, or `app`. A feature must not import from another feature — cross-feature data flows through `domain/`.
 
 ---
 
@@ -138,7 +149,7 @@ Add a package only when ≥2 apps share the same code. Do not create packages sp
 
 ### data-pipeline
 
-Batch or streaming ETL/ELT pipeline. `sources` and `sinks` are the universal industry terms for inbound and outbound adapters in data engineering.
+Batch or streaming ETL/ELT pipeline.
 
 ```
 src/
@@ -153,9 +164,9 @@ src/
 │   │   └── <Sink>WriterPort.<ext>
 │   └── <PipelineName>.<ext>
 ├── sources/                 # inbound adapters — implement <Source>ReaderPort
-│   └── <SourceName>Reader.<ext>         # omit sources not in scope
+│   └── <SourceName>Reader.<ext>
 ├── sinks/                   # outbound adapters — implement <Sink>WriterPort
-│   └── <SinkName>Writer.<ext>           # omit sinks not in scope
+│   └── <SinkName>Writer.<ext>
 └── infrastructure/          # config, scheduler, monitoring, DI wiring
     ├── config.<ext>
     ├── scheduler.<ext>
@@ -165,13 +176,13 @@ tests/
 └── integration/
 ```
 
-**Dependency rule**: `domain` ← `pipelines` ← `sources/sinks` ← `infrastructure`. `pipelines/` owns the port interfaces because it defines the abstractions it needs — sources and sinks implement those interfaces without knowing the pipeline internals.
+**Dependency rule**: `domain` ← `pipelines` ← `sources/sinks` ← `infrastructure`. `pipelines/` owns the port interfaces because it defines the abstractions it needs.
 
 ---
 
 ### data-science
 
-ML model training, evaluation, and serving. Structure follows the Cookiecutter Data Science v2 convention, extended with a clean dependency direction.
+ML model training, evaluation, and serving. Follows Cookiecutter Data Science v2 convention.
 
 ```
 data/
@@ -182,7 +193,7 @@ notebooks/                   # exploration only — never imported by src/
 src/
 ├── domain/                  # data contracts, feature schemas, evaluation metric logic
 │   ├── schemas/
-│   │   └── <Entity>Schema.<ext>         # input/output contracts and validation rules
+│   │   └── <Entity>Schema.<ext>
 │   └── metrics/
 │       └── <Metric>.<ext>               # metric computation (pure functions)
 ├── features/                # feature engineering — pure transformations on domain data
@@ -196,8 +207,8 @@ src/
 │   └── <PipelineName>.<ext>
 └── infrastructure/          # I/O: data loaders, model registry clients, config
     ├── loaders/
-    │   └── <Source>Loader.<ext>         # omit sources not in scope
-    ├── registry.<ext>                   # model registry client
+    │   └── <Source>Loader.<ext>
+    ├── registry.<ext>
     └── config.<ext>
 models/                      # serialized model artifacts — outputs of training pipelines
 reports/                     # generated figures and evaluation outputs
@@ -206,7 +217,7 @@ tests/
 └── integration/
 ```
 
-**Dependency rule**: `domain` ← `features/models` ← `pipelines` ← `infrastructure`. `features/` and `models/` import from `domain/` only. `pipelines/` orchestrates but does not own business rules. `infrastructure/` wires I/O and is the only layer allowed to import third-party ML framework clients.
+**Dependency rule**: `domain` ← `features/models` ← `pipelines` ← `infrastructure`. `infrastructure/` is the only layer allowed to import third-party ML framework clients.
 
 ---
 
@@ -265,48 +276,22 @@ tests/
 
 ---
 
-## Port/adapter mapping rules
+## Port/adapter naming
 
-### Naming
+| Role | Pattern | Example |
+|---|---|---|
+| Port (interface) | `<Entity>Repository`, `<Service>Port`, `<Event>Publisher`, `<Resource>Reader`, `<Resource>Writer` | `UserRepository`, `EmailPort` |
+| Adapter (implementation) | `<Tech><Entity>Repository`, `<Tech><Service>Client` | `PgUserRepository`, `SendgridEmailClient` |
 
-- Port (interface): `<Entity>Repository`, `<Service>Port`, `<Event>Publisher`, `<Resource>Reader`, `<Resource>Writer`
-- Adapter (implementation): `<Tech><Entity>Repository` (e.g., `PgUserRepository`), `<Tech><Service>Client` (e.g., `SendgridEmailClient`)
+### When to create a port interface
 
-### One adapter per port is the default
-
-Do not create a port interface when there is only one concrete implementation and no test double is needed — that is YAGNI. Create a port when:
-- ≥2 concrete implementations exist or are planned in the PRD
+Create a port when:
+- ≥2 concrete implementations exist or are planned
 - The implementation must be swapped for a test double in unit tests
 - The dependency crosses a system or process boundary
 
+Do NOT create a port when only one implementation exists and no test double is needed — that is YAGNI.
+
 ### Inbound adapters do not implement interfaces
 
-HTTP controllers, CLI parsers, and event consumers call use cases directly. They are not behind an interface — they are the entry point. Only outbound dependencies (things the app calls out to) need port interfaces.
-
-## ADR threshold
-
-Write an ADR stub in `docs/adrs/` for any decision that is:
-
-- Hard to reverse: choice of database engine, ORM, message broker, cloud provider, API protocol (REST vs GraphQL vs gRPC)
-- Cross-cutting: authentication strategy, error handling contract, logging format, distributed tracing approach
-- Boundary-defining: monolith vs microservices, sync vs async communication, event sourcing vs CRUD
-
-Do NOT write an ADR for:
-- Naming conventions within a single file
-- Library versions
-- Folder organization details that can be changed without cascading impact
-
-## SOLID, DRY, KISS, YAGNI enforcement
-
-Apply these as constraints on the directory structure and layer map, not as post-hoc commentary:
-
-| Principle | Concrete check |
-|---|---|
-| Single Responsibility | Each orchestration unit (use case, pipeline, feature slice) operates on one cohesive concern and has one reason to change |
-| Open/Closed | New I/O adapters (sources, sinks, API clients, DB repos) slot in without modifying orchestration or domain code |
-| Liskov Substitution | All implementations of a port interface are fully interchangeable — the orchestration layer cannot tell them apart |
-| Interface Segregation | Ports and contracts are narrow: one interface per external capability, never a god-interface covering multiple concerns |
-| Dependency Inversion | Core and orchestration layers import nothing from adapters or infrastructure — the dependency always points inward |
-| DRY | Shared domain logic lives in `domain/`, shared utilities in a `shared/` or `lib/` module — never duplicated across adapters |
-| KISS | Start with a single deployable unit; split only when an explicit requirement (independent scaling, separate deploy cadence) forces it |
-| YAGNI | Exclude any layer, port, interface, or directory not required by a stated requirement — name what was excluded and why |
+HTTP controllers, CLI parsers, and event consumers call use cases directly. They are the entry point — not behind an interface. Only outbound dependencies need port interfaces.
