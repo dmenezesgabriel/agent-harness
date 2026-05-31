@@ -23,3 +23,30 @@ rubrics:
       Score 0.0 if the palette uses rainbow/random colors with no semantic meaning,
       or if more than 7 colors are used for a single chart.
       Respond with JSON: {"passed": <bool>, "score": <float>, "reasoning": <one sentence>}
+
+  - id: multiseries_timeseries_encoding
+    artifact_file: valid_line_timeseries.js
+    pass_threshold: 0.8
+    prompt: |
+      Evaluate whether this chart applies the dataviz skill's chart-selection rules for
+      several time-series. The artifact has four regional revenue series over ordered
+      monthly dates, so an acceptable answer uses a line, area, or connected scatter
+      encoding with one separate series per region and time on the x-axis.
+      Score 1.0 if all regions are represented as separate ordered series with a suitable
+      time-series chart type. Score 0.5 if the chart type is suitable but regions are
+      aggregated or missing. Score 0.0 if it uses bars, pie, or another categorical-only
+      encoding for the time-series trend.
+      Respond with JSON: {"passed": <bool>, "score": <float>, "reasoning": <one sentence>}
+
+  - id: dashboard_story_structure
+    artifact_file: valid_dashboard.html
+    pass_threshold: 0.8
+    prompt: |
+      Evaluate whether this dashboard follows the dataviz skill's Phase 4 build guidance:
+      title/subtitle states the key takeaway, KPI/context appears before supporting charts,
+      the main trend is visually primary, supporting charts answer approved questions,
+      and a data source or time period note is present.
+      Score 1.0 if all five qualities are present. Score 0.7 if one quality is weak or
+      implicit. Score 0.4 if only two or three qualities are present. Score 0.0 if the
+      artifact is just disconnected charts without narrative structure.
+      Respond with JSON: {"passed": <bool>, "score": <float>, "reasoning": <one sentence>}

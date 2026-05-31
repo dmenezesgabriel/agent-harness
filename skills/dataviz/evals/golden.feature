@@ -32,6 +32,22 @@ Feature: dataviz golden fixture validation
     Given the chart artifact "valid_bar_chart.js"
     Then the chart does not use a red-green color pair
 
+  Scenario: Valid multi-series time-series chart uses a line encoding
+    Given the chart artifact "valid_line_timeseries.js"
+    Then the chart uses a line type with ISO date labels
+    And the chart has at least 4 data series
+    And the chart uses at most 7 distinct colors
+    And the chart does not use a red-green color pair
+
+  Scenario: Valid dashboard includes narrative, context, and multiple charts
+    Given the chart artifact "valid_dashboard.html"
+    Then the dashboard has at least 2 chart canvases
+    And the artifact includes a narrative takeaway
+    And the artifact includes a data source or time period note
+    And the chart does not use 3D rendering
+    And the chart does not use dual y-axes
+    And the chart does not use a red-green color pair
+
   # ── invalid fixtures: detection patterns must trigger ────────────────────────
 
   Scenario: Truncated bar chart is flagged for non-zero y-minimum

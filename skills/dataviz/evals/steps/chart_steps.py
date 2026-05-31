@@ -59,13 +59,24 @@ _CHART_TYPE = re.compile(r"""type\s*:\s*["'](\w+)["']""")
 _JSX_CHART_COMPONENT = re.compile(
     r"<(Line|Bar|Area|Pie|Scatter|Radar|Bubble|Donut)Chart[\s/>]", re.IGNORECASE
 )
+_SVG_LINE_MARKS = re.compile(
+    r"<svg\b(?=.*(?:<path\b|createElementNS\([^)]*['\"]path['\"]))(?=.*\bM['\"`\s{])",
+    re.IGNORECASE | re.DOTALL,
+)
 _LABELS_ARRAY = re.compile(r"labels\s*:\s*\[([^\]]+)\]")
 # ISO date strings like "2024-01-01" signal time-series data
 _ISO_DATE_LABEL = re.compile(r'"\d{4}-\d{2}-\d{2}"')
+_DATASET_LABEL_PAT = re.compile(r"\blabel\s*:", re.IGNORECASE)
+_CANVAS_PAT = re.compile(r"<canvas\b", re.IGNORECASE)
+_SOURCE_PAT = re.compile(r"\b(source|data source|period|time range)\b", re.IGNORECASE)
+_TAKEAWAY_PAT = re.compile(
+    r"\b(takeaway|diverge|growing|decline|fastest|worst)\b", re.IGNORECASE
+)
 # Explicit series color — Chart.js backgroundColor or JSX stroke/fill/color props
 _BACKGROUND_COLOR_VALUE = re.compile(
     r"backgroundColor\s*:\s*"
     r'(?:["\'](?:#[0-9a-fA-F]{3,8}|rgba?\([^)]+\)|hsla?\([^)]+\)|[a-z]+)["\']|\[)'
+    r'|(?:borderColor|stroke|fill|color|[A-Z][A-Za-z]+)\s*:\s*["\']#[0-9a-fA-F]{3,8}["\']'
     r'|(?:stroke|fill|color)\s*=\s*["\']#[0-9a-fA-F]{3,8}["\']',
     re.IGNORECASE,
 )
@@ -82,6 +93,7 @@ _VIZ_KEYWORDS = re.compile(
     r"|alt\.Chart\b|\.mark_line\(\)|\.mark_bar\(\)"  # Altair
     r"|import\s+matplotlib|plt\.(plot|bar|scatter|hist|show)\b"  # Matplotlib
     r'|"mark"\s*:\s*"(?:line|bar|area|point|circle)"'  # Vega-Lite
+    r"|<svg\b|createElementNS\([^)]*['\"]path['\"]"  # hand-built SVG
     r"|d3\.select\b"  # D3.js
     r"|from\s+['\"](?:recharts|victory|echarts|highcharts|apexcharts|@nivo/\w+)['\"]"  # React libs
     r"|(?:LineChart|BarChart|AreaChart|PieChart|ScatterChart)\b",  # Recharts components
@@ -188,8 +200,8 @@ def step_has_chart_artifact(context: ChartContext) -> None:
     )
 
 
-@given("the live chart artifact")
-def step_load_live_artifact(context: ChartContext) -> None:
+@given("the generated chart artifact")
+def step_load_generated_artifact(context: ChartContext) -> None:
     """Load the primary visualization file regardless of framework or extension."""
     for ext in _VIZ_EXTENSIONS:
         candidates = sorted(
@@ -236,9 +248,11 @@ def step_chart_type_appropriate(context: ChartContext) -> None:
 
     # JSX component libs (Recharts, Victory, Nivo, …): <LineChart>, <BarChart>, …
     jsx_match = _JSX_CHART_COMPONENT.search(content)
-    assert jsx_match, (
+    if jsx_match or _SVG_LINE_MARKS.search(content):
+        return
+    assert False, (
         f"{context.current_file!r} has no recognizable chart type — "
-        "expected `type: '...'` (Chart.js) or a JSX chart component (<LineChart>, <BarChart>, …)"
+        "expected `type: '...'`, a JSX chart component, or SVG line marks"
     )
 
 
@@ -252,6 +266,52 @@ def step_bar_with_iso_dates(context: ChartContext) -> None:
     labels_match = _LABELS_ARRAY.search(context.current_content)
     assert labels_match and _ISO_DATE_LABEL.search(labels_match.group(1)), (
         f"{context.current_file!r}: expected ISO date labels in the bar chart fixture"
+    )
+
+
+@then("the chart uses a line type with ISO date labels")
+def step_line_with_iso_dates(context: ChartContext) -> None:
+    type_match = _CHART_TYPE.search(context.current_content)
+    assert type_match and type_match.group(1) == "line", (
+        f"{context.current_file!r}: expected type 'line' for time-series data"
+    )
+    labels_match = _LABELS_ARRAY.search(context.current_content)
+    assert labels_match and _ISO_DATE_LABEL.search(labels_match.group(1)), (
+        f"{context.current_file!r}: expected ISO date labels for the line chart"
+    )
+
+
+@then("the chart has at least {series_count:d} data series")
+def step_has_data_series(context: ChartContext, series_count: int) -> None:
+    matches = _DATASET_LABEL_PAT.findall(context.current_content)
+    assert len(matches) >= series_count, (
+        f"{context.current_file!r} has {len(matches)} dataset block(s); "
+        f"expected at least {series_count} separate series"
+    )
+
+
+@then("the dashboard has at least {chart_count:d} chart canvases")
+def step_dashboard_chart_canvases(context: ChartContext, chart_count: int) -> None:
+    matches = _CANVAS_PAT.findall(context.current_content)
+    assert len(matches) >= chart_count, (
+        f"{context.current_file!r} has {len(matches)} chart canvas element(s); "
+        f"expected at least {chart_count}"
+    )
+
+
+@then("the artifact includes a data source or time period note")
+def step_includes_source_note(context: ChartContext) -> None:
+    assert _SOURCE_PAT.search(context.current_content), (
+        f"{context.current_file!r} lacks a source or period note; dashboards must "
+        "include context for the data"
+    )
+
+
+@then("the artifact includes a narrative takeaway")
+def step_includes_narrative_takeaway(context: ChartContext) -> None:
+    assert _TAKEAWAY_PAT.search(context.current_content), (
+        f"{context.current_file!r} lacks a narrative takeaway; title/subtitle should "
+        "communicate the main insight"
     )
 
 

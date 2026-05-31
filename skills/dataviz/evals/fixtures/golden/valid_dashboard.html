@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Regional Revenue Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  </head>
+  <body>
+    <header>
+      <h1>West is pulling away while Southeast declines</h1>
+      <p>Takeaway: revenue trends diverge across regions over 2024.</p>
+    </header>
+    <section aria-label="Key metrics">
+      <p>Fastest growing region: Midwest</p>
+      <p>Region needing attention: Southeast</p>
+    </section>
+    <main>
+      <canvas id="regional-trend"></canvas>
+      <canvas id="latest-revenue"></canvas>
+    </main>
+    <footer>Data source: regional revenue reports. Period: January-April 2024.</footer>
+    <script type="module">
+      const months = ["2024-01-01", "2024-02-01", "2024-03-01", "2024-04-01"];
+      const palette = ["#0072B2", "#E69F00", "#009E73", "#CC79A7"];
+
+      new Chart(document.getElementById("regional-trend"), {
+        type: "line",
+        data: {
+          labels: months,
+          datasets: [
+            { label: "Northeast", data: [125, 131, 128, 142], borderColor: palette[0], backgroundColor: palette[0] },
+            { label: "Southeast", data: [98, 92, 87, 89], borderColor: palette[1], backgroundColor: palette[1] },
+            { label: "Midwest", data: [110, 118, 124, 128], borderColor: palette[2], backgroundColor: palette[2] },
+            { label: "West", data: [145, 152, 160, 167], borderColor: palette[3], backgroundColor: palette[3] },
+          ],
+        },
+        options: { scales: { y: { beginAtZero: true } } },
+      });
+
+      new Chart(document.getElementById("latest-revenue"), {
+        type: "bar",
+        data: {
+          labels: ["Northeast", "Southeast", "Midwest", "West"],
+          datasets: [{ label: "April revenue", data: [142, 89, 128, 167], backgroundColor: palette }],
+        },
+        options: { scales: { y: { beginAtZero: true } } },
+      });
+    </script>
+  </body>
+</html>
