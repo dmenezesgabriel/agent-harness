@@ -215,7 +215,12 @@ Ask: **"Does this chart plan make sense? Want to change anything before I build?
 ### Design rules (apply automatically)
 
 - **Data-ink ratio**: Remove borders, shadows, excessive gridlines. Light gray horizontal gridlines only.
-- **Color**: Sequential palette for magnitude. Max 5–7 colors. Same color = same meaning across all charts.
+- **Color**: Colors must be perceptually distinct for users with deuteranopia and protanopia (the most common colorblindness types). Two well-tested defaults:
+  - Wong (2011): `#0072B2` · `#E69F00` · `#009E73` · `#CC79A7` · `#56B4E9` · `#F0E442` · `#D55E00`
+  - Okabe & Ito: `#E69F00` · `#56B4E9` · `#009E73` · `#F0E442` · `#0072B2` · `#D55E00` · `#CC79A7`
+  For brand or custom palettes, verify at [Viz Palette](https://projects.susielu.com/viz-palette).
+  Never pair pure red with pure green — indistinguishable under deuteranopia.
+  Max 7 colors. Same color = same meaning across all charts.
 - **Reference lines**: Add thresholds, benchmarks, or guidelines where relevant.
 - **Context**: Include data source and time period as a footnote.
 - **Labels**: Direct labeling over legends when possible. Round to meaningful precision.
@@ -302,7 +307,7 @@ Iterate based on feedback. Make targeted adjustments — do not regenerate every
 - [ ] Data inspected — shape, types, and quality findings presented before charting
 - [ ] Chart plan approved before build started
 - [ ] Every chart answers a specific question from Phase 1
-- [ ] Color palette is consistent and colorblind-safe
+- [ ] Color palette is accessible: explicit hardcoded colors, no red+green pairing, verified for deuteranopia
 - [ ] Data source and time period noted in the dashboard
 - [ ] Phase 5 review checklist run with user
 
