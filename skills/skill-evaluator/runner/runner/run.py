@@ -25,11 +25,12 @@ from runner.evaluation import SkillEvaluationApp, SkillEvaluator
 from runner.invocation import SkillInvoker
 from runner.judging import RubricJudgeRunner
 from runner.models import CliArgs
-from runner.ports import AgentPort, JudgePort
+from runner.ports import AgentPort, JudgePort, TriggerClassifierPort
 from runner.reporting import MarkdownReportWriter, SkillInputSizer
+from runner.trigger import TriggerEvaluator
 
 _SKILLS_ROOT = Path(__file__).parent.parent.parent.parent  # agent-harness/skills/
-_MODES = ("invoke", "judge", "all")
+_MODES = ("invoke", "judge", "all", "trigger")
 _ADAPTERS = ("claude", "opencode")
 
 
@@ -52,6 +53,9 @@ def _build_app(args: CliArgs) -> SkillEvaluationApp:
     judge = (
         cast(JudgePort, _build_adapter(args)) if args.mode in ("judge", "all") else None
     )
+    trigger_classifier = (
+        cast(TriggerClassifierPort, _build_adapter(args)) if args.mode == "trigger" else None
+    )
     evaluator = SkillEvaluator(
         invoker=SkillInvoker(),
         structural_runner=BehaveStructuralRunner(),
@@ -60,6 +64,8 @@ def _build_app(args: CliArgs) -> SkillEvaluationApp:
         report_writer=MarkdownReportWriter(),
         agent=agent,
         judge=judge,
+        trigger_evaluator=TriggerEvaluator(),
+        trigger_classifier=trigger_classifier,
     )
     return SkillEvaluationApp(
         discovery=SkillDiscovery(_SKILLS_ROOT), evaluator=evaluator

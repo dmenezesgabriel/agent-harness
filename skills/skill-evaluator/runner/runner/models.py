@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, computed_field
 
-Mode = Literal["invoke", "judge", "all"]
+Mode = Literal["invoke", "judge", "all", "trigger"]
 AdapterName = Literal["claude", "opencode"]
 
 
@@ -42,3 +42,20 @@ class RubricDefinition(BaseModel):
 
 class RubricFile(BaseModel):
     rubrics: list[RubricDefinition] = Field(default_factory=list)
+
+
+class TriggerResult(BaseModel):
+    query: str
+    expected: bool
+    actual: bool
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def passed(self) -> bool:
+        return self.expected == self.actual
+
+
+class TriggerReport(BaseModel):
+    results: list[TriggerResult]
+    pass_rate: float
+    passed: bool

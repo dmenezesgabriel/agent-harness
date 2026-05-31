@@ -4,7 +4,7 @@ from contextlib import suppress
 from datetime import datetime
 from pathlib import Path
 
-from runner.models import JudgeReport, Mode, ScenarioResult
+from runner.models import JudgeReport, Mode, ScenarioResult, TriggerReport
 
 _PERCENT_SCALE = 100
 
@@ -40,6 +40,7 @@ class MarkdownReportWriter:
         structural_results: list[ScenarioResult],
         judge_verdicts: list[JudgeReport],
         input_sizes: dict[str, int] | None = None,
+        trigger_report: TriggerReport | None = None,
     ) -> Path:
         reports_dir = evals_dir / "reports"
         reports_dir.mkdir(parents=True, exist_ok=True)
@@ -48,7 +49,7 @@ class MarkdownReportWriter:
             reports_dir / f"{skill_name}-{run_at.strftime('%Y-%m-%dT%H-%M-%S-%f')}.md"
         )
         lines = _report_lines(
-            mode, skill_name, run_at, structural_results, judge_verdicts, input_sizes
+            mode, skill_name, run_at, structural_results, judge_verdicts, input_sizes, trigger_report
         )
         report_path.write_text(
             "\n".join(lines),
@@ -64,6 +65,7 @@ def _report_lines(
     structural_results: list[ScenarioResult],
     judge_verdicts: list[JudgeReport],
     input_sizes: dict[str, int] | None,
+    trigger_report: TriggerReport | None = None,
 ) -> list[str]:
     lines = [
         f"# Eval Report: {skill_name}",
@@ -73,8 +75,9 @@ def _report_lines(
     active_structural = [r for r in structural_results if r.status != "skipped"]
     lines += _structural_lines(active_structural)
     lines += _judge_lines(judge_verdicts)
+    lines += _trigger_lines(trigger_report)
     lines += _input_size_lines(input_sizes)
-    lines += _pass_rate_lines(active_structural, judge_verdicts)
+    lines += _pass_rate_lines(active_structural, judge_verdicts, trigger_report)
     return lines
 
 
@@ -122,6 +125,28 @@ def _judge_lines(judge_verdicts: list[JudgeReport]) -> list[str]:
     return lines
 
 
+def _trigger_lines(trigger_report: TriggerReport | None) -> list[str]:
+    if not trigger_report or not trigger_report.results:
+        return []
+    lines = [
+        "## Trigger routing checks",
+        "",
+        "| Query | Expected | Actual | Result |",
+        "|-------|----------|--------|--------|",
+    ]
+    for r in trigger_report.results:
+        expected = "INVOKE" if r.expected else "SKIP"
+        actual = "INVOKE" if r.actual else "SKIP"
+        icon = "PASS" if r.passed else "FAIL"
+        lines.append(f"| {r.query} | {expected} | {actual} | {icon} |")
+    pct = int(_PERCENT_SCALE * trigger_report.pass_rate)
+    passed_count = sum(1 for r in trigger_report.results if r.passed)
+    total = len(trigger_report.results)
+    overall = "PASS" if trigger_report.passed else "FAIL"
+    lines += ["", f"**Trigger accuracy**: {passed_count}/{total} ({pct}%) — {overall}", ""]
+    return lines
+
+
 def _input_size_lines(input_sizes: dict[str, int] | None) -> list[str]:
     if not input_sizes:
         return []
@@ -136,15 +161,19 @@ def _input_size_lines(input_sizes: dict[str, int] | None) -> list[str]:
 
 
 def _pass_rate_lines(
-    active_structural: list[ScenarioResult], judge_verdicts: list[JudgeReport]
+    active_structural: list[ScenarioResult],
+    judge_verdicts: list[JudgeReport],
+    trigger_report: TriggerReport | None = None,
 ) -> list[str]:
     structural_passes = sum(
         1 for scenario in active_structural if scenario.status == "passed"
     )
     judge_passes = sum(1 for verdict in judge_verdicts if verdict.passed)
-    total_checks = len(active_structural) + len(judge_verdicts)
+    trigger_passes = sum(1 for r in trigger_report.results if r.passed) if trigger_report else 0
+    trigger_total = len(trigger_report.results) if trigger_report else 0
+    total_checks = len(active_structural) + len(judge_verdicts) + trigger_total
     if not total_checks:
         return []
-    total_passes = structural_passes + judge_passes
+    total_passes = structural_passes + judge_passes + trigger_passes
     pct = int(_PERCENT_SCALE * total_passes / total_checks)
     return [f"**Pass rate**: {total_passes}/{total_checks} ({pct}%)"]

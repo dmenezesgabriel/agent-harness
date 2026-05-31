@@ -31,6 +31,14 @@ _JUDGE_SYSTEM = (
     '{"passed": <bool>, "score": <float 0.0-1.0>, "reasoning": <one sentence>}'
 )
 
+_CLASSIFY_SYSTEM = (
+    "You are an agent. You have access to one skill. "
+    "When a user message matches the skill's purpose you invoke it; "
+    "when it does not match you handle the request directly. "
+    "Given the skill description and user message below, "
+    "reply with exactly one word: INVOKE or SKIP. No explanation, no punctuation."
+)
+
 # Tools the skill is allowed to use when building artifacts
 _INVOKE_TOOLS = "Write Read"
 
@@ -84,6 +92,19 @@ class ClaudeCodeAdapter:
             )
             files = self._collect_dir(workdir)
             return ArtifactSet(workdir=workdir, files=files)
+
+    def classify(self, skill_description: str, query: str) -> bool:
+        prompt = f"Skill description:\n{skill_description}\n\nUser message:\n{query}"
+        stdout = self._run_in_dir(
+            prompt,
+            system=_CLASSIFY_SYSTEM,
+            model=_JUDGE_MODEL,
+            workdir=None,
+            tools=None,
+            append_system=False,
+        )
+        token = stdout.strip().upper().split()[0] if stdout.strip() else ""
+        return token == "INVOKE"
 
     def judge(self, artifact_content: str, rubric: str, rubric_id: str) -> JudgeVerdict:
         prompt = f"Rubric:\n{rubric}\n\nArtifact:\n{artifact_content}"

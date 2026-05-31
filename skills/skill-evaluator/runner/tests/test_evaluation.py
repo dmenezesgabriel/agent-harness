@@ -63,6 +63,7 @@ class FakeReportWriter:
         _structural_results: list[ScenarioResult],
         _judge_verdicts: list[JudgeReport],
         _input_sizes: dict[str, int] | None = None,
+        _trigger_report: object = None,
     ) -> Path:
         return evals_dir / "reports" / "report.md"
 

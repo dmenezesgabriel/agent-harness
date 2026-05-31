@@ -5,7 +5,7 @@ from typing import Protocol
 
 from pydantic import BaseModel, Field
 
-from runner.models import JudgeReport, Mode, ScenarioResult
+from runner.models import JudgeReport, Mode, ScenarioResult, TriggerReport
 
 
 class ArtifactSet(BaseModel):
@@ -45,6 +45,16 @@ class AgentPort(Protocol):
     """
 
     def invoke_skill(self, skill_name: str, prompt: str) -> ArtifactSet: ...
+
+
+class TriggerClassifierPort(Protocol):
+    """Classify whether an agent would invoke a skill for a given user message.
+
+    Usage:
+        triggered = classifier.classify(skill_description, 'plot my sales data')
+    """
+
+    def classify(self, skill_description: str, query: str) -> bool: ...
 
 
 class JudgePort(Protocol):
@@ -94,4 +104,5 @@ class ReportWriterPort(Protocol):
         structural_results: list[ScenarioResult],
         judge_verdicts: list[JudgeReport],
         input_sizes: dict[str, int] | None = None,
+        trigger_report: TriggerReport | None = None,
     ) -> Path: ...

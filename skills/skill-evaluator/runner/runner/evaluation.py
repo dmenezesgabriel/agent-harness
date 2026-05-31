@@ -11,14 +11,16 @@ _log = structlog.get_logger()
 from runner.discovery import SkillDiscovery
 from runner.invocation import SkillInvoker
 from runner.judging import RubricJudgeRunner
-from runner.models import CliArgs, JudgeReport, Mode, ScenarioResult
+from runner.models import CliArgs, JudgeReport, Mode, ScenarioResult, TriggerReport
 from runner.ports import (
     AgentPort,
     JudgePort,
     ReportWriterPort,
     SkillInputSizerPort,
     StructuralCheckPort,
+    TriggerClassifierPort,
 )
+from runner.trigger import TriggerEvaluator
 
 
 class SkillEvaluationApp:
@@ -63,6 +65,8 @@ class SkillEvaluator:
         report_writer: ReportWriterPort,
         agent: AgentPort | None,
         judge: JudgePort | None,
+        trigger_evaluator: TriggerEvaluator | None = None,
+        trigger_classifier: TriggerClassifierPort | None = None,
     ) -> None:
         self._invoker = invoker
         self._structural_runner = structural_runner
@@ -71,6 +75,8 @@ class SkillEvaluator:
         self._report_writer = report_writer
         self._agent = agent
         self._judge = judge
+        self._trigger_evaluator = trigger_evaluator
+        self._trigger_classifier = trigger_classifier
 
     def evaluate(self, evals_dir: Path, mode: Mode) -> bool:
         skill_name = evals_dir.parent.name
@@ -92,6 +98,7 @@ class SkillEvaluator:
             _log.info("structural_done", skill=skill_name, elapsed_s=round(time.monotonic() - t0, 1))
 
         judge_verdicts = self._judge_verdicts(evals_dir, artifacts_dir, mode)
+        trigger_report = self._trigger_report(skill_name, evals_dir, mode)
         report_path = self._report_writer.write(
             skill_name,
             evals_dir,
@@ -99,9 +106,10 @@ class SkillEvaluator:
             structural_results,
             judge_verdicts,
             input_sizes,
+            trigger_report,
         )
         print(f"\nReport: {report_path}")
-        return _is_successful(structural_results, judge_verdicts)
+        return _is_successful(structural_results, judge_verdicts, trigger_report)
 
     def _judge_verdicts(
         self, evals_dir: Path, artifacts_dir: Path, mode: Mode
@@ -113,6 +121,16 @@ class SkillEvaluator:
         _log.info("judge_phase_done", skill=evals_dir.parent.name, elapsed_s=round(time.monotonic() - t0, 1), verdicts=len(verdicts))
         return verdicts
 
+    def _trigger_report(
+        self, skill_name: str, evals_dir: Path, mode: Mode
+    ) -> TriggerReport | None:
+        if mode != "trigger" or self._trigger_evaluator is None or self._trigger_classifier is None:
+            return None
+        t0 = time.monotonic()
+        report = self._trigger_evaluator.evaluate(skill_name, evals_dir, self._trigger_classifier)
+        _log.info("trigger_phase_done", skill=skill_name, elapsed_s=round(time.monotonic() - t0, 1), passed=report.passed)
+        return report
+
 
 def _print_skill_header(skill_name: str, mode: Mode) -> None:
     print(f"\n{'=' * 60}")
@@ -121,10 +139,13 @@ def _print_skill_header(skill_name: str, mode: Mode) -> None:
 
 
 def _is_successful(
-    structural_results: list[ScenarioResult], judge_verdicts: list[JudgeReport]
+    structural_results: list[ScenarioResult],
+    judge_verdicts: list[JudgeReport],
+    trigger_report: TriggerReport | None = None,
 ) -> bool:
     failed_structural = sum(
         1 for scenario in structural_results if scenario.status == "failed"
     )
     failed_judge = sum(1 for verdict in judge_verdicts if not verdict.passed)
-    return failed_structural == 0 and failed_judge == 0
+    trigger_failed = trigger_report is not None and not trigger_report.passed
+    return failed_structural == 0 and failed_judge == 0 and not trigger_failed
