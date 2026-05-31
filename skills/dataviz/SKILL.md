@@ -1,10 +1,10 @@
 ---
 name: dataviz
 description: >
-  Guides the entire data visualization lifecycle: understanding the story, inspecting data, selecting charts, building dashboards, and iterating on design. Use when the user wants to visualize, chart, graph, plot, or dashboard their data — even if they don't explicitly say "visualization" or "dashboard". Use for chart type selection, color palette choices, visual encoding, layout design, and implementation. Also use when the user has a data file and wants insights shown visually. Also use when the user says "show me trends", "compare these categories", "make this data presentable", "tell a story with data", or "I have a file and want to understand it visually" — even if they never say "chart" or "graph". Handles local files (CSV, Parquet, JSON, Excel, DuckDB) via Python + DuckDB and outputs a Vite app or Jupyter notebook.
+  Guides the full visualization lifecycle: story → inspect → select → build → review. Use when the user wants to visualize, chart, graph, plot, or dashboard data — including when they say "show me trends", "compare these categories", "make this data presentable", "tell a story with data", or "I have a file and want to understand it visually". Handles local files (CSV, Parquet, JSON, Excel, DuckDB) via Python + DuckDB; outputs Vite app or Jupyter notebook.
 metadata:
   domain: data-visualization
-  version: "1.2"
+  version: "1.3"
 ---
 
 Build effective, well-designed dashboards from data. Follow the phases in order: understand the story first, inspect the data, then build.
@@ -32,30 +32,28 @@ Do not start generating charts immediately. Do not pick a chart type before insp
 
 ## Phase 0: Environment
 
-Ask:
+Ask: **Where does your data live, and what output format do you need?**
 
-> **Where does your data live, and what output format do you need?**
->
-> - **Local files** (CSV, Parquet, JSON, Excel, local DuckDB) + **Vite app** → Python + DuckDB for inspection, then a local Vite app
-> - **Local files** + **Jupyter notebook** → Python + DuckDB + matplotlib/plotly inline
+- **Vite app**: local files → Python + DuckDB inspection → Vite app
+- **Notebook**: local files → Python + DuckDB + matplotlib/plotly inline
 
-Remember the chosen mode — it governs data inspection (Phase 2) and code generation (Phase 4).
+Remember the mode — it governs Phase 2 (inspection) and Phase 4 (code generation).
 
 ---
 
 ## Phase 1: The Story
 
-Ask these four questions **one at a time**. Do not proceed until all are answered.
+Ask **one at a time**; do not proceed until all four are answered.
 
-**Q1 — Audience**: Who is this dashboard for? (policy maker, CEO, engineers, general public — shapes level of detail and language)
+**Q1 — Audience**: Who is this for? (shapes detail level and language)
 
-**Q2 — Decision**: What decision should this help someone make? Give a concrete example: "Should we invest more in region X?", "Is our air quality improving?"
+**Q2 — Decision**: What decision does it support? Give a concrete example.
 
-**Q3 — Key takeaway**: If someone looks for 5 seconds, what is the ONE thing they walk away with? Not three things — one.
+**Q3 — Key takeaway**: If someone looks for 5 seconds, what is the ONE thing they walk away with?
 
-**Q4 — Questions**: What 2–5 specific sub-questions should the dashboard answer?
+**Q4 — Questions**: What 2–5 specific sub-questions should it answer?
 
-Once all four are answered, summarize back:
+Summarize back:
 
 ```
 Here's what I understand:
@@ -66,6 +64,12 @@ Here's what I understand:
 
 Does this look right? I'll use this to guide every chart choice and design decision.
 ```
+
+Example:
+- Audience: city council members
+- Decision: whether to expand bike lanes in high-accident corridors
+- Key takeaway: three corridors account for 70% of cyclist injuries
+- Questions: Which corridors are worst? Trend over 3 years? Peak hours?
 
 ---
 
@@ -137,6 +141,8 @@ Ask: **"Does this chart plan make sense? Want to change anything before I build?
 
 ## Phase 4: Build the Dashboard
 
+**Default stack**: Vite app → Chart.js (CDN). Notebook → matplotlib or Plotly. Use what the user requests if they name a library; otherwise stick to the default.
+
 ### Layout (F-pattern)
 
 1. Title + subtitle — the key takeaway as a sentence
@@ -148,12 +154,10 @@ Ask: **"Does this chart plan make sense? Want to change anything before I build?
 ### Design rules (apply automatically)
 
 - **Data-ink ratio**: Remove borders, shadows, excessive gridlines. Light gray horizontal gridlines only.
-- **Color**: Colors must be perceptually distinct for users with deuteranopia and protanopia (the most common colorblindness types). Two well-tested defaults:
-  - Wong (2011): `#0072B2` · `#E69F00` · `#009E73` · `#CC79A7` · `#56B4E9` · `#F0E442` · `#D55E00`
-  - Okabe & Ito: `#E69F00` · `#56B4E9` · `#009E73` · `#F0E442` · `#0072B2` · `#D55E00` · `#CC79A7`
-  For brand or custom palettes, verify at [Viz Palette](https://projects.susielu.com/viz-palette).
-  Never pair pure red with pure green — indistinguishable under deuteranopia.
-  Max 7 colors. Same color = same meaning across all charts.
+- **Color**: Colorblind-safe defaults (deuteranopia/protanopia):
+  - Wong: `#0072B2` `#E69F00` `#009E73` `#CC79A7` `#56B4E9` `#F0E442` `#D55E00`
+  - Okabe & Ito: `#E69F00` `#56B4E9` `#009E73` `#F0E442` `#0072B2` `#D55E00` `#CC79A7`
+  Custom palettes: verify at [Viz Palette](https://projects.susielu.com/viz-palette). Max 7 colors. Never pure red + pure green. Same color = same meaning across all charts.
 - **Reference lines**: Add thresholds, benchmarks, or guidelines where relevant.
 - **Context**: Include data source and time period as a footnote.
 - **Labels**: Direct labeling over legends when possible. Round to meaningful precision.
@@ -165,14 +169,12 @@ Ask: **"Does this chart plan make sense? Want to change anything before I build?
 
 ### Ask before generating code
 
-> **Do you have a brand or theme preference?**
->
-> - "Tufte minimal" — maximum data-ink ratio, almost no decoration
-> - "Financial Times" — salmon background, authoritative serif headers
-> - "Dark mode" — dark background, bright accents, high contrast
-> - "Clean analytical" — white background, sans-serif, institutional clarity
->
-> Or give me hex values and I'll match your brand.
+**Do you have a brand or theme preference?**
+- Tufte minimal — maximum data-ink ratio, almost no decoration
+- Financial Times — salmon background, authoritative serif headers
+- Dark mode — dark background, bright accents, high contrast
+- Clean analytical — white background, sans-serif, institutional clarity
+- Or provide hex values to match your brand.
 
 ---
 
@@ -196,43 +198,29 @@ Iterate based on feedback. Make targeted adjustments — do not regenerate every
 
 ## Interactivity (suggest proactively after Phase 5)
 
-> **Want to add interactivity?**
->
-> - **Cross-filtering** — click a bar/region to filter all other charts
-> - **Time range filter** — toggle between periods or use a slider
-> - **Metric toggle** — switch between different measures
->
-> I'll keep it to 1–2 global filters. No dropdown overload.
+**Want to add interactivity?**
+- Cross-filtering — click a bar/region to filter all other charts
+- Time range filter — toggle between periods or use a slider
+- Metric toggle — switch between different measures
+
+Limit to 1–2 global filters. No dropdown overload.
 
 ---
 
 ## Gotchas
 
-- **DuckDB file paths in SQL**: Always wrap paths in single quotes: `SELECT * FROM 'path/to/file.csv'`. Unquoted paths fail silently or produce confusing errors.
-- **Excel files**: DuckDB requires the `spatial` or `excel` extension for `.xlsx`. Prefer converting to CSV first if the user can.
-- **Parquet schema drift**: If multiple Parquet files have different schemas, use `read_parquet(['a.parquet', 'b.parquet'], union_by_name=True)` to avoid column mismatch errors.
-- **Date columns parsed as strings**: DuckDB infers dates from CSVs, but formats like `MM/DD/YYYY` are read as strings. Cast explicitly: `CAST(date_col AS DATE)` after confirming the format.
-- **Vite port conflicts**: If port 5173 is in use, Vite auto-increments to 5174. Tell the user to check the terminal output for the actual URL.
-- **Large CSVs and DuckDB LIMIT**: `LIMIT 5` on a remote file still downloads the whole file. For large remote files, use DuckDB's `read_csv_auto` with `sample_size` instead.
+- **DuckDB file paths in SQL**: Always wrap paths in single quotes: `SELECT * FROM 'path/to/file.csv'`. Unquoted paths fail silently.
+- **Excel files**: DuckDB requires the `spatial` or `excel` extension for `.xlsx`. Prefer converting to CSV first.
+- **Parquet schema drift**: Use `read_parquet(['a.parquet', 'b.parquet'], union_by_name=True)` when files have different schemas.
+- **Date columns parsed as strings**: Formats like `MM/DD/YYYY` are read as strings. Cast explicitly: `CAST(date_col AS DATE)`.
+- **Vite port conflicts**: If 5173 is in use, Vite auto-increments. Check terminal output for the actual URL.
+- **Large CSVs and DuckDB LIMIT**: `LIMIT 5` on a remote file still downloads the whole file. Use `read_csv_auto` with `sample_size` instead.
 
 ## Anti-patterns to avoid
 
-- **Pie charts with more than 5 slices** → use bar or table
-- **3D charts of any kind** → always 2D
-- **Dual y-axes with unrelated metrics** → use separate charts
-- **Line charts with more than 7 series** → use small multiples
-- **Truncated y-axes on bar charts** → always start at zero
-- **Area charts without a zero baseline** → area encoding breaks; zero baseline is mandatory
-- **Stacked bars when subcomponent comparison is the goal** → only the baseline segment has an aligned axis; use grouped bars or separate charts
-- **Slopegraph for more than two time points** → middle data gets lost; use a line chart instead
-- **Bubble chart when bubble sizes cluster similarly** → the 3rd dimension adds noise, not insight; use scatter instead
-- **Treemap with zero or negative values** → area encoding can't represent these; use bar chart
-- **Waterfall with extreme scale disparities** → large base value + tiny changes makes bars invisible; show only deltas with text for the base
-- **Table during a live presentation** → audience can't listen and read simultaneously; use chart + annotations
-- **Boxplot without explaining the structure** → non-technical audiences are lost; narrate each component before revealing the full chart
-- **Rainbow palettes with no semantic meaning** → use intentional palettes
 - **Generating charts before inspecting data** → always run Phase 2 first
 - **Skipping the story questions** → every chart choice must trace back to a question from Phase 1
+- **Dual y-axes with unrelated metrics** → use separate charts
 
 ## Before marking complete
 
@@ -254,14 +242,3 @@ After delivering the dashboard, summarize:
 - Design choices made (theme, palette, any layout deviations)
 - Interactivity added, if any
 - Open follow-up items, if any
-
-## Reference: Color tools
-
-- [Colorbrewer 2.0](https://colorbrewer2.org/) — colorblind-safe sequential/diverging/qualitative palettes
-- [Viz Palette](https://projects.susielu.com/viz-palette) — test your palette for colorblind accessibility
-
-## Reference: Chart decision frameworks
-
-- [From Data to Viz](https://www.data-to-viz.com/) — full decision tree with 38 chart types
-- [FT Visual Vocabulary](https://ft.com/vocabulary) — 9 data relationships mapped to chart types
-- [The Graphic Continuum](https://policyviz.com/2014/09/09/graphic-continuum/) — 90+ chart types by complexity

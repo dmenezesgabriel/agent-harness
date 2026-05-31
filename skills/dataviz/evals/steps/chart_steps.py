@@ -55,6 +55,11 @@ _NONZERO_Y_MIN = re.compile(
 )
 
 _CHART_TYPE = re.compile(r"""type\s*:\s*["'](\w+)["']""")
+_PLOTLY_NEWPLOT = re.compile(r"Plotly\.newPlot\b", re.IGNORECASE)
+_PLOTLY_TRACE_MODE = re.compile(
+    r"""mode\s*:\s*["'](?:lines|markers|lines\+markers|text|lines\+text|markers\+text)["']""",
+    re.IGNORECASE,
+)
 # JSX component name → chart type (Recharts, Victory, Nivo, …)
 _JSX_CHART_COMPONENT = re.compile(
     r"<(Line|Bar|Area|Pie|Scatter|Radar|Bubble|Donut)Chart[\s/>]", re.IGNORECASE
@@ -72,12 +77,18 @@ _SOURCE_PAT = re.compile(r"\b(source|data source|period|time range)\b", re.IGNOR
 _TAKEAWAY_PAT = re.compile(
     r"\b(takeaway|diverge|growing|decline|fastest|worst)\b", re.IGNORECASE
 )
-# Explicit series color — Chart.js backgroundColor or JSX stroke/fill/color props
+# Explicit series color — any framework: Chart.js backgroundColor, Plotly line/marker/color,
+# JSX stroke/fill/color props, SVG fill=, or any JS object key holding a hex literal.
 _BACKGROUND_COLOR_VALUE = re.compile(
+    # Chart.js: backgroundColor: "#..." or backgroundColor: [...]
     r"backgroundColor\s*:\s*"
     r'(?:["\'](?:#[0-9a-fA-F]{3,8}|rgba?\([^)]+\)|hsla?\([^)]+\)|[a-z]+)["\']|\[)'
-    r'|(?:borderColor|stroke|fill|color|[A-Z][A-Za-z]+)\s*:\s*["\']#[0-9a-fA-F]{3,8}["\']'
-    r'|(?:stroke|fill|color)\s*=\s*["\']#[0-9a-fA-F]{3,8}["\']',
+    # Plotly / Vega-Lite / general: color/borderColor/stroke/fill/plot_bgcolor/paper_bgcolor: "#..."
+    r'|(?:border[Cc]olor|stroke|fill|color|plot_bgcolor|paper_bgcolor|[A-Za-z_]+[Cc]olor)\s*:\s*["\']#[0-9a-fA-F]{3,8}["\']'
+    # Any JS object value that is a bare hex literal: someKey: "#aabbcc"
+    r'|:\s*["\']#[0-9a-fA-F]{6}["\']'
+    # SVG attribute: fill="#..." stroke="#..."
+    r'|(?:stroke|fill)\s*=\s*["\']#[0-9a-fA-F]{3,8}["\']',
     re.IGNORECASE,
 )
 # Captures all items inside backgroundColor: [...]
@@ -247,12 +258,17 @@ def step_chart_type_appropriate(context: ChartContext) -> None:
         return
 
     # JSX component libs (Recharts, Victory, Nivo, …): <LineChart>, <BarChart>, …
-    jsx_match = _JSX_CHART_COMPONENT.search(content)
-    if jsx_match or _SVG_LINE_MARKS.search(content):
+    if _JSX_CHART_COMPONENT.search(content) or _SVG_LINE_MARKS.search(content):
         return
+
+    # Plotly.js: Plotly.newPlot(...) with mode encoding (lines, markers, etc.)
+    if _PLOTLY_NEWPLOT.search(content) and _PLOTLY_TRACE_MODE.search(content):
+        return
+
     assert False, (
         f"{context.current_file!r} has no recognizable chart type — "
-        "expected `type: '...'`, a JSX chart component, or SVG line marks"
+        "expected `type: '...'`, a JSX chart component, SVG line marks, "
+        "or Plotly.newPlot with a mode encoding"
     )
 
 
