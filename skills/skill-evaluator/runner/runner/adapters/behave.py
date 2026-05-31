@@ -26,7 +26,7 @@ class BehaveStructuralRunner:
     """
 
     def run(self, evals_dir: Path, artifacts_dir: Path) -> list[ScenarioResult]:
-        static_dir = evals_dir / "fixtures"
+        static_dir = evals_dir / "fixtures" / "golden"
         results = self._behave_pass(evals_dir, static_dir, tag="golden")
         if artifacts_dir != static_dir:
             results += self._behave_pass(evals_dir, artifacts_dir, tag="generated")

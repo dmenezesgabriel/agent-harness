@@ -75,7 +75,11 @@ class SkillEvaluator:
     def evaluate(self, evals_dir: Path, mode: Mode) -> bool:
         skill_name = evals_dir.parent.name
         _print_skill_header(skill_name, mode)
-        artifacts_dir = evals_dir / "fixtures" / "golden"
+        golden_dir = evals_dir / "fixtures" / "golden"
+        generated_dir = evals_dir / "fixtures" / "_generated_artifacts"
+        artifacts_dir = (
+            generated_dir if mode == "judge" and generated_dir.exists() else golden_dir
+        )
         input_sizes = self._input_sizer.measure(evals_dir)
         structural_results: list[ScenarioResult] = []
 

@@ -104,6 +104,70 @@ def test_app_returns_failure_when_any_skill_fails(tmp_path: Path) -> None:
     assert exit_code == 1
 
 
+def test_evaluator_judge_mode_uses_generated_artifacts_when_present(
+    tmp_path: Path,
+) -> None:
+    # Arrange
+    evals_dir = tmp_path / "dataviz" / "evals"
+    generated_dir = evals_dir / "fixtures" / "_generated_artifacts"
+    generated_dir.mkdir(parents=True)
+
+    judged_dirs: list[Path] = []
+
+    class CapturingJudgeRunner:
+        def run(self, _evals_dir: Path, artifacts_dir: Path, _judge: object) -> list[JudgeReport]:
+            judged_dirs.append(artifacts_dir)
+            return []
+
+    evaluator = SkillEvaluator(
+        invoker=cast(SkillInvoker, FakeInvoker()),
+        structural_runner=FakeStructuralRunner(),
+        judge_runner=cast(RubricJudgeRunner, CapturingJudgeRunner()),
+        input_sizer=FakeSkillInputSizer(),
+        report_writer=FakeReportWriter(),
+        agent=None,
+        judge=cast(JudgePort, FakeJudge()),
+    )
+
+    # Act
+    evaluator.evaluate(evals_dir, "judge")
+
+    # Assert
+    assert judged_dirs == [generated_dir]
+
+
+def test_evaluator_judge_mode_falls_back_to_golden_when_no_generated(
+    tmp_path: Path,
+) -> None:
+    # Arrange
+    evals_dir = tmp_path / "dataviz" / "evals"
+    golden_dir = evals_dir / "fixtures" / "golden"
+    golden_dir.mkdir(parents=True)
+
+    judged_dirs: list[Path] = []
+
+    class CapturingJudgeRunner:
+        def run(self, _evals_dir: Path, artifacts_dir: Path, _judge: object) -> list[JudgeReport]:
+            judged_dirs.append(artifacts_dir)
+            return []
+
+    evaluator = SkillEvaluator(
+        invoker=cast(SkillInvoker, FakeInvoker()),
+        structural_runner=FakeStructuralRunner(),
+        judge_runner=cast(RubricJudgeRunner, CapturingJudgeRunner()),
+        input_sizer=FakeSkillInputSizer(),
+        report_writer=FakeReportWriter(),
+        agent=None,
+        judge=cast(JudgePort, FakeJudge()),
+    )
+
+    # Act
+    evaluator.evaluate(evals_dir, "judge")
+
+    # Assert
+    assert judged_dirs == [golden_dir]
+
+
 def test_evaluator_returns_false_when_judge_fails(tmp_path: Path) -> None:
     # Arrange
     evals_dir = tmp_path / "dataviz" / "evals"

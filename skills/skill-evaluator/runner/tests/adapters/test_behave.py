@@ -99,21 +99,21 @@ def test_read_results_reports_json_decode_failure(tmp_path: Path) -> None:
     ]
 
 
-def test_run_skips_generated_pass_when_artifacts_dir_is_static(
+def test_run_skips_generated_pass_when_artifacts_dir_is_golden(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     # Arrange
     evals_dir = tmp_path / "evals"
-    fixtures_dir = evals_dir / "fixtures"
-    fixtures_dir.mkdir(parents=True)
+    golden_dir = evals_dir / "fixtures" / "golden"
+    golden_dir.mkdir(parents=True)
     runner = BehaveStructuralRunner()
     expected_results = [ScenarioResult(feature="f", scenario="golden", status="passed")]
     behave_pass = Mock(return_value=expected_results)
     monkeypatch.setattr(runner, "_behave_pass", behave_pass)
 
     # Act
-    results = runner.run(evals_dir, fixtures_dir)
+    results = runner.run(evals_dir, golden_dir)
 
     # Assert
-    behave_pass.assert_called_once_with(evals_dir, fixtures_dir, tag="golden")
+    behave_pass.assert_called_once_with(evals_dir, golden_dir, tag="golden")
     assert results == expected_results

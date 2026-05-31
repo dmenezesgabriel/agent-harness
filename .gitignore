@@ -28,3 +28,5 @@ test-results
 
 # Symlink to skills/ — excluded to avoid double grep results
 .claude/skills
+
+_generated_artifacts
