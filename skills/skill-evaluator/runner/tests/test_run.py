@@ -73,6 +73,7 @@ def test_build_app_constructs_opencode_adapter_with_requested_models(
     claude_constructor.assert_not_called()
     opencode_constructor.assert_called_once_with(
         skill_root=_SKILLS_ROOT,
+        timeout=180,
         invoke_provider="openai-codex",
         invoke_model="gpt-5.4-mini",
         judge_provider="openai-codex",

@@ -30,6 +30,7 @@ _INVOKE_PROVIDER = "openai-codex"
 _INVOKE_MODEL = "gpt-5.4-mini"
 _JUDGE_PROVIDER = "openai-codex"
 _JUDGE_MODEL = "chatgpt-5.5"
+_IGNORED_ARTIFACT_PARTS = frozenset({".git", "dist", "node_modules"})
 
 _JUDGE_SYSTEM = (
     "You are an expert evaluator of AI-generated software artifacts. "
@@ -44,7 +45,7 @@ class _OpenCodeSession(Protocol):
 
 
 class _OpenCodeMessage(Protocol):
-    id: str
+    id: str | None
 
 
 class _OpenCodePart(Protocol):
@@ -189,6 +190,8 @@ class OpenCodeAdapter:
         for path in workdir.rglob("*"):
             if not path.is_file():
                 continue
+            if _IGNORED_ARTIFACT_PARTS & set(path.relative_to(workdir).parts):
+                continue
             with suppress(UnicodeDecodeError):
                 files[str(path.relative_to(workdir))] = path.read_text(encoding="utf-8")
         return files
@@ -263,20 +266,41 @@ def _create_client(base_url: str, timeout: int) -> _OpenCodeClient:
     return cast(_OpenCodeClient, Opencode(base_url=base_url, timeout=timeout))
 
 
-def _assistant_text(messages: object, message_id: str) -> str:
-    for response_message in cast(list[_OpenCodeMessageWithParts], messages):
+def _assistant_text(messages: object, message_id: str | None) -> str:
+    typed_messages = cast(list[_OpenCodeMessageWithParts], messages)
+    if message_id is None:
+        return _latest_assistant_text(typed_messages)
+    for response_message in typed_messages:
         if response_message.info.id != message_id:
             continue
-        text_parts = [
-            part.text
-            for part in response_message.parts
-            if getattr(part, "type", None) == "text"
-        ]
-        return "\n".join(text_parts)
+        return _message_text(response_message)
     raise RuntimeError(
         f"assistant message {message_id!r} not found in OpenCode session messages; "
         "expected message with text parts"
     )
+
+
+def _latest_assistant_text(messages: list[_OpenCodeMessageWithParts]) -> str:
+    for response_message in reversed(messages):
+        role = getattr(response_message.info, "role", "assistant")
+        if role != "assistant":
+            continue
+        text = _message_text(response_message)
+        if text:
+            return text
+    raise RuntimeError(
+        "assistant message id missing and no assistant text found in OpenCode "
+        "session messages; expected a response with text parts"
+    )
+
+
+def _message_text(response_message: _OpenCodeMessageWithParts) -> str:
+    text_parts = [
+        part.text
+        for part in response_message.parts
+        if getattr(part, "type", None) == "text"
+    ]
+    return "\n".join(text_parts)
 
 
 def _free_port() -> int:

@@ -146,6 +146,34 @@ def test_invoke_skill_sends_skill_as_system_and_collects_artifacts(
     assert fake_client.session.chat_calls[0]["model_id"] == "gpt-5.4-mini"
 
 
+def test_invoke_skill_ignores_dependency_artifacts(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    skill_dir = tmp_path / "dataviz"
+    skill_dir.mkdir()
+    (skill_dir / "SKILL.md").write_text("Use chart rules", encoding="utf-8")
+
+    def fake_client_factory(_base_url: str, _timeout: int) -> FakeOpenCodeClient:
+        assert FakeOpenCodeServer.active_workdir is not None
+        (FakeOpenCodeServer.active_workdir / "node_modules" / "react").mkdir(
+            parents=True
+        )
+        (
+            FakeOpenCodeServer.active_workdir / "node_modules" / "react" / "index.js"
+        ).write_text("library", encoding="utf-8")
+        (FakeOpenCodeServer.active_workdir / "index.html").write_text(
+            "<svg></svg>", encoding="utf-8"
+        )
+        return FakeOpenCodeClient("ok")
+
+    adapter = _adapter(tmp_path, monkeypatch)
+    adapter._client_factory = fake_client_factory
+
+    artifacts = adapter.invoke_skill("dataviz", "Make a chart")
+
+    assert artifacts.files == {"index.html": "<svg></svg>"}
+
+
 def test_judge_defaults_passed_from_score(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -182,3 +210,18 @@ def test_opencode_server_starts_in_workdir_and_terminates(
 def test_assistant_text_raises_when_message_is_missing() -> None:
     with pytest.raises(RuntimeError, match="assistant message 'missing'"):
         opencode._assistant_text([], "missing")
+
+
+def test_assistant_text_uses_latest_assistant_when_message_id_is_missing() -> None:
+    messages = [
+        SimpleNamespace(
+            info=SimpleNamespace(id="user-1", role="user"),
+            parts=[SimpleNamespace(type="text", text="prompt")],
+        ),
+        SimpleNamespace(
+            info=SimpleNamespace(id="assistant-1", role="assistant"),
+            parts=[SimpleNamespace(type="text", text="answer")],
+        ),
+    ]
+
+    assert opencode._assistant_text(messages, None) == "answer"

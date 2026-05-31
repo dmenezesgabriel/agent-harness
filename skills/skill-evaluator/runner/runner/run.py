@@ -18,6 +18,7 @@ from typing import Protocol, cast
 
 from runner.adapters.behave import BehaveStructuralRunner
 from runner.adapters.claude_code import ClaudeCodeAdapter
+from runner.log_setup import configure as _configure_logging
 from runner.adapters.opencode import OpenCodeAdapter
 from runner.discovery import SkillDiscovery
 from runner.evaluation import SkillEvaluationApp, SkillEvaluator
@@ -37,6 +38,7 @@ class _EvaluationAdapter(AgentPort, JudgePort, Protocol):
 
 
 def main() -> None:
+    _configure_logging()
     args = _parse_args()
     raise SystemExit(_build_app(args).run(args))
 
@@ -70,6 +72,7 @@ def _build_adapter(args: CliArgs) -> _EvaluationAdapter:
     if args.adapter == "opencode":
         return OpenCodeAdapter(
             skill_root=_SKILLS_ROOT,
+            timeout=args.opencode_timeout,
             invoke_provider=args.opencode_invoke_provider,
             invoke_model=args.opencode_invoke_model,
             judge_provider=args.opencode_judge_provider,
@@ -117,6 +120,12 @@ def _add_opencode_args(parser: argparse.ArgumentParser) -> None:
         "--opencode-judge-model",
         default=os.getenv("OPENCODE_JUDGE_MODEL", "chatgpt-5.5"),
         help="OpenCode judge model (default: chatgpt-5.5)",
+    )
+    parser.add_argument(
+        "--opencode-timeout",
+        type=int,
+        default=int(os.getenv("OPENCODE_TIMEOUT", "180")),
+        help="OpenCode request timeout in seconds (default: 180)",
     )
 
 

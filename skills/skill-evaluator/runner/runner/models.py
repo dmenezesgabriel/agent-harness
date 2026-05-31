@@ -16,6 +16,7 @@ class CliArgs(BaseModel):
     opencode_invoke_model: str = "gpt-5.4-mini"
     opencode_judge_provider: str = "openai-codex"
     opencode_judge_model: str = "chatgpt-5.5"
+    opencode_timeout: int = 180
 
 
 class ScenarioResult(BaseModel):
