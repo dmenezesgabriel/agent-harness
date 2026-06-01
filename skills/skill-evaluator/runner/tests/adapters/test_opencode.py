@@ -179,6 +179,69 @@ class TestInvokeSkill:
         assert artifacts.files == {"index.html": "<svg></svg>"}
 
 
+class TestInvokeBaseline:
+    def test_invoke_baseline_uses_neutral_system_and_collects_artifacts(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        fake_client = FakeOpenCodeClient("ok")
+        adapter = _adapter(tmp_path, monkeypatch)
+        adapter._client_factory = lambda _base_url, _timeout: fake_client
+        FakeOpenCodeServer.write_artifact = True
+
+        try:
+            artifacts = adapter.invoke_baseline("Make a chart without skill guidance")
+        finally:
+            FakeOpenCodeServer.write_artifact = False
+
+        assert artifacts.files == {"chart.js": "new Chart()"}
+        assert fake_client.session.chat_calls[0]["system"] == opencode._BASELINE_SYSTEM
+        assert fake_client.session.chat_calls[0]["provider_id"] == "openai-codex"
+        assert fake_client.session.chat_calls[0]["model_id"] == "gpt-5.4-mini"
+
+
+class TestClassify:
+    def test_classify_returns_true_when_response_is_invoke(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        adapter = _adapter(tmp_path, monkeypatch, response_text="INVOKE")
+
+        result = adapter.classify("Generates charts from data", "plot my sales data")
+
+        assert result is True
+
+    def test_classify_returns_false_when_response_is_skip(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        adapter = _adapter(tmp_path, monkeypatch, response_text="SKIP")
+
+        result = adapter.classify("Generates charts from data", "write a poem")
+
+        assert result is False
+
+    def test_classify_is_case_insensitive(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        adapter = _adapter(tmp_path, monkeypatch, response_text="invoke")
+
+        result = adapter.classify("Generates charts from data", "plot my sales data")
+
+        assert result is True
+
+    def test_classify_uses_judge_provider_and_model(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        fake_client = FakeOpenCodeClient("INVOKE")
+        adapter = _adapter(tmp_path, monkeypatch)
+        adapter._client_factory = lambda _base_url, _timeout: fake_client
+
+        adapter.classify("Generates charts from data", "plot my sales data")
+
+        call = fake_client.session.chat_calls[0]
+        assert call["system"] == opencode._CLASSIFY_SYSTEM
+        assert call["provider_id"] == "openai-codex"
+        assert call["model_id"] == "chatgpt-5.4"
+
+
 class TestJudge:
     def test_judge_defaults_passed_from_score(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

@@ -37,6 +37,14 @@ _JUDGE_SYSTEM = (
     "Respond ONLY with a JSON object - no prose, no markdown fences: "
     '{"passed": <bool>, "score": <float 0.0-1.0>, "reasoning": <one sentence>}'
 )
+_BASELINE_SYSTEM = "You are a helpful assistant. Complete the task the user describes."
+_CLASSIFY_SYSTEM = (
+    "You are an agent. You have access to one skill. "
+    "When a user message matches the skill's purpose you invoke it; "
+    "when it does not match you handle the request directly. "
+    "Given the skill description and user message below, "
+    "reply with exactly one word: INVOKE or SKIP. No explanation, no punctuation."
+)
 _INVOKE_TOOLS = {"read": True, "write": True}
 
 
@@ -156,6 +164,33 @@ class OpenCodeAdapter:
             score=payload.score,
             reasoning=payload.reasoning,
         )
+
+    def invoke_baseline(self, prompt: str) -> ArtifactSet:
+        with tempfile.TemporaryDirectory(prefix="eval-baseline-") as tmp:
+            workdir = Path(tmp)
+            self._chat_in_workdir(
+                workdir,
+                prompt,
+                system=_BASELINE_SYSTEM,
+                provider_id=self._invoke_provider,
+                model_id=self._invoke_model,
+                tools=_INVOKE_TOOLS,
+            )
+            return ArtifactSet(workdir=workdir, files=self._collect_dir(workdir))
+
+    def classify(self, skill_description: str, query: str) -> bool:
+        prompt = f"Skill description:\n{skill_description}\n\nUser message:\n{query}"
+        with tempfile.TemporaryDirectory(prefix="eval-classify-") as tmp:
+            stdout = self._chat_in_workdir(
+                Path(tmp),
+                prompt,
+                system=_CLASSIFY_SYSTEM,
+                provider_id=self._judge_provider,
+                model_id=self._judge_model,
+                tools=None,
+            )
+        token = stdout.strip().upper().split()[0] if stdout.strip() else ""
+        return token == "INVOKE"  # nosec B105
 
     def _chat_in_workdir(
         self,
