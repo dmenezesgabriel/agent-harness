@@ -1,7 +1,7 @@
 ---
 name: dataviz
 description: >
-  Guides the full visualization lifecycle: story → inspect → select → build → review. Use when the user wants to visualize, chart, graph, plot, or dashboard data — including when they say "show me trends", "compare these categories", "make this data presentable", "tell a story with data", or "I have a file and want to understand it visually". Handles local files (CSV, Parquet, JSON, Excel, DuckDB) via Python + DuckDB; outputs Vite app or Jupyter notebook.
+  Guides the full visualization lifecycle: story → inspect → select → build → review. Use when the user wants to visualize, chart, graph, plot, or dashboard data — including when they say "show me trends", "compare these categories", "make this data presentable", "tell a story with data", "I have a file and want to understand it visually", or "what chart type should I use for X". Also handles chart-selection-only questions (no data file required). Handles local files (CSV, Parquet, JSON, Excel, DuckDB) via Python + DuckDB; outputs Vite app or Jupyter notebook.
 metadata:
   domain: data-visualization
   version: "1.3"
