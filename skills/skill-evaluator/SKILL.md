@@ -31,7 +31,7 @@ be expressed as patterns, and must use rubrics already defined in `evals/rubrics
 |------|-------------|----------|
 | `invoke` | Calls the skill (haiku) via claude CLI, runs behave structural checks on live output, reports skill input size (char counts). | `claude` CLI |
 | `judge` | Runs LLM-as-judge (sonnet) against rubric files on golden fixtures. Reproducible — no agent call needed. | `claude` CLI |
-| `all` | Runs invoke → structural → judge in sequence. | `claude` CLI |
+| `all` | Runs invoke → structural → judge → trigger in sequence. | `claude` CLI |
 
 Note: The claude CLI does not expose token counts. Skill input size reports character counts for `SKILL.md` and `fixtures/input_*.md` as an honest proxy. This helps compare whether the same or better output quality can be achieved with smaller skill instructions or fixture prompts.
 

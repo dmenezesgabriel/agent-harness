@@ -3,7 +3,7 @@
 
 Discovers skills/*/evals/, builds the requested evaluation mode strategy,
 and runs the evaluator. Modes: invoke (skill + structural), judge (LLM rubric),
-trigger (routing accuracy), all (invoke + judge).
+trigger (routing accuracy), all (invoke + structural + judge + trigger).
 
 Usage:
     uv run python -m runner.run [--skill <name>] [--mode invoke|judge|all|trigger]
@@ -65,6 +65,7 @@ def _build_strategy(args: CliArgs, adapter: _EvaluationAdapter) -> EvalModeStrat
             return AllStrategy(
                 SkillInvoker(), BehaveStructuralRunner(), cast(AgentPort, adapter),
                 RubricJudgeRunner(), cast(JudgePort, adapter), sizer,
+                TriggerEvaluator(), cast(TriggerClassifierPort, adapter),
             )
         case _:
             raise ValueError(f"Unknown mode {args.mode!r}; expected one of {_MODES}")
