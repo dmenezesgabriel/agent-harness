@@ -14,11 +14,10 @@
 - Functions: 4-20 lines. Split if longer.
 - Files: under 500 lines. Split by responsibility.
 - One thing per function, one responsibility per module (SRP).
-- Names: specific and unique. Avoid `data`, `handler`, `Manager`.
-  Prefer names that return <5 grep hits in the codebase.
+- Names: specific and unique. No abbreviations — write full words (`calculateVolume`, not `calcVol`). Avoid `data`, `handler`, `Manager`. Prefer names that return <5 grep hits in the codebase.
 - Types: explicit. No `any`, no `Dict`, no untyped functions.
 - No code duplication. Extract shared logic into a function/module.
-- Early returns over nested ifs. Max 2 levels of indentation.
+- Early returns over nested ifs. Max 2 levels of indentation. No else keyword — invert the condition and return early.
 - Exception messages must include the offending value and expected shape.
 
 ## Comments
