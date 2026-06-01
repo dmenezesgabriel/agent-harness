@@ -1,6 +1,6 @@
 # Output Rules
 
-After implementation, write a short implementation summary in `tasks/implementation/`.
+Write a short implementation summary in `tasks/implementation/` after each task.
 
 ## Directory rule
 
@@ -58,13 +58,9 @@ The summary must include:
 Good:
 - `UT-001` added for project name length.
 - `IT-001` added for `POST /projects` persistence.
-- `ProjectForm` component states verified for invalid, submitting, and server-error states.
-- ADR `docs/adrs/001-use-notification-port.md` updated to `Accepted`.
-- `E2E-001` not applicable because this task changed only a pure validator.
+- `E2E-001` not applicable — this task changed only a pure validator.
 
 Bad:
 - Done.
 - Tests passed.
-- Changed backend.
-- Changed frontend.
 - No issues.

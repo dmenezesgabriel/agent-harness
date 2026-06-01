@@ -1,0 +1,87 @@
+{
+  "description": "Trigger accuracy queries for the implement-it skill. Tests that the skill fires on concrete implementation requests backed by a defined task, and stays silent for exploratory, review, planning, or documentation requests.",
+  "should_trigger": [
+    {
+      "query": "implement the login endpoint from issue #42",
+      "note": "explicit implement verb + named issue"
+    },
+    {
+      "query": "code the task in tasks/003-add-search.md",
+      "note": "code verb + task file reference"
+    },
+    {
+      "query": "fix the authentication bug described in TASK-101",
+      "note": "fix verb + named task identifier"
+    },
+    {
+      "query": "refactor the UserService per the design spec in tasks/005-refactor-user-service.md",
+      "note": "refactor verb + task file reference"
+    },
+    {
+      "query": "complete the payment integration task",
+      "note": "complete verb + named task"
+    },
+    {
+      "query": "build the product search feature per the acceptance criteria in tasks/007-product-search.md",
+      "note": "build verb + task file with explicit acceptance criteria"
+    },
+    {
+      "query": "implement user email validation with AC-1 through AC-4",
+      "note": "implement verb + inline acceptance criteria — no external task reference needed"
+    },
+    {
+      "query": "code this story: as a user I want to filter products by category so I can find items faster",
+      "note": "user story with defined scope — implement-it handles stories with clear acceptance criteria"
+    },
+    {
+      "query": "finish implementing tasks/004-export-csv.md",
+      "note": "finish verb + task file reference — resuming interrupted work"
+    },
+    {
+      "query": "implement the retry logic described in the task",
+      "note": "implement verb + reference to an existing task description"
+    }
+  ],
+  "should_not_trigger": [
+    {
+      "query": "how does the authentication system work?",
+      "note": "exploratory question about existing code, no implementation requested"
+    },
+    {
+      "query": "explain the current database schema",
+      "note": "documentation/explanation request, not an implementation task"
+    },
+    {
+      "query": "should we use PostgreSQL or MongoDB for this feature?",
+      "note": "architectural decision question with no defined task or acceptance criteria"
+    },
+    {
+      "query": "plan the sprint tasks for next week",
+      "note": "planning request — belongs to plan-it, not implement-it"
+    },
+    {
+      "query": "review this pull request for the payment integration",
+      "note": "code review request — belongs to review-it"
+    },
+    {
+      "query": "what's the best approach for caching the product catalogue?",
+      "note": "open-ended design question, no concrete task to implement"
+    },
+    {
+      "query": "write documentation for the search API",
+      "note": "documentation task without code implementation"
+    },
+    {
+      "query": "debug why the login test is failing",
+      "note": "exploratory debugging — investigating a failure, not implementing a defined fix"
+    },
+    {
+      "query": "give me feedback on this code design",
+      "note": "feedback/review request, not an implementation task"
+    },
+    {
+      "query": "what would happen if we changed the ORM from SQLAlchemy to Django ORM?",
+      "note": "speculative architectural question with no task or acceptance criteria"
+    }
+  ]
+}

@@ -1,7 +1,5 @@
 # ADR Implementation Rules
 
-Use these rules when implementation touches architectural decisions.
-
 ## When to check ADRs
 
 Before implementing, check for relevant ADRs when the task involves:
@@ -65,14 +63,12 @@ Update:
 - Open Questions
 
 Good:
-- Status changed to `Accepted`.
-- Validation notes mention passing integration tests.
-- Consequences mention added adapter complexity.
+- Status changed to `Accepted` after integration tests pass.
+- Consequences note added adapter complexity.
 - Open questions list retry policy for future work.
 
 Bad:
 - Paste implementation logs into the ADR.
-- Write a long narrative.
 - Omit consequences.
 - Remove open questions without resolving them.
 

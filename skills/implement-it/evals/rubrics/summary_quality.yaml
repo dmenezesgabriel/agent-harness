@@ -1,0 +1,57 @@
+rubrics:
+  - id: summary_behavior_specificity
+    artifact_file: valid_complete_summary.md
+    pass_threshold: 0.7
+    prompt: |
+      Evaluate the "## Behavior Implemented" section of this implementation summary.
+      A high-quality section names real values, types, and observable outcomes — not
+      just restates the task title or says "the function works as expected."
+      Score 1.0 if: concrete types and values are mentioned (e.g. specific exception
+        messages, return types, boundary values), and the behavior is described from
+        the caller's perspective.
+      Score 0.5 if: the description is partially concrete but missing specifics (e.g.
+        mentions exceptions but not message format, or mentions types but not values).
+      Score 0.0 if: the description is entirely generic ("implements the feature",
+        "works correctly", "follows the spec").
+      Respond with JSON: {"passed": <bool>, "score": <float>, "reasoning": <one sentence>}
+
+  - id: summary_test_description_quality
+    artifact_file: valid_complete_summary.md
+    pass_threshold: 0.7
+    prompt: |
+      Evaluate the "## Tests Added or Updated" section of this implementation summary.
+      A high-quality section names specific test cases or edge cases and states the
+      total test count — not just "added unit tests" or "tests were written."
+      Score 1.0 if: specific cases are listed (e.g. boundary values, error conditions,
+        happy path inputs) AND the total number of tests is stated.
+      Score 0.5 if: some specifics are present (cases listed OR count stated) but not both.
+      Score 0.0 if: the section is entirely generic ("added tests", "wrote unit tests",
+        "tested the feature").
+      Respond with JSON: {"passed": <bool>, "score": <float>, "reasoning": <one sentence>}
+
+  - id: summary_design_decision_reasoning
+    artifact_file: valid_complete_summary.md
+    pass_threshold: 0.7
+    prompt: |
+      Evaluate the "## Design Notes" section of this implementation summary.
+      A high-quality section explains WHY design choices were made — not just WHAT was done.
+      Score 1.0 if: at least one design choice includes an explicit reason (e.g. "chose X
+        over Y because Z", "avoided pattern P because it would over-engineer this single-field
+        case", references a principle from the codebase conventions).
+      Score 0.5 if: some rationale is implied but not stated explicitly.
+      Score 0.0 if: the section only describes what was built with no reasoning ("used Value
+        Object pattern", "implemented as a static method").
+      Respond with JSON: {"passed": <bool>, "score": <float>, "reasoning": <one sentence>}
+
+  - id: summary_ac_traceability
+    artifact_file: valid_complete_summary.md
+    pass_threshold: 0.8
+    prompt: |
+      Evaluate whether this implementation summary makes the acceptance criteria traceable.
+      Specifically: can a reader confirm that each AC item from the original task is addressed
+      somewhere in the summary (Files Changed, Behavior Implemented, Tests Added, or Validation Run)?
+      Score 1.0 if: each acceptance criterion (AC-1, AC-2, …) is clearly reflected — either
+        named explicitly or unambiguously covered by the described behavior and tests.
+      Score 0.5 if: most AC items are traceable but at least one is absent or only implied.
+      Score 0.0 if: the summary makes no meaningful reference to acceptance criteria.
+      Respond with JSON: {"passed": <bool>, "score": <float>, "reasoning": <one sentence>}
