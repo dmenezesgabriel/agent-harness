@@ -65,11 +65,7 @@ Here's what I understand:
 Does this look right? I'll use this to guide every chart choice and design decision.
 ```
 
-Example:
-- Audience: city council members
-- Decision: whether to expand bike lanes in high-accident corridors
-- Key takeaway: three corridors account for 70% of cyclist injuries
-- Questions: Which corridors are worst? Trend over 3 years? Peak hours?
+> e.g., Audience: city council · Decision: expand bike lanes? · Takeaway: 3 corridors = 70% of injuries · Questions: which corridors, 3-year trend, peak hours
 
 ---
 
@@ -91,15 +87,13 @@ Here's what I found:
 - Categorical columns: [name, cardinality]
 - Numeric columns: [name, range, distribution notes]
 - Data quality: [nulls, outliers, surprises]
-
-Based on your questions and this data shape, here's my chart plan:
 ```
 
 ---
 
 ## Phase 3: Chart Selection
 
-Read [decision-tree.md](references/decision-tree.md) and walk it top-down for every chart. State the path taken and justify the leaf node.
+Read [decision-tree.md](references/decision-tree.md) and walk it once per Phase 1 question. State the path as a compact chain (e.g., `Time → 1 series → Line chart`) and justify the leaf in one sentence.
 
 For each chart type identified in the tree, read its reference file before finalizing the plan:
 
@@ -154,10 +148,7 @@ Ask: **"Does this chart plan make sense? Want to change anything before I build?
 ### Design rules (apply automatically)
 
 - **Data-ink ratio**: Remove borders, shadows, excessive gridlines. Light gray horizontal gridlines only.
-- **Color**: Colorblind-safe defaults (deuteranopia/protanopia):
-  - Wong: `#0072B2` `#E69F00` `#009E73` `#CC79A7` `#56B4E9` `#F0E442` `#D55E00`
-  - Okabe & Ito: `#E69F00` `#56B4E9` `#009E73` `#F0E442` `#0072B2` `#D55E00` `#CC79A7`
-  Custom palettes: verify at [Viz Palette](https://projects.susielu.com/viz-palette). Max 7 colors. Never pure red + pure green. Same color = same meaning across all charts.
+- **Color**: Colorblind-safe (deuteranopia/protanopia). Default palette (Wong): `#0072B2` `#E69F00` `#009E73` `#CC79A7` `#56B4E9` `#F0E442` `#D55E00`. Custom palettes: verify at [Viz Palette](https://projects.susielu.com/viz-palette). Max 7 colors. Never pure red + green. Same color = same meaning.
 - **Reference lines**: Add thresholds, benchmarks, or guidelines where relevant.
 - **Context**: Include data source and time period as a footnote.
 - **Labels**: Direct labeling over legends when possible. Round to meaningful precision.
@@ -225,11 +216,8 @@ Limit to 1–2 global filters. No dropdown overload.
 ## Before marking complete
 
 - [ ] Story questions answered and summary confirmed by user
-- [ ] Data inspected — shape, types, and quality findings presented before charting
-- [ ] Chart plan approved before build started
-- [ ] Every chart answers a specific question from Phase 1
-- [ ] Color palette is accessible: explicit hardcoded colors, no red+green pairing, verified for deuteranopia
-- [ ] Data source and time period noted in the dashboard
+- [ ] Data inspected before chart selection
+- [ ] Chart plan approved before build
 - [ ] Phase 5 review checklist run with user
 
 ## Final response
