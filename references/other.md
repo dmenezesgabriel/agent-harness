@@ -27,6 +27,9 @@
 - [Benchmark^2: Systematic Evaluation of LLM Benchmarks](https://arxiv.org/abs/2601.03986) (Qian et al., 2026) — A framework for assessing the quality and consistency of existing LLM benchmarks.
 - [FinAuditing: A Financial Taxonomy-Structured Multi-Document Benchmark for Evaluating LLMs](https://arxiv.org/abs/2412.05579) (Wang et al., 2025) — Evaluating model performance on complex, structured financial auditing tasks.
 - [Unveiling LLM Evaluation Focused on Metrics: Challenges and Solutions](https://arxiv.org/abs/2404.09135) (Hu & Zhou, 2024) — A comprehensive guide to the mathematical formulations and interpretations of LLM evaluation metrics.
+- https://arxiv.org/abs/2402.07927
+- https://arxiv.org/html/2507.18638v2
+- https://arxiv.org/html/2311.05661v3
 
 ## Pi used extensions
 
