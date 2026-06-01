@@ -7,13 +7,13 @@ import sys
 import tempfile
 import time
 from pathlib import Path
+from typing import Literal
 
 import structlog
 
-_log = structlog.get_logger()
-from typing import Literal
-
 from runner.models import ScenarioResult
+
+_log = structlog.get_logger()
 
 _STRUCTURAL_FAILURE_PREVIEW_CHARS = 120
 

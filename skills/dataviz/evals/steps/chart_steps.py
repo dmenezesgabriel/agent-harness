@@ -265,7 +265,7 @@ def step_chart_type_appropriate(context: ChartContext) -> None:
     if _PLOTLY_NEWPLOT.search(content) and _PLOTLY_TRACE_MODE.search(content):
         return
 
-    assert False, (
+    raise AssertionError(
         f"{context.current_file!r} has no recognizable chart type — "
         "expected `type: '...'`, a JSX chart component, SVG line marks, "
         "or Plotly.newPlot with a mode encoding"

@@ -10,6 +10,7 @@
 - [amosblomqvist/pi-config](https://github.com/amosblomqvist/pi-config/) — Configuration files and scripts for Raspberry Pi setups.
 - [nicobailon (Nico Bailon)](https://github.com/nicobailon) — GitHub profile for developer Nico Bailon.
 - [Open WebUI](https://github.com/open-webui/open-webui) — A user-friendly self-hosted WebUI for LLMs (formerly Ollama WebUI).
+- https://dev.to/truongpx396/learn-harness-engineering-by-building-a-mini-claude-code-45a9
 
 ### **Platforms and Specifications**
 - [LM Studio](https://lmstudio.ai/) — A desktop application for discovering and running local LLMs.

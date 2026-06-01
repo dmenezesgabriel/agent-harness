@@ -32,34 +32,37 @@ class FakeAgent:
     pass
 
 
-def test_invoke_strategy_mode_is_invoke() -> None:
-    strategy = InvokeStrategy(
-        cast(SkillInvoker, FakeInvoker(Path("/tmp"))),
-        cast(StructuralCheckPort, FakeStructuralRunner([])),
-        cast(AgentPort, FakeAgent()),
-        cast(SkillInputSizerPort, FakeSizer()),
-    )
-    assert strategy.mode == "invoke"
+class TestInvokeStrategy:
+    def test_invoke_strategy_mode_is_invoke(self) -> None:
+        strategy = InvokeStrategy(
+            cast(SkillInvoker, FakeInvoker(Path("/tmp"))),  # nosec B108
+            cast(StructuralCheckPort, FakeStructuralRunner([])),
+            cast(AgentPort, FakeAgent()),
+            cast(SkillInputSizerPort, FakeSizer()),
+        )
+        assert strategy.mode == "invoke"
 
+    def test_invoke_strategy_returns_structural_results_and_input_sizes(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        evals_dir = tmp_path / "dataviz" / "evals"
+        evals_dir.mkdir(parents=True)
+        artifacts_dir = evals_dir / "fixtures" / "_generated_artifacts"
+        artifacts_dir.mkdir(parents=True)
+        passed = ScenarioResult(feature="f", scenario="s", status="passed")
 
-def test_invoke_strategy_returns_structural_results_and_input_sizes(tmp_path: Path) -> None:
-    evals_dir = tmp_path / "dataviz" / "evals"
-    evals_dir.mkdir(parents=True)
-    artifacts_dir = evals_dir / "fixtures" / "_generated_artifacts"
-    artifacts_dir.mkdir(parents=True)
-    passed = ScenarioResult(feature="f", scenario="s", status="passed")
+        strategy = InvokeStrategy(
+            cast(SkillInvoker, FakeInvoker(artifacts_dir)),
+            cast(StructuralCheckPort, FakeStructuralRunner([passed])),
+            cast(AgentPort, FakeAgent()),
+            cast(SkillInputSizerPort, FakeSizer()),
+        )
 
-    strategy = InvokeStrategy(
-        cast(SkillInvoker, FakeInvoker(artifacts_dir)),
-        cast(StructuralCheckPort, FakeStructuralRunner([passed])),
-        cast(AgentPort, FakeAgent()),
-        cast(SkillInputSizerPort, FakeSizer()),
-    )
+        outcome = strategy.run("dataviz", evals_dir)
 
-    outcome = strategy.run("dataviz", evals_dir)
-
-    assert outcome.mode == "invoke"
-    assert outcome.structural_results == [passed]
-    assert outcome.input_sizes == {"SKILL.md": 100}
-    assert outcome.judge_verdicts == []
-    assert outcome.trigger_report is None
+        assert outcome.mode == "invoke"
+        assert outcome.structural_results == [passed]
+        assert outcome.input_sizes == {"SKILL.md": 100}
+        assert outcome.judge_verdicts == []
+        assert outcome.trigger_report is None

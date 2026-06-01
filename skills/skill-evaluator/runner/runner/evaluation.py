@@ -27,11 +27,11 @@ class SkillEvaluationApp:
             )
             return 1
 
-        overall_ok = True
+        all_succeeded = True
         for evals_dir in skill_dirs:
-            ok = self._evaluator.evaluate(evals_dir)
-            overall_ok = overall_ok and ok
-        return 0 if overall_ok else 1
+            skill_succeeded = self._evaluator.evaluate(evals_dir)
+            all_succeeded = all_succeeded and skill_succeeded
+        return 0 if all_succeeded else 1
 
 
 class SkillEvaluator:
@@ -61,6 +61,7 @@ class SkillEvaluator:
             outcome.judge_verdicts,
             outcome.input_sizes,
             outcome.trigger_report,
+            baseline_structural_results=outcome.baseline_structural_results or None,
         )
         print(f"\nReport: {report_path}")
         return _is_successful(outcome)
@@ -77,5 +78,7 @@ def _is_successful(outcome: EvalOutcome) -> bool:
         1 for r in outcome.structural_results if r.status == "failed"
     )
     failed_judge = sum(1 for v in outcome.judge_verdicts if not v.passed)
-    trigger_failed = outcome.trigger_report is not None and not outcome.trigger_report.passed
+    trigger_failed = (
+        outcome.trigger_report is not None and not outcome.trigger_report.passed
+    )
     return failed_structural == 0 and failed_judge == 0 and not trigger_failed

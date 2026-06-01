@@ -106,122 +106,133 @@ def _adapter(
     )
 
 
-def test_judge_payload_rejects_score_outside_unit_interval() -> None:
-    raw_payload = {"passed": True, "score": 1.2, "reasoning": "too high"}
+class TestJudgePayload:
+    def test_judge_payload_rejects_score_outside_unit_interval(self) -> None:
+        raw_payload = {"passed": True, "score": 1.2, "reasoning": "too high"}
 
-    with pytest.raises(ValidationError):
-        _JudgePayload.model_validate(raw_payload)
-
-
-def test_adapter_init_fails_when_opencode_cli_is_missing(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    which = Mock(return_value=None)
-    monkeypatch.setattr("runner.adapters.opencode.shutil.which", which)
-
-    with pytest.raises(RuntimeError, match="opencode CLI not found"):
-        OpenCodeAdapter(skill_root=tmp_path)
-    which.assert_called_once_with("opencode")
+        with pytest.raises(ValidationError):
+            _JudgePayload.model_validate(raw_payload)
 
 
-def test_invoke_skill_sends_skill_as_system_and_collects_artifacts(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    skill_dir = tmp_path / "dataviz"
-    skill_dir.mkdir()
-    (skill_dir / "SKILL.md").write_text("Use chart rules", encoding="utf-8")
-    fake_client = FakeOpenCodeClient("ok")
-    adapter = _adapter(tmp_path, monkeypatch)
-    adapter._client_factory = lambda _base_url, _timeout: fake_client
-    FakeOpenCodeServer.write_artifact = True
+class TestAdapterInit:
+    def test_adapter_init_fails_when_opencode_cli_is_missing(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        which = Mock(return_value=None)
+        monkeypatch.setattr("runner.adapters.opencode.shutil.which", which)
 
-    try:
+        with pytest.raises(RuntimeError, match="opencode CLI not found"):
+            OpenCodeAdapter(skill_root=tmp_path)
+        which.assert_called_once_with("opencode")
+
+
+class TestInvokeSkill:
+    def test_invoke_skill_sends_skill_as_system_and_collects_artifacts(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        skill_dir = tmp_path / "dataviz"
+        skill_dir.mkdir()
+        (skill_dir / "SKILL.md").write_text("Use chart rules", encoding="utf-8")
+        fake_client = FakeOpenCodeClient("ok")
+        adapter = _adapter(tmp_path, monkeypatch)
+        adapter._client_factory = lambda _base_url, _timeout: fake_client
+        FakeOpenCodeServer.write_artifact = True
+
+        try:
+            artifacts = adapter.invoke_skill("dataviz", "Make a chart")
+        finally:
+            FakeOpenCodeServer.write_artifact = False
+
+        assert artifacts.files == {"chart.js": "new Chart()"}
+        assert fake_client.session.chat_calls[0]["system"] == "Use chart rules"
+        assert fake_client.session.chat_calls[0]["provider_id"] == "openai-codex"
+        assert fake_client.session.chat_calls[0]["model_id"] == "gpt-5.4-mini"
+
+    def test_invoke_skill_ignores_dependency_artifacts(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        skill_dir = tmp_path / "dataviz"
+        skill_dir.mkdir()
+        (skill_dir / "SKILL.md").write_text("Use chart rules", encoding="utf-8")
+
+        def fake_client_factory(_base_url: str, _timeout: int) -> FakeOpenCodeClient:
+            assert FakeOpenCodeServer.active_workdir is not None
+            (FakeOpenCodeServer.active_workdir / "node_modules" / "react").mkdir(
+                parents=True
+            )
+            (
+                FakeOpenCodeServer.active_workdir
+                / "node_modules"
+                / "react"
+                / "index.js"
+            ).write_text("library", encoding="utf-8")
+            (FakeOpenCodeServer.active_workdir / "index.html").write_text(
+                "<svg></svg>", encoding="utf-8"
+            )
+            return FakeOpenCodeClient("ok")
+
+        adapter = _adapter(tmp_path, monkeypatch)
+        adapter._client_factory = fake_client_factory
+
         artifacts = adapter.invoke_skill("dataviz", "Make a chart")
-    finally:
-        FakeOpenCodeServer.write_artifact = False
 
-    assert artifacts.files == {"chart.js": "new Chart()"}
-    assert fake_client.session.chat_calls[0]["system"] == "Use chart rules"
-    assert fake_client.session.chat_calls[0]["provider_id"] == "openai-codex"
-    assert fake_client.session.chat_calls[0]["model_id"] == "gpt-5.4-mini"
+        assert artifacts.files == {"index.html": "<svg></svg>"}
 
 
-def test_invoke_skill_ignores_dependency_artifacts(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    skill_dir = tmp_path / "dataviz"
-    skill_dir.mkdir()
-    (skill_dir / "SKILL.md").write_text("Use chart rules", encoding="utf-8")
-
-    def fake_client_factory(_base_url: str, _timeout: int) -> FakeOpenCodeClient:
-        assert FakeOpenCodeServer.active_workdir is not None
-        (FakeOpenCodeServer.active_workdir / "node_modules" / "react").mkdir(
-            parents=True
+class TestJudge:
+    def test_judge_defaults_passed_from_score(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        adapter = _adapter(
+            tmp_path,
+            monkeypatch,
+            response_text='{"score": 0.8, "reasoning": "meets rubric"}',
         )
-        (
-            FakeOpenCodeServer.active_workdir / "node_modules" / "react" / "index.js"
-        ).write_text("library", encoding="utf-8")
-        (FakeOpenCodeServer.active_workdir / "index.html").write_text(
-            "<svg></svg>", encoding="utf-8"
+
+        verdict = adapter.judge("artifact", "rubric", rubric_id="quality")
+
+        assert verdict.passed is True
+        assert verdict.score == 0.8
+        assert verdict.rubric_id == "quality"
+
+
+class TestOpenCodeServer:
+    def test_opencode_server_starts_in_workdir_and_terminates(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        fake_popen = FakePopen()
+        popen_constructor = Mock(return_value=fake_popen)
+        monkeypatch.setattr(
+            "runner.adapters.opencode.subprocess.Popen", popen_constructor
         )
-        return FakeOpenCodeClient("ok")
+        monkeypatch.setattr(
+            "runner.adapters.opencode._server_is_ready", Mock(return_value=True)
+        )
 
-    adapter = _adapter(tmp_path, monkeypatch)
-    adapter._client_factory = fake_client_factory
+        with opencode._OpenCodeServer("opencode", tmp_path, 4321):
+            pass
 
-    artifacts = adapter.invoke_skill("dataviz", "Make a chart")
-
-    assert artifacts.files == {"index.html": "<svg></svg>"}
-
-
-def test_judge_defaults_passed_from_score(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    adapter = _adapter(
-        tmp_path,
-        monkeypatch,
-        response_text='{"score": 0.8, "reasoning": "meets rubric"}',
-    )
-
-    verdict = adapter.judge("artifact", "rubric", rubric_id="quality")
-
-    assert verdict.passed is True
-    assert verdict.score == 0.8
-    assert verdict.rubric_id == "quality"
+        assert fake_popen.terminated is True
+        assert popen_constructor.call_args.kwargs["cwd"] == tmp_path
 
 
-def test_opencode_server_starts_in_workdir_and_terminates(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    fake_popen = FakePopen()
-    popen_constructor = Mock(return_value=fake_popen)
-    monkeypatch.setattr("runner.adapters.opencode.subprocess.Popen", popen_constructor)
-    monkeypatch.setattr(
-        "runner.adapters.opencode._server_is_ready", Mock(return_value=True)
-    )
+class TestAssistantText:
+    def test_assistant_text_raises_when_message_is_missing(self) -> None:
+        with pytest.raises(RuntimeError, match="assistant message 'missing'"):
+            opencode._assistant_text([], "missing")
 
-    with opencode._OpenCodeServer("opencode", tmp_path, 4321):
-        pass
+    def test_assistant_text_uses_latest_assistant_when_message_id_is_missing(
+        self,
+    ) -> None:
+        messages = [
+            SimpleNamespace(
+                info=SimpleNamespace(id="user-1", role="user"),
+                parts=[SimpleNamespace(type="text", text="prompt")],
+            ),
+            SimpleNamespace(
+                info=SimpleNamespace(id="assistant-1", role="assistant"),
+                parts=[SimpleNamespace(type="text", text="answer")],
+            ),
+        ]
 
-    assert fake_popen.terminated is True
-    assert popen_constructor.call_args.kwargs["cwd"] == tmp_path
-
-
-def test_assistant_text_raises_when_message_is_missing() -> None:
-    with pytest.raises(RuntimeError, match="assistant message 'missing'"):
-        opencode._assistant_text([], "missing")
-
-
-def test_assistant_text_uses_latest_assistant_when_message_id_is_missing() -> None:
-    messages = [
-        SimpleNamespace(
-            info=SimpleNamespace(id="user-1", role="user"),
-            parts=[SimpleNamespace(type="text", text="prompt")],
-        ),
-        SimpleNamespace(
-            info=SimpleNamespace(id="assistant-1", role="assistant"),
-            parts=[SimpleNamespace(type="text", text="answer")],
-        ),
-    ]
-
-    assert opencode._assistant_text(messages, None) == "answer"
+        assert opencode._assistant_text(messages, None) == "answer"

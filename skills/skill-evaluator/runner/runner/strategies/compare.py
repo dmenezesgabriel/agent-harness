@@ -4,26 +4,24 @@ import time
 from pathlib import Path
 
 from runner.invocation import SkillInvoker
-from runner.judging import RubricJudgeRunner
 from runner.models import EvalOutcome, Mode
 from runner.ports import (
     AgentPort,
-    JudgePort,
+    BaselineAgentPort,
     SkillInputSizerPort,
     StructuralCheckPort,
-    TriggerClassifierPort,
 )
 from runner.strategies._timing import _log_elapsed
-from runner.trigger import TriggerEvaluator
 
 
-class AllStrategy:
-    """Run invocation + structural checks + LLM judge + trigger routing in sequence.
+class CompareStrategy:
+    """Invoke the skill and a plain baseline, run structural checks on both.
 
-    The judge and trigger run against the artifacts produced by invocation, not golden fixtures.
+    The baseline reveals what Claude produces without skill guidance.
+    Comparing structural check results shows what the skill actually contributes.
 
     Usage:
-        strategy = AllStrategy(invoker, structural_runner, agent, judge_runner, judge, input_sizer, trigger_evaluator, classifier)
+        strategy = CompareStrategy(invoker, structural_runner, agent, baseline_agent, input_sizer)
         outcome = strategy.run('dataviz', evals_dir)
     """
 
@@ -32,24 +30,18 @@ class AllStrategy:
         invoker: SkillInvoker,
         structural_runner: StructuralCheckPort,
         agent: AgentPort,
-        judge_runner: RubricJudgeRunner,
-        judge: JudgePort,
+        baseline_agent: BaselineAgentPort,
         input_sizer: SkillInputSizerPort,
-        trigger_evaluator: TriggerEvaluator,
-        classifier: TriggerClassifierPort,
     ) -> None:
         self._invoker = invoker
         self._structural_runner = structural_runner
         self._agent = agent
-        self._judge_runner = judge_runner
-        self._judge = judge
+        self._baseline_agent = baseline_agent
         self._input_sizer = input_sizer
-        self._trigger_evaluator = trigger_evaluator
-        self._classifier = classifier
 
     @property
     def mode(self) -> Mode:
-        return Mode.ALL
+        return Mode.COMPARE
 
     def run(self, skill_name: str, evals_dir: Path) -> EvalOutcome:
         input_sizes = self._input_sizer.measure(evals_dir)
@@ -63,21 +55,16 @@ class AllStrategy:
         _log_elapsed("structural_done", skill_name, start)
 
         start = time.monotonic()
-        verdicts = self._judge_runner.run(evals_dir, artifacts_dir, self._judge)
-        _log_elapsed("judge_phase_done", skill_name, start, verdicts=len(verdicts))
+        baseline_dir = self._invoker.invoke_baseline(evals_dir, self._baseline_agent)
+        _log_elapsed("baseline_invocation_done", skill_name, start)
 
         start = time.monotonic()
-        trigger_report = self._trigger_evaluator.evaluate(
-            skill_name, evals_dir, self._classifier
-        )
-        _log_elapsed(
-            "trigger_phase_done", skill_name, start, passed=trigger_report.passed
-        )
+        baseline_results = self._structural_runner.run(evals_dir, baseline_dir)
+        _log_elapsed("baseline_structural_done", skill_name, start)
 
         return EvalOutcome(
-            mode=Mode.ALL,
+            mode=Mode.COMPARE,
             structural_results=structural_results,
-            judge_verdicts=verdicts,
-            trigger_report=trigger_report,
+            baseline_structural_results=baseline_results,
             input_sizes=input_sizes,
         )

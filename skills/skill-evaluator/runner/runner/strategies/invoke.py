@@ -3,13 +3,10 @@ from __future__ import annotations
 import time
 from pathlib import Path
 
-import structlog
-
 from runner.invocation import SkillInvoker
 from runner.models import EvalOutcome, Mode
 from runner.ports import AgentPort, SkillInputSizerPort, StructuralCheckPort
-
-_log = structlog.get_logger()
+from runner.strategies._timing import _log_elapsed
 
 
 class InvokeStrategy:
@@ -34,21 +31,21 @@ class InvokeStrategy:
 
     @property
     def mode(self) -> Mode:
-        return "invoke"
+        return Mode.INVOKE
 
     def run(self, skill_name: str, evals_dir: Path) -> EvalOutcome:
         input_sizes = self._input_sizer.measure(evals_dir)
 
-        t0 = time.monotonic()
+        start = time.monotonic()
         artifacts_dir = self._invoker.invoke(skill_name, evals_dir, self._agent)
-        _log.info("invocation_done", skill=skill_name, elapsed_s=round(time.monotonic() - t0, 1))
+        _log_elapsed("invocation_done", skill_name, start)
 
-        t0 = time.monotonic()
+        start = time.monotonic()
         structural_results = self._structural_runner.run(evals_dir, artifacts_dir)
-        _log.info("structural_done", skill=skill_name, elapsed_s=round(time.monotonic() - t0, 1))
+        _log_elapsed("structural_done", skill_name, start)
 
         return EvalOutcome(
-            mode="invoke",
+            mode=Mode.INVOKE,
             structural_results=structural_results,
             input_sizes=input_sizes,
         )

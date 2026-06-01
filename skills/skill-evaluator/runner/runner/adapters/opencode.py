@@ -29,7 +29,7 @@ _HOSTNAME = "127.0.0.1"
 _INVOKE_PROVIDER = "openai-codex"
 _INVOKE_MODEL = "gpt-5.4-mini"
 _JUDGE_PROVIDER = "openai-codex"
-_JUDGE_MODEL = "chatgpt-5.5"
+_JUDGE_MODEL = "chatgpt-5.4"
 _IGNORED_ARTIFACT_PARTS = frozenset({".git", "dist", "node_modules"})
 
 _JUDGE_SYSTEM = (

@@ -3,7 +3,7 @@ from __future__ import annotations
 import shutil
 from pathlib import Path
 
-from runner.ports import AgentPort
+from runner.ports import AgentPort, BaselineAgentPort
 
 
 class SkillInvoker:
@@ -29,6 +29,23 @@ class SkillInvoker:
         artifacts = adapter.invoke_skill(skill_name, input_text)
         self._write_artifacts(generated_dir, artifacts.files)
         return generated_dir
+
+    def invoke_baseline(self, evals_dir: Path, agent: BaselineAgentPort) -> Path:
+        input_files = sorted((evals_dir / "fixtures" / "inputs").glob("*.md"))
+        if not input_files:
+            print(
+                f"  No input prompts found in {evals_dir / 'fixtures' / 'inputs'} - skipping baseline"
+            )
+            return evals_dir / "fixtures" / "golden"
+
+        baseline_dir = evals_dir / "fixtures" / "_baseline_artifacts"
+        self._reset_generated_artifacts_dir(baseline_dir)
+
+        input_text = input_files[0].read_text(encoding="utf-8")
+        print(f"  Invoking baseline with fixture: {input_files[0].name}")
+        artifacts = agent.invoke_baseline(input_text)
+        self._write_artifacts(baseline_dir, artifacts.files)
+        return baseline_dir
 
     def _reset_generated_artifacts_dir(self, generated_dir: Path) -> None:
         if generated_dir.exists():

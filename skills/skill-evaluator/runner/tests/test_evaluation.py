@@ -48,111 +48,131 @@ class FakeReportWriter:
         _judge_verdicts: list[JudgeReport],
         _input_sizes: dict[str, int] | None = None,
         _trigger_report: object = None,
+        baseline_structural_results: list[ScenarioResult] | None = None,  # noqa: ARG002
     ) -> Path:
         return evals_dir / "reports" / "report.md"
 
 
-def test_app_returns_failure_when_no_evals_are_found() -> None:
-    # Arrange
-    app = SkillEvaluationApp(
-        cast(SkillDiscovery, FakeDiscovery([])),
-        cast(SkillEvaluator, FakeEvaluator(is_success=True)),
-    )
+class TestSkillEvaluationApp:
+    def test_app_returns_failure_when_no_evals_are_found(self) -> None:
+        # Arrange
+        app = SkillEvaluationApp(
+            cast(SkillDiscovery, FakeDiscovery([])),
+            cast(SkillEvaluator, FakeEvaluator(is_success=True)),
+        )
 
-    # Act
-    exit_code = app.run(CliArgs(skill="missing"))
+        # Act
+        exit_code = app.run(CliArgs(skill="missing"))
 
-    # Assert
-    assert exit_code == 1
+        # Assert
+        assert exit_code == 1
 
+    def test_app_returns_failure_when_any_skill_fails(self, tmp_path: Path) -> None:
+        # Arrange
+        evals_dir = tmp_path / "dataviz" / "evals"
+        app = SkillEvaluationApp(
+            cast(SkillDiscovery, FakeDiscovery([evals_dir])),
+            cast(SkillEvaluator, FakeEvaluator(is_success=False)),
+        )
 
-def test_app_returns_failure_when_any_skill_fails(tmp_path: Path) -> None:
-    # Arrange
-    evals_dir = tmp_path / "dataviz" / "evals"
-    app = SkillEvaluationApp(
-        cast(SkillDiscovery, FakeDiscovery([evals_dir])),
-        cast(SkillEvaluator, FakeEvaluator(is_success=False)),
-    )
+        # Act
+        exit_code = app.run(CliArgs(mode=Mode.JUDGE))
 
-    # Act
-    exit_code = app.run(CliArgs(mode="judge"))
-
-    # Assert
-    assert exit_code == 1
-
-
-def test_evaluator_delegates_to_strategy_and_returns_success(tmp_path: Path) -> None:
-    # Arrange
-    evals_dir = tmp_path / "dataviz" / "evals"
-    evals_dir.mkdir(parents=True)
-    outcome = EvalOutcome(
-        mode="invoke",
-        structural_results=[ScenarioResult(feature="f", scenario="s", status="passed")],
-    )
-    evaluator = SkillEvaluator(
-        strategy=cast(EvalModeStrategy, FakeStrategy(outcome)),
-        report_writer=cast(ReportWriterPort, FakeReportWriter()),
-    )
-
-    # Act
-    is_success = evaluator.evaluate(evals_dir)
-
-    # Assert
-    assert is_success is True
+        # Assert
+        assert exit_code == 1
 
 
-def test_evaluator_returns_false_when_structural_check_fails(tmp_path: Path) -> None:
-    # Arrange
-    evals_dir = tmp_path / "dataviz" / "evals"
-    evals_dir.mkdir(parents=True)
-    outcome = EvalOutcome(
-        mode="invoke",
-        structural_results=[ScenarioResult(feature="f", scenario="s", status="failed", failure="missing rule")],
-    )
-    evaluator = SkillEvaluator(
-        strategy=cast(EvalModeStrategy, FakeStrategy(outcome)),
-        report_writer=cast(ReportWriterPort, FakeReportWriter()),
-    )
+class TestSkillEvaluator:
+    def test_evaluator_delegates_to_strategy_and_returns_success(
+        self, tmp_path: Path
+    ) -> None:
+        # Arrange
+        evals_dir = tmp_path / "dataviz" / "evals"
+        evals_dir.mkdir(parents=True)
+        outcome = EvalOutcome(
+            mode=Mode.INVOKE,
+            structural_results=[
+                ScenarioResult(feature="f", scenario="s", status="passed")
+            ],
+        )
+        evaluator = SkillEvaluator(
+            strategy=cast(EvalModeStrategy, FakeStrategy(outcome)),
+            report_writer=cast(ReportWriterPort, FakeReportWriter()),
+        )
 
-    # Act
-    is_success = evaluator.evaluate(evals_dir)
+        # Act
+        is_success = evaluator.evaluate(evals_dir)
 
-    # Assert
-    assert is_success is False
+        # Assert
+        assert is_success is True
+
+    def test_evaluator_returns_false_when_structural_check_fails(
+        self, tmp_path: Path
+    ) -> None:
+        # Arrange
+        evals_dir = tmp_path / "dataviz" / "evals"
+        evals_dir.mkdir(parents=True)
+        outcome = EvalOutcome(
+            mode=Mode.INVOKE,
+            structural_results=[
+                ScenarioResult(
+                    feature="f", scenario="s", status="failed", failure="missing rule"
+                )
+            ],
+        )
+        evaluator = SkillEvaluator(
+            strategy=cast(EvalModeStrategy, FakeStrategy(outcome)),
+            report_writer=cast(ReportWriterPort, FakeReportWriter()),
+        )
+
+        # Act
+        is_success = evaluator.evaluate(evals_dir)
+
+        # Assert
+        assert is_success is False
+
+    def test_evaluator_returns_false_when_judge_fails(self, tmp_path: Path) -> None:
+        # Arrange
+        evals_dir = tmp_path / "dataviz" / "evals"
+        evals_dir.mkdir(parents=True)
+        outcome = EvalOutcome(
+            mode=Mode.JUDGE,
+            judge_verdicts=[
+                JudgeReport(
+                    rubric_id="q", passed=False, score=_FAILING_SCORE, reasoning="bad"
+                )
+            ],
+        )
+        evaluator = SkillEvaluator(
+            strategy=cast(EvalModeStrategy, FakeStrategy(outcome)),
+            report_writer=cast(ReportWriterPort, FakeReportWriter()),
+        )
+
+        # Act
+        is_success = evaluator.evaluate(evals_dir)
+
+        # Assert
+        assert is_success is False
 
 
-def test_evaluator_returns_false_when_judge_fails(tmp_path: Path) -> None:
-    # Arrange
-    evals_dir = tmp_path / "dataviz" / "evals"
-    evals_dir.mkdir(parents=True)
-    outcome = EvalOutcome(
-        mode="judge",
-        judge_verdicts=[JudgeReport(rubric_id="q", passed=False, score=_FAILING_SCORE, reasoning="bad")],
-    )
-    evaluator = SkillEvaluator(
-        strategy=cast(EvalModeStrategy, FakeStrategy(outcome)),
-        report_writer=cast(ReportWriterPort, FakeReportWriter()),
-    )
+class TestIsSuccessful:
+    def test_is_successful_passes_when_all_checks_pass(self) -> None:
+        outcome = EvalOutcome(
+            mode=Mode.ALL,
+            structural_results=[
+                ScenarioResult(feature="f", scenario="s", status="passed")
+            ],
+            judge_verdicts=[
+                JudgeReport(rubric_id="r", passed=True, score=0.9, reasoning="good")
+            ],
+        )
+        assert _is_successful(outcome) is True
 
-    # Act
-    is_success = evaluator.evaluate(evals_dir)
-
-    # Assert
-    assert is_success is False
-
-
-def test_is_successful_passes_when_all_checks_pass() -> None:
-    outcome = EvalOutcome(
-        mode="all",
-        structural_results=[ScenarioResult(feature="f", scenario="s", status="passed")],
-        judge_verdicts=[JudgeReport(rubric_id="r", passed=True, score=0.9, reasoning="good")],
-    )
-    assert _is_successful(outcome) is True
-
-
-def test_is_successful_ignores_skipped_structural_results() -> None:
-    outcome = EvalOutcome(
-        mode="invoke",
-        structural_results=[ScenarioResult(feature="f", scenario="s", status="skipped")],
-    )
-    assert _is_successful(outcome) is True
+    def test_is_successful_ignores_skipped_structural_results(self) -> None:
+        outcome = EvalOutcome(
+            mode=Mode.INVOKE,
+            structural_results=[
+                ScenarioResult(feature="f", scenario="s", status="skipped")
+            ],
+        )
+        assert _is_successful(outcome) is True

@@ -1,16 +1,25 @@
 from __future__ import annotations
 
+from enum import StrEnum
 from typing import Literal
 
 from pydantic import BaseModel, Field, computed_field
 
-Mode = Literal["invoke", "judge", "all", "trigger"]
+
+class Mode(StrEnum):
+    INVOKE = "invoke"
+    JUDGE = "judge"
+    ALL = "all"
+    TRIGGER = "trigger"
+    COMPARE = "compare"
+
+
 AdapterName = Literal["claude", "opencode"]
 
 
 class CliArgs(BaseModel):
     skill: str | None = None
-    mode: Mode = "invoke"
+    mode: Mode = Mode.INVOKE
     adapter: AdapterName = "claude"
     opencode_invoke_provider: str = "openai-codex"
     opencode_invoke_model: str = "gpt-5.4-mini"
@@ -66,11 +75,12 @@ class EvalOutcome(BaseModel):
 
     Usage:
         outcome = strategy.run('dataviz', evals_dir)
-        assert outcome.mode == 'invoke'
+        assert outcome.mode == Mode.INVOKE
     """
 
     mode: Mode
     structural_results: list[ScenarioResult] = Field(default_factory=list)
+    baseline_structural_results: list[ScenarioResult] = Field(default_factory=list)
     judge_verdicts: list[JudgeReport] = Field(default_factory=list)
     trigger_report: TriggerReport | None = None
     input_sizes: dict[str, int] = Field(default_factory=dict)

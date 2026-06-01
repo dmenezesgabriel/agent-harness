@@ -24,14 +24,26 @@ from runner.evaluation import SkillEvaluationApp, SkillEvaluator
 from runner.invocation import SkillInvoker
 from runner.judging import RubricJudgeRunner
 from runner.log_setup import configure as _configure_logging
-from runner.models import CliArgs
-from runner.ports import AgentPort, EvalModeStrategy, JudgePort, TriggerClassifierPort
+from runner.models import CliArgs, Mode
+from runner.ports import (
+    AgentPort,
+    BaselineAgentPort,
+    EvalModeStrategy,
+    JudgePort,
+    TriggerClassifierPort,
+)
 from runner.reporting import MarkdownReportWriter, SkillInputSizer
-from runner.strategies import AllStrategy, InvokeStrategy, JudgeStrategy, TriggerStrategy
+from runner.strategies import (
+    AllStrategy,
+    CompareStrategy,
+    InvokeStrategy,
+    JudgeStrategy,
+    TriggerStrategy,
+)
 from runner.trigger import TriggerEvaluator
 
 _SKILLS_ROOT = Path(__file__).parent.parent.parent.parent  # agent-harness/skills/
-_MODES = ("invoke", "judge", "all", "trigger")
+_MODES = ("invoke", "judge", "all", "trigger", "compare")
 _ADAPTERS = ("claude", "opencode")
 
 
@@ -49,26 +61,54 @@ def _build_app(args: CliArgs) -> SkillEvaluationApp:
     adapter = _build_adapter(args)
     strategy = _build_strategy(args, adapter)
     evaluator = SkillEvaluator(strategy=strategy, report_writer=MarkdownReportWriter())
-    return SkillEvaluationApp(discovery=SkillDiscovery(_SKILLS_ROOT), evaluator=evaluator)
+    return SkillEvaluationApp(
+        discovery=SkillDiscovery(_SKILLS_ROOT), evaluator=evaluator
+    )
 
 
 def _build_strategy(args: CliArgs, adapter: _EvaluationAdapter) -> EvalModeStrategy:
     sizer = SkillInputSizer()
     match args.mode:
-        case "invoke":
-            return InvokeStrategy(SkillInvoker(), BehaveStructuralRunner(), cast(AgentPort, adapter), sizer)
-        case "judge":
+        case Mode.INVOKE:
+            return InvokeStrategy(
+                SkillInvoker(),
+                BehaveStructuralRunner(),
+                cast(AgentPort, adapter),
+                sizer,
+            )
+        case Mode.JUDGE:
             return JudgeStrategy(RubricJudgeRunner(), cast(JudgePort, adapter), sizer)
-        case "trigger":
-            return TriggerStrategy(TriggerEvaluator(), cast(TriggerClassifierPort, adapter), sizer)
-        case "all":
+        case Mode.TRIGGER:
+            return TriggerStrategy(
+                TriggerEvaluator(), cast(TriggerClassifierPort, adapter), sizer
+            )
+        case Mode.ALL:
             return AllStrategy(
-                SkillInvoker(), BehaveStructuralRunner(), cast(AgentPort, adapter),
-                RubricJudgeRunner(), cast(JudgePort, adapter), sizer,
-                TriggerEvaluator(), cast(TriggerClassifierPort, adapter),
+                SkillInvoker(),
+                BehaveStructuralRunner(),
+                cast(AgentPort, adapter),
+                RubricJudgeRunner(),
+                cast(JudgePort, adapter),
+                sizer,
+                TriggerEvaluator(),
+                cast(TriggerClassifierPort, adapter),
+            )
+        case Mode.COMPARE:
+            if not isinstance(adapter, BaselineAgentPort):
+                raise TypeError(
+                    f"compare mode requires a baseline-capable adapter; got {type(adapter).__name__!r}"
+                )
+            return CompareStrategy(
+                SkillInvoker(),
+                BehaveStructuralRunner(),
+                cast(AgentPort, adapter),
+                adapter,
+                sizer,
             )
         case _:
-            raise ValueError(f"Unknown mode {args.mode!r}; expected one of {_MODES}")
+            raise ValueError(
+                f"Unknown mode {args.mode!r}; expected one of {list(Mode)}"
+            )
 
 
 def _build_adapter(args: CliArgs) -> _EvaluationAdapter:

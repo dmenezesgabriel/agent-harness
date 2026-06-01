@@ -20,27 +20,6 @@ from pydantic import BaseModel, Field
 from runner.ports import ArtifactSet, JudgeVerdict
 
 _DEFAULT_TIMEOUT_SECONDS = 180
-_JUDGE_PASS_THRESHOLD = 0.7
-_ERROR_PREVIEW_CHARS = 500
-_INVOKE_MODEL = "haiku"
-_JUDGE_MODEL = "sonnet"
-
-_JUDGE_SYSTEM = (
-    "You are an expert evaluator of AI-generated software artifacts. "
-    "Respond ONLY with a JSON object — no prose, no markdown fences: "
-    '{"passed": <bool>, "score": <float 0.0-1.0>, "reasoning": <one sentence>}'
-)
-
-_CLASSIFY_SYSTEM = (
-    "You are an agent. You have access to one skill. "
-    "When a user message matches the skill's purpose you invoke it; "
-    "when it does not match you handle the request directly. "
-    "Given the skill description and user message below, "
-    "reply with exactly one word: INVOKE or SKIP. No explanation, no punctuation."
-)
-
-# Tools the skill is allowed to use when building artifacts
-_INVOKE_TOOLS = "Write Read"
 
 
 class _JudgePayload(BaseModel):
@@ -66,6 +45,36 @@ class ClaudeCodeAdapter:
         artifacts = adapter.invoke_skill('dataviz', 'Make a line chart ...')
     """
 
+    _JUDGE_PASS_THRESHOLD = 0.7
+    _ERROR_PREVIEW_CHARS = 500
+    _INVOKE_MODEL = "haiku"
+    _JUDGE_MODEL = "sonnet"
+    # INVOKE/SKIP is a binary decision; haiku is sufficient and ~3x cheaper than sonnet
+    _CLASSIFY_MODEL = "haiku"
+
+    _JUDGE_SYSTEM = (
+        "You are an expert evaluator of AI-generated software artifacts. "
+        "Fail superficial compliance: correct structure but empty or placeholder content. "
+        "Respond ONLY with a JSON object — no prose, no markdown fences: "
+        '{"passed": <bool>, "score": <float 0.0-1.0>, "reasoning": <one sentence citing artifact evidence>}'
+    )
+
+    _CLASSIFY_SYSTEM = (
+        "You are an agent. You have access to one skill. "
+        "When a user message matches the skill's purpose you invoke it; "
+        "when it does not match you handle the request directly. "
+        "Given the skill description and user message below, "
+        "reply with exactly one word: INVOKE or SKIP. No explanation, no punctuation."
+    )
+
+    # Neutral system prompt that gives no skill guidance — used for baseline comparison
+    _BASELINE_SYSTEM = (
+        "You are a helpful assistant. Complete the task the user describes."
+    )
+
+    # Tools the skill is allowed to use when building artifacts
+    _INVOKE_TOOLS = "Write Read"
+
     def __init__(
         self, skill_root: Path, timeout: int = _DEFAULT_TIMEOUT_SECONDS
     ) -> None:
@@ -85,10 +94,24 @@ class ClaudeCodeAdapter:
             self._run_in_dir(
                 prompt,
                 system=skill_md,
-                model=_INVOKE_MODEL,
+                model=self._INVOKE_MODEL,
                 workdir=workdir,
-                tools=_INVOKE_TOOLS,
+                tools=self._INVOKE_TOOLS,
                 append_system=True,
+            )
+            files = self._collect_dir(workdir)
+            return ArtifactSet(workdir=workdir, files=files)
+
+    def invoke_baseline(self, prompt: str) -> ArtifactSet:
+        with tempfile.TemporaryDirectory(prefix="eval-baseline-") as tmp:
+            workdir = Path(tmp)
+            self._run_in_dir(
+                prompt,
+                system=self._BASELINE_SYSTEM,
+                model=self._INVOKE_MODEL,
+                workdir=workdir,
+                tools=self._INVOKE_TOOLS,
+                append_system=False,
             )
             files = self._collect_dir(workdir)
             return ArtifactSet(workdir=workdir, files=files)
@@ -97,21 +120,21 @@ class ClaudeCodeAdapter:
         prompt = f"Skill description:\n{skill_description}\n\nUser message:\n{query}"
         stdout = self._run_in_dir(
             prompt,
-            system=_CLASSIFY_SYSTEM,
-            model=_JUDGE_MODEL,
+            system=self._CLASSIFY_SYSTEM,
+            model=self._CLASSIFY_MODEL,
             workdir=None,
             tools=None,
             append_system=False,
         )
         token = stdout.strip().upper().split()[0] if stdout.strip() else ""
-        return token == "INVOKE"
+        return token == "INVOKE"  # nosec B105
 
     def judge(self, artifact_content: str, rubric: str, rubric_id: str) -> JudgeVerdict:
         prompt = f"Rubric:\n{rubric}\n\nArtifact:\n{artifact_content}"
         stdout = self._run_in_dir(
             prompt,
-            system=_JUDGE_SYSTEM,
-            model=_JUDGE_MODEL,
+            system=self._JUDGE_SYSTEM,
+            model=self._JUDGE_MODEL,
             workdir=None,
             tools=None,
             append_system=False,
@@ -121,7 +144,7 @@ class ClaudeCodeAdapter:
             rubric_id=rubric_id,
             passed=payload.passed
             if payload.passed is not None
-            else payload.score >= _JUDGE_PASS_THRESHOLD,
+            else payload.score >= self._JUDGE_PASS_THRESHOLD,
             score=payload.score,
             reasoning=payload.reasoning,
         )
@@ -173,8 +196,8 @@ class ClaudeCodeAdapter:
         if result.returncode != 0:
             raise RuntimeError(
                 f"claude exited {result.returncode}\n"
-                f"stderr: {result.stderr[:_ERROR_PREVIEW_CHARS]}\n"
-                f"stdout: {result.stdout[:_ERROR_PREVIEW_CHARS]}"
+                f"stderr: {result.stderr[: self._ERROR_PREVIEW_CHARS]}\n"
+                f"stdout: {result.stdout[: self._ERROR_PREVIEW_CHARS]}"
             )
         return result.stdout
 

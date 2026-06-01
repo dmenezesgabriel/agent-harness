@@ -19,47 +19,45 @@ def _reset_structlog() -> Generator[None, None, None]:
     structlog.reset_defaults()
 
 
-def test_configure_emits_json_with_event_and_fields() -> None:
-    stream = io.StringIO()
-    configure(stream=stream)
+class TestConfigure:
+    def test_configure_emits_json_with_event_and_fields(self) -> None:
+        stream = io.StringIO()
+        configure(stream=stream)
 
-    structlog.get_logger().info("my_event", key="value", count=3)
+        structlog.get_logger().info("my_event", key="value", count=3)
 
-    record = json.loads(stream.getvalue().strip())
-    assert record["event"] == "my_event"
-    assert record["key"] == "value"
-    assert record["count"] == 3
+        record = json.loads(stream.getvalue().strip())
+        assert record["event"] == "my_event"
+        assert record["key"] == "value"
+        assert record["count"] == 3
 
+    def test_configure_includes_iso_timestamp(self) -> None:
+        stream = io.StringIO()
+        configure(stream=stream)
 
-def test_configure_includes_iso_timestamp() -> None:
-    stream = io.StringIO()
-    configure(stream=stream)
+        structlog.get_logger().info("ts_check")
 
-    structlog.get_logger().info("ts_check")
+        record = json.loads(stream.getvalue().strip())
+        assert "timestamp" in record
+        assert "T" in record["timestamp"]  # ISO 8601 separator
 
-    record = json.loads(stream.getvalue().strip())
-    assert "timestamp" in record
-    assert "T" in record["timestamp"]  # ISO 8601 separator
+    def test_configure_writes_to_provided_stream_not_stderr(self) -> None:
+        stream = io.StringIO()
+        configure(stream=stream)
 
+        structlog.get_logger().info("stream_check")
 
-def test_configure_writes_to_provided_stream_not_stderr() -> None:
-    stream = io.StringIO()
-    configure(stream=stream)
+        assert stream.getvalue() != ""
 
-    structlog.get_logger().info("stream_check")
+    def test_configure_each_event_is_valid_json(self) -> None:
+        stream = io.StringIO()
+        configure(stream=stream)
+        log = structlog.get_logger()
 
-    assert stream.getvalue() != ""
+        log.info("first", x=1)
+        log.info("second", x=2)
 
-
-def test_configure_each_event_is_valid_json() -> None:
-    stream = io.StringIO()
-    configure(stream=stream)
-    log = structlog.get_logger()
-
-    log.info("first", x=1)
-    log.info("second", x=2)
-
-    lines = [l for l in stream.getvalue().splitlines() if l.strip()]
-    assert len(lines) == 2
-    for line in lines:
-        json.loads(line)  # must not raise
+        lines = [ln for ln in stream.getvalue().splitlines() if ln.strip()]
+        assert len(lines) == 2
+        for line in lines:
+            json.loads(line)  # must not raise

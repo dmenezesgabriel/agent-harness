@@ -29,7 +29,7 @@ class MarkdownReportWriter:
     """Write skill evaluation reports as markdown files.
 
     Usage:
-        path = MarkdownReportWriter().write('dataviz', evals_dir, 'all', [], [])
+        path = MarkdownReportWriter().write('dataviz', evals_dir, Mode.ALL, [], [])
     """
 
     def write(
@@ -41,6 +41,7 @@ class MarkdownReportWriter:
         judge_verdicts: list[JudgeReport],
         input_sizes: dict[str, int] | None = None,
         trigger_report: TriggerReport | None = None,
+        baseline_structural_results: list[ScenarioResult] | None = None,
     ) -> Path:
         reports_dir = evals_dir / "reports"
         reports_dir.mkdir(parents=True, exist_ok=True)
@@ -48,37 +49,188 @@ class MarkdownReportWriter:
         report_path = (
             reports_dir / f"{skill_name}-{run_at.strftime('%Y-%m-%dT%H-%M-%S-%f')}.md"
         )
-        lines = _report_lines(
-            mode, skill_name, run_at, structural_results, judge_verdicts, input_sizes, trigger_report
+        lines = self._report_lines(
+            mode=mode,
+            skill_name=skill_name,
+            run_at=run_at,
+            structural_results=structural_results,
+            judge_verdicts=judge_verdicts,
+            input_sizes=input_sizes,
+            trigger_report=trigger_report,
+            baseline_structural_results=baseline_structural_results,
         )
-        report_path.write_text(
-            "\n".join(lines),
-            encoding="utf-8",
-        )
+        report_path.write_text("\n".join(lines), encoding="utf-8")
         return report_path
 
+    @staticmethod
+    def _status_icon(passed: bool) -> str:
+        return "PASS" if passed else "FAIL"
 
-def _report_lines(
-    mode: Mode,
-    skill_name: str,
-    run_at: datetime,
-    structural_results: list[ScenarioResult],
-    judge_verdicts: list[JudgeReport],
-    input_sizes: dict[str, int] | None,
-    trigger_report: TriggerReport | None = None,
-) -> list[str]:
-    lines = [
-        f"# Eval Report: {skill_name}",
-        f"Run: {run_at.isoformat()} | Mode: {mode}",
-        "",
-    ]
-    active_structural = [r for r in structural_results if r.status != "skipped"]
-    lines += _structural_lines(active_structural)
-    lines += _judge_lines(judge_verdicts)
-    lines += _trigger_lines(trigger_report)
-    lines += _input_size_lines(input_sizes)
-    lines += _pass_rate_lines(active_structural, judge_verdicts, trigger_report)
-    return lines
+    @staticmethod
+    def _report_lines(
+        mode: Mode,
+        skill_name: str,
+        run_at: datetime,
+        structural_results: list[ScenarioResult],
+        judge_verdicts: list[JudgeReport],
+        input_sizes: dict[str, int] | None,
+        trigger_report: TriggerReport | None = None,
+        baseline_structural_results: list[ScenarioResult] | None = None,
+    ) -> list[str]:
+        lines = [
+            f"# Eval Report: {skill_name}",
+            f"Run: {run_at.isoformat()} | Mode: {mode}",
+            "",
+        ]
+        active_structural = [r for r in structural_results if r.status != "skipped"]
+        lines += MarkdownReportWriter._structural_lines(active_structural)
+        lines += MarkdownReportWriter._comparison_lines(
+            active_structural, baseline_structural_results
+        )
+        lines += MarkdownReportWriter._judge_lines(judge_verdicts)
+        lines += MarkdownReportWriter._trigger_lines(trigger_report)
+        lines += MarkdownReportWriter._input_size_lines(input_sizes)
+        lines += MarkdownReportWriter._pass_rate_lines(
+            active_structural, judge_verdicts, trigger_report
+        )
+        return lines
+
+    @staticmethod
+    def _structural_lines(active_structural: list[ScenarioResult]) -> list[str]:
+        if not active_structural:
+            return []
+        lines = [
+            "## Structural checks (behave)",
+            "",
+            "| Scenario | Result |",
+            "|----------|--------|",
+        ]
+        for scenario in active_structural:
+            icon = MarkdownReportWriter._status_icon(scenario.status == "passed")
+            lines.append(f"| {scenario.scenario} | {icon} |")
+        failures = [s for s in active_structural if s.status == "failed"]
+        if failures:
+            lines += ["", "### Failures", ""]
+            for scenario in failures:
+                lines.append(f"**{scenario.scenario}**: {scenario.failure}")
+        lines.append("")
+        return lines
+
+    @staticmethod
+    def _comparison_lines(
+        structural_results: list[ScenarioResult],
+        baseline_results: list[ScenarioResult] | None,
+    ) -> list[str]:
+        if not baseline_results:
+            return []
+        baseline_by_scenario = {r.scenario: r for r in baseline_results}
+        skill_passes = sum(1 for r in structural_results if r.status == "passed")
+        baseline_passes = sum(1 for r in baseline_results if r.status == "passed")
+        delta = skill_passes - baseline_passes
+        delta_label = f"+{delta}" if delta >= 0 else str(delta)
+        return [
+            "## Baseline comparison",
+            "",
+            "| Check | Skill | Baseline |",
+            "|-------|-------|----------|",
+            *MarkdownReportWriter._comparison_rows(
+                structural_results, baseline_by_scenario
+            ),
+            "",
+            f"**Skill improvement**: {delta_label} checks vs baseline ({skill_passes} skill / {baseline_passes} baseline)",
+            "",
+        ]
+
+    @staticmethod
+    def _comparison_rows(
+        structural_results: list[ScenarioResult],
+        baseline_by_scenario: dict[str, ScenarioResult],
+    ) -> list[str]:
+        rows = []
+        for result in structural_results:
+            skill_icon = MarkdownReportWriter._status_icon(result.status == "passed")
+            baseline = baseline_by_scenario.get(result.scenario)
+            baseline_icon = MarkdownReportWriter._status_icon(
+                baseline is not None and baseline.status == "passed"
+            )
+            rows.append(f"| {result.scenario} | {skill_icon} | {baseline_icon} |")
+        return rows
+
+    @staticmethod
+    def _judge_lines(judge_verdicts: list[JudgeReport]) -> list[str]:
+        if not judge_verdicts:
+            return []
+        lines = [
+            "## LLM-as-judge checks",
+            "",
+            "| Rubric | Score | Result | Reasoning |",
+        ]
+        lines.append("|--------|-------|--------|-----------|")
+        for verdict in judge_verdicts:
+            icon = MarkdownReportWriter._status_icon(verdict.passed)
+            lines.append(
+                f"| {verdict.rubric_id} | {verdict.score:.2f} | {icon} | {verdict.reasoning} |"
+            )
+        lines.append("")
+        return lines
+
+    @staticmethod
+    def _trigger_lines(trigger_report: TriggerReport | None) -> list[str]:
+        if not trigger_report or not trigger_report.results:
+            return []
+        lines = [
+            "## Trigger routing checks",
+            "",
+            "| Query | Expected | Actual | Result |",
+            "|-------|----------|--------|--------|",
+        ]
+        for r in trigger_report.results:
+            expected = "INVOKE" if r.expected else "SKIP"
+            actual = "INVOKE" if r.actual else "SKIP"
+            icon = MarkdownReportWriter._status_icon(r.passed)
+            lines.append(f"| {r.query} | {expected} | {actual} | {icon} |")
+        pass_percent = int(_PERCENT_SCALE * trigger_report.pass_rate)
+        passed_count = sum(1 for r in trigger_report.results if r.passed)
+        total = len(trigger_report.results)
+        overall = MarkdownReportWriter._status_icon(trigger_report.passed)
+        lines += [
+            "",
+            f"**Trigger accuracy**: {passed_count}/{total} ({pass_percent}%) — {overall}",
+            "",
+        ]
+        return lines
+
+    @staticmethod
+    def _input_size_lines(input_sizes: dict[str, int] | None) -> list[str]:
+        if not input_sizes:
+            return []
+        total_chars = sum(input_sizes.values())
+        lines = ["## Skill input size (chars - proxy for tokens)", ""]
+        lines += ["| File | Characters |", "|------|-----------|"]
+        for rel_path, size in sorted(input_sizes.items()):
+            lines.append(f"| {rel_path} | {size:,} |")
+        lines.append(f"| **Total** | **{total_chars:,}** |")
+        lines.append("")
+        return lines
+
+    @staticmethod
+    def _pass_rate_lines(
+        active_structural: list[ScenarioResult],
+        judge_verdicts: list[JudgeReport],
+        trigger_report: TriggerReport | None = None,
+    ) -> list[str]:
+        structural_passes = sum(1 for s in active_structural if s.status == "passed")
+        judge_passes = sum(1 for v in judge_verdicts if v.passed)
+        trigger_passes = (
+            sum(1 for r in trigger_report.results if r.passed) if trigger_report else 0
+        )
+        trigger_total = len(trigger_report.results) if trigger_report else 0
+        total_checks = len(active_structural) + len(judge_verdicts) + trigger_total
+        if not total_checks:
+            return []
+        total_passes = structural_passes + judge_passes + trigger_passes
+        pass_percent = int(_PERCENT_SCALE * total_passes / total_checks)
+        return [f"**Pass rate**: {total_passes}/{total_checks} ({pass_percent}%)"]
 
 
 def _measure_file(path: Path, label: str, sizes: dict[str, int]) -> None:
@@ -86,94 +238,3 @@ def _measure_file(path: Path, label: str, sizes: dict[str, int]) -> None:
         return
     with suppress(OSError, UnicodeDecodeError):
         sizes[label] = len(path.read_text(encoding="utf-8"))
-
-
-def _structural_lines(active_structural: list[ScenarioResult]) -> list[str]:
-    if not active_structural:
-        return []
-    lines = [
-        "## Structural checks (behave)",
-        "",
-        "| Scenario | Result |",
-        "|----------|--------|",
-    ]
-    for scenario in active_structural:
-        icon = "PASS" if scenario.status == "passed" else "FAIL"
-        lines.append(f"| {scenario.scenario} | {icon} |")
-    failures = [
-        scenario for scenario in active_structural if scenario.status == "failed"
-    ]
-    if failures:
-        lines += ["", "### Failures", ""]
-        for scenario in failures:
-            lines.append(f"**{scenario.scenario}**: {scenario.failure}")
-    lines.append("")
-    return lines
-
-
-def _judge_lines(judge_verdicts: list[JudgeReport]) -> list[str]:
-    if not judge_verdicts:
-        return []
-    lines = ["## LLM-as-judge checks", "", "| Rubric | Score | Result | Reasoning |"]
-    lines.append("|--------|-------|--------|-----------|")
-    for verdict in judge_verdicts:
-        icon = "PASS" if verdict.passed else "FAIL"
-        lines.append(
-            f"| {verdict.rubric_id} | {verdict.score:.2f} | {icon} | {verdict.reasoning} |"
-        )
-    lines.append("")
-    return lines
-
-
-def _trigger_lines(trigger_report: TriggerReport | None) -> list[str]:
-    if not trigger_report or not trigger_report.results:
-        return []
-    lines = [
-        "## Trigger routing checks",
-        "",
-        "| Query | Expected | Actual | Result |",
-        "|-------|----------|--------|--------|",
-    ]
-    for r in trigger_report.results:
-        expected = "INVOKE" if r.expected else "SKIP"
-        actual = "INVOKE" if r.actual else "SKIP"
-        icon = "PASS" if r.passed else "FAIL"
-        lines.append(f"| {r.query} | {expected} | {actual} | {icon} |")
-    pct = int(_PERCENT_SCALE * trigger_report.pass_rate)
-    passed_count = sum(1 for r in trigger_report.results if r.passed)
-    total = len(trigger_report.results)
-    overall = "PASS" if trigger_report.passed else "FAIL"
-    lines += ["", f"**Trigger accuracy**: {passed_count}/{total} ({pct}%) — {overall}", ""]
-    return lines
-
-
-def _input_size_lines(input_sizes: dict[str, int] | None) -> list[str]:
-    if not input_sizes:
-        return []
-    total_chars = sum(input_sizes.values())
-    lines = ["## Skill input size (chars - proxy for tokens)", ""]
-    lines += ["| File | Characters |", "|------|-----------|"]
-    for rel_path, size in sorted(input_sizes.items()):
-        lines.append(f"| {rel_path} | {size:,} |")
-    lines.append(f"| **Total** | **{total_chars:,}** |")
-    lines.append("")
-    return lines
-
-
-def _pass_rate_lines(
-    active_structural: list[ScenarioResult],
-    judge_verdicts: list[JudgeReport],
-    trigger_report: TriggerReport | None = None,
-) -> list[str]:
-    structural_passes = sum(
-        1 for scenario in active_structural if scenario.status == "passed"
-    )
-    judge_passes = sum(1 for verdict in judge_verdicts if verdict.passed)
-    trigger_passes = sum(1 for r in trigger_report.results if r.passed) if trigger_report else 0
-    trigger_total = len(trigger_report.results) if trigger_report else 0
-    total_checks = len(active_structural) + len(judge_verdicts) + trigger_total
-    if not total_checks:
-        return []
-    total_passes = structural_passes + judge_passes + trigger_passes
-    pct = int(_PERCENT_SCALE * total_passes / total_checks)
-    return [f"**Pass rate**: {total_passes}/{total_checks} ({pct}%)"]

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Protocol
+from typing import Protocol, runtime_checkable
 
 from pydantic import BaseModel, Field
 
@@ -45,6 +45,20 @@ class AgentPort(Protocol):
     """
 
     def invoke_skill(self, skill_name: str, prompt: str) -> ArtifactSet: ...
+
+
+@runtime_checkable
+class BaselineAgentPort(Protocol):
+    """Invoke plain Claude (no skill injection) against a prompt.
+
+    Used by compare mode to measure what Claude produces without skill guidance.
+
+    Usage:
+        adapter = ClaudeCodeAdapter(skill_root=Path('skills'))
+        artifacts = adapter.invoke_baseline('Make a chart ...')
+    """
+
+    def invoke_baseline(self, prompt: str) -> ArtifactSet: ...
 
 
 class TriggerClassifierPort(Protocol):
@@ -118,4 +132,5 @@ class ReportWriterPort(Protocol):
         judge_verdicts: list[JudgeReport],
         input_sizes: dict[str, int] | None = None,
         trigger_report: TriggerReport | None = None,
+        baseline_structural_results: list[ScenarioResult] | None = None,
     ) -> Path: ...

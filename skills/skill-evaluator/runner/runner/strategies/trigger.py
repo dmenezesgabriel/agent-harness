@@ -3,13 +3,10 @@ from __future__ import annotations
 import time
 from pathlib import Path
 
-import structlog
-
 from runner.models import EvalOutcome, Mode
 from runner.ports import SkillInputSizerPort, TriggerClassifierPort
+from runner.strategies._timing import _log_elapsed
 from runner.trigger import TriggerEvaluator
-
-_log = structlog.get_logger()
 
 
 class TriggerStrategy:
@@ -32,17 +29,21 @@ class TriggerStrategy:
 
     @property
     def mode(self) -> Mode:
-        return "trigger"
+        return Mode.TRIGGER
 
     def run(self, skill_name: str, evals_dir: Path) -> EvalOutcome:
         input_sizes = self._input_sizer.measure(evals_dir)
 
-        t0 = time.monotonic()
-        trigger_report = self._trigger_evaluator.evaluate(skill_name, evals_dir, self._classifier)
-        _log.info("trigger_phase_done", skill=skill_name, elapsed_s=round(time.monotonic() - t0, 1), passed=trigger_report.passed)
+        start = time.monotonic()
+        trigger_report = self._trigger_evaluator.evaluate(
+            skill_name, evals_dir, self._classifier
+        )
+        _log_elapsed(
+            "trigger_phase_done", skill_name, start, passed=trigger_report.passed
+        )
 
         return EvalOutcome(
-            mode="trigger",
+            mode=Mode.TRIGGER,
             trigger_report=trigger_report,
             input_sizes=input_sizes,
         )

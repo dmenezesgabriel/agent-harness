@@ -56,10 +56,14 @@ class TriggerEvaluator:
     ) -> TriggerReport:
         queries_path = evals_dir / "eval_queries.json"
         if not queries_path.exists():
-            _log.info("trigger_eval_skipped", skill=skill_name, reason="no eval_queries.json")
+            _log.info(
+                "trigger_eval_skipped", skill=skill_name, reason="no eval_queries.json"
+            )
             return TriggerReport(results=[], pass_rate=1.0, passed=True)
 
-        raw: dict[str, list[str | dict[str, str]]] = json.loads(queries_path.read_text(encoding="utf-8"))
+        raw: dict[str, list[str | dict[str, str]]] = json.loads(
+            queries_path.read_text(encoding="utf-8")
+        )
         description = _extract_skill_description(evals_dir.parent / "SKILL.md")
 
         results: list[TriggerResult] = []
@@ -67,15 +71,26 @@ class TriggerEvaluator:
             query = entry["query"] if isinstance(entry, dict) else entry
             actual = classifier.classify(description, query)
             results.append(TriggerResult(query=query, expected=True, actual=actual))
-            _log.debug("trigger_classified", query=query[:60], expected=True, actual=actual)
+            _log.debug(
+                "trigger_classified", query=query[:60], expected=True, actual=actual
+            )
 
         for entry in raw.get("should_not_trigger", []):
             query = entry["query"] if isinstance(entry, dict) else entry
             actual = classifier.classify(description, query)
             results.append(TriggerResult(query=query, expected=False, actual=actual))
-            _log.debug("trigger_classified", query=query[:60], expected=False, actual=actual)
+            _log.debug(
+                "trigger_classified", query=query[:60], expected=False, actual=actual
+            )
 
-        pass_rate = sum(1 for r in results if r.passed) / len(results) if results else 1.0
+        pass_rate = (
+            sum(1 for r in results if r.passed) / len(results) if results else 1.0
+        )
         passed = pass_rate >= _TRIGGER_PASS_THRESHOLD
-        _log.info("trigger_eval_done", skill=skill_name, pass_rate=round(pass_rate, 2), passed=passed)
+        _log.info(
+            "trigger_eval_done",
+            skill=skill_name,
+            pass_rate=round(pass_rate, 2),
+            passed=passed,
+        )
         return TriggerReport(results=results, pass_rate=pass_rate, passed=passed)
