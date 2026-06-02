@@ -90,12 +90,20 @@ class TestMarkdownReportWriterComparison:
         # Arrange
         evals_dir = tmp_path / "dataviz" / "evals"
         skill_results = [
-            ScenarioResult(feature="f", scenario="has_chart", status="passed"),
-            ScenarioResult(feature="f", scenario="has_title", status="failed"),
+            ScenarioResult(
+                feature="generated output", scenario="has_chart", status="passed"
+            ),
+            ScenarioResult(
+                feature="generated output", scenario="has_title", status="failed"
+            ),
         ]
         baseline_results = [
-            ScenarioResult(feature="f", scenario="has_chart", status="failed"),
-            ScenarioResult(feature="f", scenario="has_title", status="failed"),
+            ScenarioResult(
+                feature="generated output", scenario="has_chart", status="failed"
+            ),
+            ScenarioResult(
+                feature="generated output", scenario="has_title", status="failed"
+            ),
         ]
 
         # Act
@@ -122,12 +130,12 @@ class TestMarkdownReportWriterComparison:
         # Arrange
         evals_dir = tmp_path / "dataviz" / "evals"
         skill_results = [
-            ScenarioResult(feature="f", scenario="c1", status="passed"),
-            ScenarioResult(feature="f", scenario="c2", status="passed"),
+            ScenarioResult(feature="generated output", scenario="c1", status="passed"),
+            ScenarioResult(feature="generated output", scenario="c2", status="passed"),
         ]
         baseline_results = [
-            ScenarioResult(feature="f", scenario="c1", status="failed"),
-            ScenarioResult(feature="f", scenario="c2", status="passed"),
+            ScenarioResult(feature="generated output", scenario="c1", status="failed"),
+            ScenarioResult(feature="generated output", scenario="c2", status="passed"),
         ]
 
         # Act
@@ -155,10 +163,14 @@ class TestMarkdownReportWriterComparison:
         # Arrange
         evals_dir = tmp_path / "dataviz" / "evals"
         skill_results = [
-            ScenarioResult(feature="f", scenario="has_chart", status="passed")
+            ScenarioResult(
+                feature="generated output", scenario="has_chart", status="passed"
+            )
         ]
         baseline_results = [
-            ScenarioResult(feature="f", scenario="has_chart", status="failed")
+            ScenarioResult(
+                feature="generated output", scenario="has_chart", status="failed"
+            )
         ]
 
         # Act
@@ -191,30 +203,32 @@ class TestMarkdownReportWriterComparison:
         assert "Baseline comparison" not in report_path.read_text(encoding="utf-8")
 
 
-class TestMarkdownReportWriterComparisonSplit:
-    def test_renders_both_subsection_headers_with_mixed_scenarios(
-        self, tmp_path: Path
-    ) -> None:
-        """UT-001 / AC-001: mixed generated + golden scenarios render both headers."""
+class TestMarkdownReportWriterComparisonSection:
+    def test_shows_only_generated_scenarios_in_comparison(self, tmp_path: Path) -> None:
+        """Generated scenarios appear in comparison; golden (fixture) ones do not."""
         evals_dir = tmp_path / "dataviz" / "evals"
         skill_results = [
             ScenarioResult(
                 feature="generated skill output validation",
-                scenario="c1",
+                scenario="gen_check",
                 status="passed",
             ),
             ScenarioResult(
-                feature="golden fixture validation", scenario="g1", status="passed"
+                feature="golden fixture validation",
+                scenario="golden_check",
+                status="passed",
             ),
         ]
         baseline_results = [
             ScenarioResult(
                 feature="generated skill output validation",
-                scenario="c1",
+                scenario="gen_check",
                 status="failed",
             ),
             ScenarioResult(
-                feature="golden fixture validation", scenario="g1", status="passed"
+                feature="golden fixture validation",
+                scenario="golden_check",
+                status="passed",
             ),
         ]
         report = (
@@ -231,11 +245,52 @@ class TestMarkdownReportWriterComparisonSplit:
             )
             .read_text(encoding="utf-8")
         )
-        assert "### Generated (contrastive)" in report
-        assert "### Golden (fixture)" in report
+        # gen_check appears in both structural and comparison sections
+        assert "gen_check" in report
+        assert "## Baseline comparison" in report
+        assert "### Generated" not in report
+        assert "### Golden" not in report
+        # golden_check must not appear in the Baseline comparison section
+        comparison_section = (
+            report.split("## Baseline comparison", 1)[1]
+            if "## Baseline comparison" in report
+            else ""
+        )
+        assert "golden_check" not in comparison_section
 
-    def test_subsection_deltas_computed_independently(self, tmp_path: Path) -> None:
-        """UT-002 / AC-002: generated delta +2, golden delta +0."""
+    def test_omits_comparison_section_when_no_generated_scenarios(
+        self, tmp_path: Path
+    ) -> None:
+        """Golden-only scenarios produce no comparison section (no signal)."""
+        evals_dir = tmp_path / "dataviz" / "evals"
+        skill_results = [
+            ScenarioResult(
+                feature="golden fixture validation", scenario="g1", status="passed"
+            )
+        ]
+        baseline_results = [
+            ScenarioResult(
+                feature="golden fixture validation", scenario="g1", status="passed"
+            )
+        ]
+        report = (
+            MarkdownReportWriter()
+            .write(
+                "dataviz",
+                evals_dir,
+                Mode.COMPARE,
+                skill_results,
+                [],
+                None,
+                None,
+                baseline_results,
+            )
+            .read_text(encoding="utf-8")
+        )
+        assert "Baseline comparison" not in report
+
+    def test_delta_counts_generated_scenarios_only(self, tmp_path: Path) -> None:
+        """Delta reflects skill gain on generated checks; golden scenarios are ignored."""
         evals_dir = tmp_path / "dataviz" / "evals"
         skill_results = [
             ScenarioResult(
@@ -286,81 +341,14 @@ class TestMarkdownReportWriterComparisonSplit:
             )
             .read_text(encoding="utf-8")
         )
+        # 3 skill generated passes vs 1 baseline → delta +2
         assert "+2" in report
-        assert "+0" in report
+        # Golden check count (13) must not inflate the delta
+        assert "+15" not in report
 
-    def test_omits_generated_subsection_when_no_generated_scenarios(
+    def test_omits_comparison_section_when_baseline_results_none(
         self, tmp_path: Path
     ) -> None:
-        """UT-003 / AC-003: no generated scenarios → Generated subsection absent."""
-        evals_dir = tmp_path / "dataviz" / "evals"
-        skill_results = [
-            ScenarioResult(
-                feature="golden fixture validation", scenario="g1", status="passed"
-            )
-        ]
-        baseline_results = [
-            ScenarioResult(
-                feature="golden fixture validation", scenario="g1", status="passed"
-            )
-        ]
-        report = (
-            MarkdownReportWriter()
-            .write(
-                "dataviz",
-                evals_dir,
-                Mode.COMPARE,
-                skill_results,
-                [],
-                None,
-                None,
-                baseline_results,
-            )
-            .read_text(encoding="utf-8")
-        )
-        assert "### Generated (contrastive)" not in report
-        assert "### Golden (fixture)" in report
-
-    def test_omits_golden_subsection_when_no_golden_scenarios(
-        self, tmp_path: Path
-    ) -> None:
-        """UT-004 / AC-004: no golden scenarios → Golden subsection absent."""
-        evals_dir = tmp_path / "dataviz" / "evals"
-        skill_results = [
-            ScenarioResult(
-                feature="generated skill output validation",
-                scenario="c1",
-                status="passed",
-            )
-        ]
-        baseline_results = [
-            ScenarioResult(
-                feature="generated skill output validation",
-                scenario="c1",
-                status="failed",
-            )
-        ]
-        report = (
-            MarkdownReportWriter()
-            .write(
-                "dataviz",
-                evals_dir,
-                Mode.COMPARE,
-                skill_results,
-                [],
-                None,
-                None,
-                baseline_results,
-            )
-            .read_text(encoding="utf-8")
-        )
-        assert "### Golden (fixture)" not in report
-        assert "### Generated (contrastive)" in report
-
-    def test_omits_baseline_section_when_baseline_results_none(
-        self, tmp_path: Path
-    ) -> None:
-        """UT-005 / AC-005: baseline_results is None → Baseline comparison absent."""
         evals_dir = tmp_path / "dataviz" / "evals"
         report = (
             MarkdownReportWriter()
@@ -368,28 +356,6 @@ class TestMarkdownReportWriterComparisonSplit:
             .read_text(encoding="utf-8")
         )
         assert "Baseline comparison" not in report
-
-    def test_non_comparison_sections_unaffected_by_split(self, tmp_path: Path) -> None:
-        """UT-006 / NFR-001: structural, judge, and pass-rate sections render identically."""
-        evals_dir = tmp_path / "dataviz" / "evals"
-        skill_results = [
-            ScenarioResult(
-                feature="generated skill output validation",
-                scenario="c1",
-                status="passed",
-            )
-        ]
-        judge_reports = [
-            JudgeReport(rubric_id="palette", passed=True, score=0.9, reasoning="good")
-        ]
-        report = (
-            MarkdownReportWriter()
-            .write("dataviz", evals_dir, Mode.ALL, skill_results, judge_reports, None)
-            .read_text(encoding="utf-8")
-        )
-        assert "## Structural checks (behave)" in report
-        assert "## LLM-as-judge checks" in report
-        assert "**Pass rate**" in report
 
 
 class TestMarkdownReportWriterJudgeComparison:
@@ -468,3 +434,45 @@ class TestMarkdownReportWriterJudgeComparison:
 
         # Assert
         assert "## Judge comparison" not in report
+
+    def test_skips_fixture_rubric_rows_absent_from_baseline(
+        self, tmp_path: Path
+    ) -> None:
+        """Fixture rubrics not in baseline_judge_verdicts are excluded from the table."""
+        # Arrange
+        evals_dir = tmp_path / "dataviz" / "evals"
+        skill_verdicts = [
+            JudgeReport(
+                rubric_id="fixture_rubric", passed=True, score=0.9, reasoning="good"
+            ),
+            JudgeReport(
+                rubric_id="generated_rubric", passed=True, score=1.0, reasoning="great"
+            ),
+        ]
+        # Baseline only ran generated rubrics (generated_only=True)
+        baseline_verdicts = [
+            JudgeReport(
+                rubric_id="generated_rubric", passed=False, score=0.3, reasoning="weak"
+            )
+        ]
+
+        # Act
+        report = (
+            MarkdownReportWriter()
+            .write(
+                "dataviz",
+                evals_dir,
+                Mode.COMPARE,
+                [],
+                skill_verdicts,
+                baseline_judge_verdicts=baseline_verdicts,
+            )
+            .read_text(encoding="utf-8")
+        )
+
+        # Assert — fixture rubric absent from comparison table, generated rubric present
+        assert "## Judge comparison" in report
+        judge_comparison_section = report.split("## Judge comparison", 1)[1]
+        assert "fixture_rubric" not in judge_comparison_section
+        assert "generated_rubric" in judge_comparison_section
+        assert "+0.70" in judge_comparison_section

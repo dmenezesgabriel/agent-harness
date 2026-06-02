@@ -131,39 +131,23 @@ class MarkdownReportWriter:
             return []
         baseline_by_scenario = {r.scenario: r for r in baseline_results}
         generated = [r for r in structural_results if "generated" in r.feature.lower()]
-        golden = [r for r in structural_results if "generated" not in r.feature.lower()]
-        lines: list[str] = ["## Baseline comparison", ""]
-        if generated:
-            lines += MarkdownReportWriter._comparison_subsection_lines(
-                "### Generated (contrastive)", generated, baseline_by_scenario
-            )
-        if golden:
-            lines += MarkdownReportWriter._comparison_subsection_lines(
-                "### Golden (fixture)", golden, baseline_by_scenario
-            )
-        return lines
-
-    @staticmethod
-    def _comparison_subsection_lines(
-        header: str,
-        scenarios: list[ScenarioResult],
-        baseline_by_scenario: dict[str, ScenarioResult],
-    ) -> list[str]:
-        skill_passes = sum(1 for r in scenarios if r.status == "passed")
+        if not generated:
+            return []
+        skill_passes = sum(1 for r in generated if r.status == "passed")
         baseline_passes = sum(
             1
-            for r in scenarios
+            for r in generated
             if (b := baseline_by_scenario.get(r.scenario)) is not None
             and b.status == "passed"
         )
         delta = skill_passes - baseline_passes
         delta_label = f"+{delta}" if delta >= 0 else str(delta)
         return [
-            header,
+            "## Baseline comparison",
             "",
             "| Check | Skill | Baseline |",
             "|-------|-------|----------|",
-            *MarkdownReportWriter._comparison_rows(scenarios, baseline_by_scenario),
+            *MarkdownReportWriter._comparison_rows(generated, baseline_by_scenario),
             "",
             f"**Skill improvement**: {delta_label} checks vs baseline ({skill_passes} skill / {baseline_passes} baseline)",
             "",
@@ -218,11 +202,12 @@ class MarkdownReportWriter:
         ]
         for verdict in judge_verdicts:
             baseline = baseline_by_id.get(verdict.rubric_id)
-            baseline_score = baseline.score if baseline is not None else 0.0
-            delta = verdict.score - baseline_score
+            if baseline is None:
+                continue
+            delta = verdict.score - baseline.score
             delta_label = f"+{delta:.2f}" if delta >= 0 else f"{delta:.2f}"
             lines.append(
-                f"| {verdict.rubric_id} | {verdict.score:.2f} | {baseline_score:.2f} | {delta_label} |"
+                f"| {verdict.rubric_id} | {verdict.score:.2f} | {baseline.score:.2f} | {delta_label} |"
             )
         lines.append("")
         return lines
