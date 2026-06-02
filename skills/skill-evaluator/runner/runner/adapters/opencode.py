@@ -23,7 +23,6 @@ from runner.ports import ArtifactSet, JudgeVerdict
 _DEFAULT_TIMEOUT_SECONDS = 180
 _SERVER_START_TIMEOUT_SECONDS = 10.0
 _SERVER_POLL_SECONDS = 0.1
-_ERROR_PREVIEW_CHARS = 500
 _HOSTNAME = "127.0.0.1"
 _INVOKE_PROVIDER = "openai-codex"
 _INVOKE_MODEL = "gpt-5.4-mini"
@@ -289,8 +288,8 @@ class _OpenCodeServer:
                 str(self._port),
             ],
             cwd=self._workdir,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
             text=True,
         )
         self._wait_until_ready()
@@ -322,16 +321,13 @@ class _OpenCodeServer:
     def _server_exit_message(self) -> str:
         if self._process is None:
             return "opencode server process missing; expected running process"
-        stdout, stderr = self._process.communicate(timeout=1)
-        return (
-            f"opencode serve exited {self._process.returncode} on port {self._port}\n"
-            f"stderr: {stderr[:_ERROR_PREVIEW_CHARS]}\n"
-            f"stdout: {stdout[:_ERROR_PREVIEW_CHARS]}"
-        )
+        return f"opencode serve exited {self._process.returncode} on port {self._port}"
 
 
 def _create_client(base_url: str, timeout: int) -> _OpenCodeClient:
-    return cast(_OpenCodeClient, Opencode(base_url=base_url, timeout=timeout))
+    return cast(
+        _OpenCodeClient, Opencode(base_url=base_url, timeout=timeout, max_retries=0)
+    )
 
 
 def _assistant_text(messages: object, message_id: str | None) -> str:
