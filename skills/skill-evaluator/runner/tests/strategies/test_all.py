@@ -14,7 +14,6 @@ from runner.models import (
 from runner.ports import (
     AgentPort,
     JudgePort,
-    JudgeVerdict,
     SkillInputSizerPort,
     StructuralCheckPort,
     TriggerClassifierPort,
@@ -53,8 +52,8 @@ class FakeJudgeRunner:
 
 
 class FakeJudge:
-    def judge(self, _content: str, _rubric: str, rubric_id: str) -> JudgeVerdict:
-        return JudgeVerdict(rubric_id=rubric_id, passed=True, score=0.9, reasoning="ok")
+    def judge(self, _content: str, _rubric: str, rubric_id: str) -> JudgeReport:
+        return JudgeReport(rubric_id=rubric_id, passed=True, score=0.9, reasoning="ok")
 
 
 class FakeSizer:

@@ -4,7 +4,7 @@ from typing import cast
 from runner.exceptions import ProviderAbortError
 from runner.judging import RubricJudgeRunner
 from runner.models import JudgeReport
-from runner.ports import JudgePort, JudgeVerdict, SkillInputSizerPort
+from runner.ports import JudgePort, SkillInputSizerPort
 from runner.strategies.judge import JudgeStrategy
 
 
@@ -28,8 +28,8 @@ class FailingJudgeRunner:
 
 
 class FakeJudge:
-    def judge(self, _content: str, _rubric: str, rubric_id: str) -> JudgeVerdict:
-        return JudgeVerdict(rubric_id=rubric_id, passed=True, score=0.9, reasoning="ok")
+    def judge(self, _content: str, _rubric: str, rubric_id: str) -> JudgeReport:
+        return JudgeReport(rubric_id=rubric_id, passed=True, score=0.9, reasoning="ok")
 
 
 class FakeSizer:

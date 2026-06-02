@@ -28,7 +28,8 @@ from runner.adapters.contract import (
     collect_text_artifacts,
 )
 from runner.adapters.judge_payloads import CompareJudgePayload, JudgePayload
-from runner.ports import ArtifactSet, JudgeVerdict
+from runner.models import JudgeReport
+from runner.ports import ArtifactSet
 
 _DEFAULT_TIMEOUT_SECONDS = 180
 _ADAPTER_NAME = "ClaudeCode"
@@ -111,7 +112,7 @@ class ClaudeCodeAdapter:
         )
         return classify_token(stdout)
 
-    def judge(self, artifact_content: str, rubric: str, rubric_id: str) -> JudgeVerdict:
+    def judge(self, artifact_content: str, rubric: str, rubric_id: str) -> JudgeReport:
         prompt = build_judge_prompt(artifact_content, rubric)
         stdout = self._run_in_dir(
             prompt,
@@ -130,7 +131,7 @@ class ClaudeCodeAdapter:
         baseline_content: str,
         rubric: str,
         rubric_id: str,
-    ) -> tuple[JudgeVerdict, JudgeVerdict]:
+    ) -> tuple[JudgeReport, JudgeReport]:
         prompt = build_compare_judge_prompt(skill_content, baseline_content, rubric)
         stdout = self._run_in_dir(
             prompt,

@@ -9,7 +9,6 @@ from runner.ports import (
     AgentPort,
     BaselineAgentPort,
     CompareJudgePort,
-    JudgeVerdict,
     SkillInputSizerPort,
     StructuralCheckPort,
 )
@@ -62,8 +61,8 @@ class FakeJudgeRunner:
 
 
 class FakeJudge:
-    def judge(self, _content: str, _rubric: str, rubric_id: str) -> JudgeVerdict:
-        return JudgeVerdict(rubric_id=rubric_id, passed=True, score=1.0, reasoning="ok")
+    def judge(self, _content: str, _rubric: str, rubric_id: str) -> JudgeReport:
+        return JudgeReport(rubric_id=rubric_id, passed=True, score=1.0, reasoning="ok")
 
     def compare_judge(
         self,
@@ -71,12 +70,12 @@ class FakeJudge:
         _baseline: str,
         _rubric: str,
         rubric_id: str,
-    ) -> tuple[JudgeVerdict, JudgeVerdict]:
+    ) -> tuple[JudgeReport, JudgeReport]:
         return (
-            JudgeVerdict(
+            JudgeReport(
                 rubric_id=rubric_id, passed=True, score=1.0, reasoning="skill ok"
             ),
-            JudgeVerdict(
+            JudgeReport(
                 rubric_id=rubric_id, passed=False, score=0.5, reasoning="baseline weak"
             ),
         )

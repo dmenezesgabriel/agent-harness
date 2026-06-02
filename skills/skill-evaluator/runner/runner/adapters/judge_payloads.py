@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
-from runner.ports import JudgeVerdict
+from runner.models import JudgeReport
 
 _PASS_THRESHOLD = 0.7
 
@@ -14,8 +14,8 @@ class JudgePayload(BaseModel):
     score: float = Field(ge=0.0, le=1.0)
     reasoning: str
 
-    def to_verdict(self, rubric_id: str) -> JudgeVerdict:
-        return JudgeVerdict(
+    def to_verdict(self, rubric_id: str) -> JudgeReport:
+        return JudgeReport(
             rubric_id=rubric_id,
             passed=self.passed
             if self.passed is not None
@@ -31,6 +31,6 @@ class CompareJudgePayload(BaseModel):
     skill: JudgePayload
     baseline: JudgePayload
 
-    def to_verdicts(self, rubric_id: str) -> tuple[JudgeVerdict, JudgeVerdict]:
+    def to_verdicts(self, rubric_id: str) -> tuple[JudgeReport, JudgeReport]:
         """Return (skill_verdict, baseline_verdict)."""
         return self.skill.to_verdict(rubric_id), self.baseline.to_verdict(rubric_id)

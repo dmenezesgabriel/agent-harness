@@ -31,7 +31,8 @@ from runner.adapters.contract import (
     collect_text_artifacts,
 )
 from runner.adapters.judge_payloads import CompareJudgePayload, JudgePayload
-from runner.ports import ArtifactSet, JudgeVerdict
+from runner.models import JudgeReport
+from runner.ports import ArtifactSet
 
 _DEFAULT_TIMEOUT_SECONDS = 180
 _SERVER_START_TIMEOUT_SECONDS = 10.0
@@ -136,7 +137,7 @@ class OpenCodeAdapter:
             )
             return ArtifactSet(workdir=workdir, files=collect_text_artifacts(workdir))
 
-    def judge(self, artifact_content: str, rubric: str, rubric_id: str) -> JudgeVerdict:
+    def judge(self, artifact_content: str, rubric: str, rubric_id: str) -> JudgeReport:
         prompt = build_judge_prompt(artifact_content, rubric)
         with tempfile.TemporaryDirectory(prefix="eval-judge-") as tmp:
             stdout = self._chat_in_workdir(
@@ -156,7 +157,7 @@ class OpenCodeAdapter:
         baseline_content: str,
         rubric: str,
         rubric_id: str,
-    ) -> tuple[JudgeVerdict, JudgeVerdict]:
+    ) -> tuple[JudgeReport, JudgeReport]:
         prompt = build_compare_judge_prompt(skill_content, baseline_content, rubric)
         with tempfile.TemporaryDirectory(prefix="eval-compare-judge-") as tmp:
             stdout = self._chat_in_workdir(

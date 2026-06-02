@@ -3,9 +3,7 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from runner.ports import ArtifactSet, JudgeVerdict
-
-_INVALID_SCORE = 1.5
+from runner.ports import ArtifactSet
 
 
 class TestArtifactSet:
@@ -29,15 +27,3 @@ class TestArtifactSet:
 
         # Assert
         assert matches == {"charts/main.js": "chart"}
-
-
-class TestJudgeVerdict:
-    def test_judge_verdict_rejects_score_outside_unit_interval(self) -> None:
-        # Arrange / Act / Assert
-        with pytest.raises(ValidationError):
-            JudgeVerdict(
-                rubric_id="palette",
-                passed=False,
-                score=_INVALID_SCORE,
-                reasoning="too high",
-            )

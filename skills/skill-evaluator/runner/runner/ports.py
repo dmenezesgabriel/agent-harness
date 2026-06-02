@@ -29,13 +29,6 @@ class ArtifactSet(BaseModel):
         return {k: v for k, v in self.files.items() if Path(k).match(glob)}
 
 
-class JudgeVerdict(BaseModel):
-    rubric_id: str
-    passed: bool
-    score: float = Field(ge=0.0, le=1.0)
-    reasoning: str
-
-
 class AgentPort(Protocol):
     """Invoke a skill against a prompt and return the produced artifacts.
 
@@ -80,7 +73,7 @@ class JudgePort(Protocol):
 
     def judge(
         self, artifact_content: str, rubric: str, rubric_id: str
-    ) -> JudgeVerdict: ...
+    ) -> JudgeReport: ...
 
 
 @runtime_checkable
@@ -96,7 +89,7 @@ class CompareJudgePort(Protocol):
 
     def judge(
         self, artifact_content: str, rubric: str, rubric_id: str
-    ) -> JudgeVerdict: ...
+    ) -> JudgeReport: ...
 
     def compare_judge(
         self,
@@ -104,7 +97,7 @@ class CompareJudgePort(Protocol):
         baseline_content: str,
         rubric: str,
         rubric_id: str,
-    ) -> tuple[JudgeVerdict, JudgeVerdict]: ...
+    ) -> tuple[JudgeReport, JudgeReport]: ...
 
 
 class StructuralCheckPort(Protocol):

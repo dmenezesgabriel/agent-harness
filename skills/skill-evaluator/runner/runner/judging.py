@@ -73,7 +73,7 @@ class RubricJudgeRunner:
                     rubric_id=rubric.id,
                     elapsed_s=round(time.monotonic() - t0, 1),
                 )
-                verdicts.append(JudgeReport.model_validate(verdict.model_dump()))
+                verdicts.append(verdict)
 
         self._print_summary(verdicts)
         return verdicts
@@ -137,10 +137,8 @@ class RubricJudgeRunner:
                         rubric_id=rubric.id,
                         elapsed_s=round(time.monotonic() - t0, 1),
                     )
-                    skill_verdicts.append(JudgeReport.model_validate(sv.model_dump()))
-                    baseline_verdicts.append(
-                        JudgeReport.model_validate(bv.model_dump())
-                    )
+                    skill_verdicts.append(sv)
+                    baseline_verdicts.append(bv)
                 else:
                     artifact_file = _resolve_artifact_file(evals_dir, skill_dir, rubric)
                     if artifact_file is None or not artifact_file.exists():
@@ -159,9 +157,7 @@ class RubricJudgeRunner:
                         rubric_id=rubric.id,
                         elapsed_s=round(time.monotonic() - t0, 1),
                     )
-                    skill_verdicts.append(
-                        JudgeReport.model_validate(verdict.model_dump())
-                    )
+                    skill_verdicts.append(verdict)
 
         self._print_compare_summary(skill_verdicts, baseline_verdicts)
         return skill_verdicts, baseline_verdicts

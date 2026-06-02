@@ -2,7 +2,6 @@ from pathlib import Path
 
 from runner.judging import RubricJudgeRunner, _extract_section, _select_artifact
 from runner.models import ArtifactSelector, JudgeReport
-from runner.ports import JudgeVerdict
 
 _PASSING_SCORE = 0.9
 
@@ -10,8 +9,8 @@ _PASSING_SCORE = 0.9
 class FakeRubricJudge:
     """Fake for regular judge() calls (non-compare mode)."""
 
-    def judge(self, artifact_content: str, rubric: str, rubric_id: str) -> JudgeVerdict:
-        return JudgeVerdict(
+    def judge(self, artifact_content: str, rubric: str, rubric_id: str) -> JudgeReport:
+        return JudgeReport(
             rubric_id=rubric_id,
             passed="pass" in rubric,
             score=_PASSING_SCORE,
@@ -302,8 +301,8 @@ class FakeCompareJudge:
 
     def judge(
         self, _artifact_content: str, _rubric: str, rubric_id: str
-    ) -> JudgeVerdict:
-        return JudgeVerdict(
+    ) -> JudgeReport:
+        return JudgeReport(
             rubric_id=rubric_id, passed=True, score=_PASSING_SCORE, reasoning="ok"
         )
 
@@ -313,15 +312,15 @@ class FakeCompareJudge:
         baseline_content: str,
         _rubric: str,
         rubric_id: str,
-    ) -> tuple[JudgeVerdict, JudgeVerdict]:
+    ) -> tuple[JudgeReport, JudgeReport]:
         return (
-            JudgeVerdict(
+            JudgeReport(
                 rubric_id=rubric_id,
                 passed=True,
                 score=1.0,
                 reasoning=f"skill: {skill_content[:10]}",
             ),
-            JudgeVerdict(
+            JudgeReport(
                 rubric_id=rubric_id,
                 passed=False,
                 score=0.3,
