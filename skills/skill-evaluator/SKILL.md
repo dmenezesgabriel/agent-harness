@@ -48,6 +48,10 @@ without turning every run into a large benchmark. Use `--input-fixture-limit 1`
 for a cheapest smoke check, or raise it only when the extra fixture coverage is
 worth the added agent calls.
 
+When multiple input fixtures are invoked, structural checks run separately for
+each fixture output directory. Report rows are labeled with the input fixture
+stem, so one good fixture cannot hide a failure in another.
+
 ## Core workflow
 
 ### Phase 0: Identify scope

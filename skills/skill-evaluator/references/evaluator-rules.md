@@ -51,6 +51,12 @@ Excluded by `environment.py` when `EVAL_ARTIFACTS_DIR` is not set (so golden fix
 scenarios never accidentally load generated output). The `_generated_artifacts/` directory
 is gitignored.
 
+For multi-input runs, each fixture output is written under a directory named after the
+input fixture stem, for example `_generated_artifacts/input_timeseries/`. Structural
+checks run against each input directory independently and prefix scenario names with the
+fixture stem. This prevents a passing artifact from one input from hiding a failure in
+another input.
+
 Use `_generated_artifacts_primary_` as the `artifact_file` value in a rubric to target
 the primary chart/visualization file the agent wrote.
 

@@ -124,3 +124,74 @@ class TestBehaveStructuralRunner:
         # Assert
         behave_pass.assert_called_once_with(evals_dir, golden_dir, tag="golden")
         assert results == expected_results
+
+    def test_run_checks_each_input_artifact_dir_independently(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # Arrange
+        evals_dir = tmp_path / "evals"
+        golden_dir = evals_dir / "fixtures" / "golden"
+        generated_dir = evals_dir / "fixtures" / "_generated_artifacts"
+        input_a_dir = generated_dir / "input_a"
+        input_b_dir = generated_dir / "input_b"
+        golden_dir.mkdir(parents=True)
+        input_a_dir.mkdir(parents=True)
+        input_b_dir.mkdir(parents=True)
+        runner = BehaveStructuralRunner()
+
+        def behave_pass(
+            _evals_dir: Path, artifacts_dir: Path, tag: str
+        ) -> list[ScenarioResult]:
+            del tag
+            return [
+                ScenarioResult(
+                    feature="generated output",
+                    scenario=f"has artifact in {artifacts_dir.name}",
+                    status="passed",
+                )
+            ]
+
+        behave_pass_mock = Mock(side_effect=behave_pass)
+        monkeypatch.setattr(runner, "_behave_pass", behave_pass_mock)
+
+        # Act
+        results = runner.run(evals_dir, generated_dir)
+
+        # Assert
+        assert behave_pass_mock.call_count == 3
+        assert results == [
+            ScenarioResult(
+                feature="generated output",
+                scenario="has artifact in golden",
+                status="passed",
+            ),
+            ScenarioResult(
+                feature="generated output",
+                scenario="input_a: has artifact in input_a",
+                status="passed",
+            ),
+            ScenarioResult(
+                feature="generated output",
+                scenario="input_b: has artifact in input_b",
+                status="passed",
+            ),
+        ]
+
+    def test_run_uses_aggregate_generated_dir_without_input_subdirs(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # Arrange
+        evals_dir = tmp_path / "evals"
+        golden_dir = evals_dir / "fixtures" / "golden"
+        generated_dir = evals_dir / "fixtures" / "_generated_artifacts"
+        golden_dir.mkdir(parents=True)
+        (generated_dir / "src").mkdir(parents=True)
+        runner = BehaveStructuralRunner()
+        behave_pass = Mock(return_value=[])
+        monkeypatch.setattr(runner, "_behave_pass", behave_pass)
+
+        # Act
+        runner.run(evals_dir, generated_dir)
+
+        # Assert
+        assert behave_pass.call_args_list[1].args == (evals_dir, generated_dir)

@@ -29,8 +29,23 @@ class BehaveStructuralRunner:
         static_dir = evals_dir / "fixtures" / "golden"
         results = self._behave_pass(evals_dir, static_dir, tag="golden")
         if artifacts_dir != static_dir:
-            results += self._behave_pass(evals_dir, artifacts_dir, tag="generated")
+            results += self._generated_passes(evals_dir, artifacts_dir)
         self._print_summary(results)
+        return results
+
+    def _generated_passes(
+        self, evals_dir: Path, artifacts_dir: Path
+    ) -> list[ScenarioResult]:
+        artifact_dirs = _input_artifact_dirs(artifacts_dir)
+        if not artifact_dirs:
+            return self._behave_pass(evals_dir, artifacts_dir, tag="generated")
+
+        results: list[ScenarioResult] = []
+        for artifact_dir in artifact_dirs:
+            fixture_results = self._behave_pass(
+                evals_dir, artifact_dir, tag="generated"
+            )
+            results.extend(_label_fixture_results(artifact_dir.name, fixture_results))
         return results
 
     def _behave_pass(
@@ -94,6 +109,23 @@ def _summary_line(active: list[ScenarioResult], skipped: int) -> str:
     failed = sum(1 for scenario in active if scenario.status == "failed")
     skip_note = f", {skipped} skipped" if skipped else ""
     return f"\n  Structural: {passed} passed, {failed} failed{skip_note}"
+
+
+def _input_artifact_dirs(artifacts_dir: Path) -> list[Path]:
+    return [
+        path
+        for path in sorted(artifacts_dir.iterdir())
+        if path.is_dir() and path.name.startswith("input_")
+    ]
+
+
+def _label_fixture_results(
+    fixture_name: str, results: list[ScenarioResult]
+) -> list[ScenarioResult]:
+    return [
+        result.model_copy(update={"scenario": f"{fixture_name}: {result.scenario}"})
+        for result in results
+    ]
 
 
 def _print_scenario_summary(scenario: ScenarioResult) -> None:

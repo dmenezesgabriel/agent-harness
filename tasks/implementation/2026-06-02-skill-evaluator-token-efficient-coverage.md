@@ -55,4 +55,4 @@ uv run pytest
 
 ## Unresolved Assumptions or Follow-Up
 
-- Multi-fixture generated artifacts are aggregated for existing Behave features. This improves fixture coverage and avoids output collisions, but per-input pass/fail isolation would require a larger runner/reporting change.
+- Mitigated in follow-up: multi-fixture generated artifacts now run structural checks per input fixture directory, with fixture-prefixed scenario names in reports.

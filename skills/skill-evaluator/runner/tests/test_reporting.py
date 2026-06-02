@@ -149,6 +149,55 @@ class TestMarkdownReportWriterComparison:
         assert "has_chart" in report
         assert "| PASS | FAIL |" in report
 
+    def test_compares_fixture_labeled_generated_checks(self, tmp_path: Path) -> None:
+        # Arrange
+        evals_dir = tmp_path / "dataviz" / "evals"
+        skill_results = [
+            ScenarioResult(
+                feature="generated output",
+                scenario="input_a: has_chart",
+                status="passed",
+            ),
+            ScenarioResult(
+                feature="generated output",
+                scenario="input_b: has_chart",
+                status="failed",
+            ),
+        ]
+        baseline_results = [
+            ScenarioResult(
+                feature="generated output",
+                scenario="input_a: has_chart",
+                status="failed",
+            ),
+            ScenarioResult(
+                feature="generated output",
+                scenario="input_b: has_chart",
+                status="failed",
+            ),
+        ]
+
+        # Act
+        report = (
+            MarkdownReportWriter()
+            .write(
+                "dataviz",
+                evals_dir,
+                Mode.COMPARE,
+                skill_results,
+                [],
+                None,
+                None,
+                baseline_results,
+            )
+            .read_text(encoding="utf-8")
+        )
+
+        # Assert
+        assert "input_a: has_chart" in report
+        assert "input_b: has_chart" in report
+        assert "**Skill improvement**: +1 checks vs baseline" in report
+
     def test_delta_label_shows_skill_gain_over_baseline(self, tmp_path: Path) -> None:
         # Arrange
         evals_dir = tmp_path / "dataviz" / "evals"
