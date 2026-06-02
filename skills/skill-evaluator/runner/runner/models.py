@@ -21,6 +21,13 @@ class Mode(StrEnum):
 
 AdapterName = Literal["claude", "opencode"]
 
+# Single source for OpenCode provider/model defaults, shared by CliArgs, the CLI
+# argument parser, and OpenCodeAdapter so the three layers cannot diverge.
+DEFAULT_OPENCODE_INVOKE_PROVIDER = "openai-codex"
+DEFAULT_OPENCODE_INVOKE_MODEL = "gpt-5.4-mini"
+DEFAULT_OPENCODE_JUDGE_PROVIDER = "openai-codex"
+DEFAULT_OPENCODE_JUDGE_MODEL = "chatgpt-5.4"
+
 
 class CliArgs(BaseModel):
     skill: str | None = None
@@ -28,10 +35,10 @@ class CliArgs(BaseModel):
     adapter: AdapterName = "claude"
     input_fixture_limit: int = Field(default=2, ge=1)
     claude_timeout: int = 180
-    opencode_invoke_provider: str = "openai-codex"
-    opencode_invoke_model: str = "gpt-5.4-mini"
-    opencode_judge_provider: str = "openai-codex"
-    opencode_judge_model: str = "chatgpt-5.5"
+    opencode_invoke_provider: str = DEFAULT_OPENCODE_INVOKE_PROVIDER
+    opencode_invoke_model: str = DEFAULT_OPENCODE_INVOKE_MODEL
+    opencode_judge_provider: str = DEFAULT_OPENCODE_JUDGE_PROVIDER
+    opencode_judge_model: str = DEFAULT_OPENCODE_JUDGE_MODEL
     opencode_timeout: int = 180
 
 

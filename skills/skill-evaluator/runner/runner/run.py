@@ -25,7 +25,14 @@ from runner.evaluation import SkillEvaluationApp, SkillEvaluator
 from runner.invocation import SkillInvoker
 from runner.judging import RubricJudgeRunner
 from runner.log_setup import configure as _configure_logging
-from runner.models import CliArgs, Mode
+from runner.models import (
+    DEFAULT_OPENCODE_INVOKE_MODEL,
+    DEFAULT_OPENCODE_INVOKE_PROVIDER,
+    DEFAULT_OPENCODE_JUDGE_MODEL,
+    DEFAULT_OPENCODE_JUDGE_PROVIDER,
+    CliArgs,
+    Mode,
+)
 from runner.ports import (
     AgentPort,
     BaselineAgentPort,
@@ -168,23 +175,23 @@ def _parse_args() -> CliArgs:
 def _add_opencode_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--opencode-invoke-provider",
-        default=os.getenv("OPENCODE_INVOKE_PROVIDER", "openai-codex"),
-        help="OpenCode invocation provider (default: openai-codex)",
+        default=os.getenv("OPENCODE_INVOKE_PROVIDER", DEFAULT_OPENCODE_INVOKE_PROVIDER),
+        help=f"OpenCode invocation provider (default: {DEFAULT_OPENCODE_INVOKE_PROVIDER})",
     )
     parser.add_argument(
         "--opencode-invoke-model",
-        default=os.getenv("OPENCODE_INVOKE_MODEL", "gpt-5.4-mini"),
-        help="OpenCode invocation model (default: gpt-5.4-mini)",
+        default=os.getenv("OPENCODE_INVOKE_MODEL", DEFAULT_OPENCODE_INVOKE_MODEL),
+        help=f"OpenCode invocation model (default: {DEFAULT_OPENCODE_INVOKE_MODEL})",
     )
     parser.add_argument(
         "--opencode-judge-provider",
-        default=os.getenv("OPENCODE_JUDGE_PROVIDER", "openai-codex"),
-        help="OpenCode judge provider (default: openai-codex)",
+        default=os.getenv("OPENCODE_JUDGE_PROVIDER", DEFAULT_OPENCODE_JUDGE_PROVIDER),
+        help=f"OpenCode judge provider (default: {DEFAULT_OPENCODE_JUDGE_PROVIDER})",
     )
     parser.add_argument(
         "--opencode-judge-model",
-        default=os.getenv("OPENCODE_JUDGE_MODEL", "chatgpt-5.5"),
-        help="OpenCode judge model (default: chatgpt-5.5)",
+        default=os.getenv("OPENCODE_JUDGE_MODEL", DEFAULT_OPENCODE_JUDGE_MODEL),
+        help=f"OpenCode judge model (default: {DEFAULT_OPENCODE_JUDGE_MODEL})",
     )
     parser.add_argument(
         "--opencode-timeout",

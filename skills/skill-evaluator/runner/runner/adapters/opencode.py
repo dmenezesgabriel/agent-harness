@@ -31,17 +31,19 @@ from runner.adapters.contract import (
     collect_text_artifacts,
 )
 from runner.adapters.judge_payloads import CompareJudgePayload, JudgePayload
-from runner.models import JudgeReport
+from runner.models import (
+    DEFAULT_OPENCODE_INVOKE_MODEL,
+    DEFAULT_OPENCODE_INVOKE_PROVIDER,
+    DEFAULT_OPENCODE_JUDGE_MODEL,
+    DEFAULT_OPENCODE_JUDGE_PROVIDER,
+    JudgeReport,
+)
 from runner.ports import ArtifactSet
 
 _DEFAULT_TIMEOUT_SECONDS = 180
 _SERVER_START_TIMEOUT_SECONDS = 10.0
 _SERVER_POLL_SECONDS = 0.1
 _HOSTNAME = "127.0.0.1"
-_INVOKE_PROVIDER = "openai-codex"
-_INVOKE_MODEL = "gpt-5.4-mini"
-_JUDGE_PROVIDER = "openai-codex"
-_JUDGE_MODEL = "chatgpt-5.4"
 _ADAPTER_NAME = "OpenCode"
 
 
@@ -100,10 +102,10 @@ class OpenCodeAdapter:
         self,
         skill_root: Path,
         timeout: int = _DEFAULT_TIMEOUT_SECONDS,
-        invoke_provider: str = _INVOKE_PROVIDER,
-        invoke_model: str = _INVOKE_MODEL,
-        judge_provider: str = _JUDGE_PROVIDER,
-        judge_model: str = _JUDGE_MODEL,
+        invoke_provider: str = DEFAULT_OPENCODE_INVOKE_PROVIDER,
+        invoke_model: str = DEFAULT_OPENCODE_INVOKE_MODEL,
+        judge_provider: str = DEFAULT_OPENCODE_JUDGE_PROVIDER,
+        judge_model: str = DEFAULT_OPENCODE_JUDGE_MODEL,
         client_factory: Callable[[str, int], object] | None = None,
     ) -> None:
         opencode_path = shutil.which("opencode")
