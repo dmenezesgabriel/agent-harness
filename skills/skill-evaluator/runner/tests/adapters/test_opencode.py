@@ -8,9 +8,10 @@ from unittest.mock import Mock
 import pytest
 from pydantic import ValidationError
 
-from runner.adapters import opencode
+from runner.adapters import contract, opencode
 from runner.adapters.judge_payloads import JudgePayload
 from runner.adapters.opencode import OpenCodeAdapter
+from runner.exceptions import ProviderAbortError
 
 _TIMEOUT_SECONDS = 12
 
@@ -204,7 +205,7 @@ class TestInvokeBaseline:
             FakeOpenCodeServer.write_artifact = False
 
         assert artifacts.files == {"chart.js": "new Chart()"}
-        assert fake_client.session.chat_calls[0]["system"] == opencode._BASELINE_SYSTEM
+        assert fake_client.session.chat_calls[0]["system"] == contract.BASELINE_SYSTEM
         assert fake_client.session.chat_calls[0]["provider_id"] == "openai-codex"
         assert fake_client.session.chat_calls[0]["model_id"] == "gpt-5.4-mini"
 
@@ -247,9 +248,22 @@ class TestClassify:
         adapter.classify("Generates charts from data", "plot my sales data")
 
         call = fake_client.session.chat_calls[0]
-        assert call["system"] == opencode._CLASSIFY_SYSTEM
+        assert call["system"] == contract.CLASSIFY_SYSTEM
         assert call["provider_id"] == "openai-codex"
         assert call["model_id"] == "chatgpt-5.4"
+
+    def test_classify_wraps_provider_timeout(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        fake_client = FakeOpenCodeClient("INVOKE")
+        monkeypatch.setattr(
+            fake_client.session, "chat", Mock(side_effect=TimeoutError("timed out"))
+        )
+        adapter = _adapter(tmp_path, monkeypatch)
+        adapter._client_factory = lambda _base_url, _timeout: fake_client
+
+        with pytest.raises(ProviderAbortError, match="OpenCode timeout during classify"):
+            adapter.classify("Generates charts from data", "plot my sales data")
 
 
 class TestJudge:

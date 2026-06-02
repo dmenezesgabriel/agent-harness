@@ -89,6 +89,7 @@ class MarkdownReportWriter:
             f"Run: {run_at.isoformat()} | Mode: {mode}",
             "",
         ]
+        lines += MarkdownReportWriter._observability_lines()
         active_structural = [r for r in structural_results if r.status != "skipped"]
         lines += MarkdownReportWriter._structural_lines(active_structural)
         lines += MarkdownReportWriter._comparison_lines(
@@ -104,6 +105,16 @@ class MarkdownReportWriter:
             active_structural, judge_verdicts, trigger_report
         )
         return lines
+
+    @staticmethod
+    def _observability_lines() -> list[str]:
+        return [
+            "## Observability Notes",
+            "",
+            "Provider/agent latency is emitted as structured `opencode_call_done` events. Evaluator overhead is emitted separately as `fixture_invocation_done`, `behave_done`, `judge_phase_done`, and `trigger_phase_done` events.",
+            "Use provider call timings for model response latency; use phase timings for evaluator throughput and orchestration overhead.",
+            "",
+        ]
 
     @staticmethod
     def _structural_lines(active_structural: list[ScenarioResult]) -> list[str]:

@@ -1,6 +1,7 @@
 from pathlib import Path
 from typing import cast
 
+from runner.exceptions import ProviderAbortError
 from runner.models import TriggerReport, TriggerResult
 from runner.ports import SkillInputSizerPort, TriggerClassifierPort
 from runner.strategies.trigger import TriggerStrategy
@@ -15,6 +16,13 @@ class FakeTriggerEvaluator:
         self, _skill_name: str, _evals_dir: Path, _classifier: object
     ) -> TriggerReport:
         return self._report
+
+
+class FailingTriggerEvaluator:
+    def evaluate(
+        self, _skill_name: str, _evals_dir: Path, _classifier: object
+    ) -> TriggerReport:
+        raise ProviderAbortError("OpenCode timeout during classify")
 
 
 class FakeClassifier:
@@ -58,3 +66,19 @@ class TestTriggerStrategy:
         assert outcome.trigger_report == _PASSING_REPORT
         assert outcome.structural_results == []
         assert outcome.judge_verdicts == []
+
+    def test_trigger_strategy_reports_provider_abort(self, tmp_path: Path) -> None:
+        evals_dir = tmp_path / "dataviz" / "evals"
+        evals_dir.mkdir(parents=True)
+
+        strategy = TriggerStrategy(
+            cast(TriggerEvaluator, FailingTriggerEvaluator()),
+            cast(TriggerClassifierPort, FakeClassifier()),
+            cast(SkillInputSizerPort, FakeSizer()),
+        )
+
+        outcome = strategy.run("dataviz", evals_dir)
+
+        assert outcome.trigger_report is not None
+        assert outcome.trigger_report.passed is False
+        assert "OpenCode timeout" in outcome.trigger_report.results[0].query

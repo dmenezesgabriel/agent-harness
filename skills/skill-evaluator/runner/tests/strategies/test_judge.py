@@ -1,6 +1,7 @@
 from pathlib import Path
 from typing import cast
 
+from runner.exceptions import ProviderAbortError
 from runner.judging import RubricJudgeRunner
 from runner.models import JudgeReport
 from runner.ports import JudgePort, JudgeVerdict, SkillInputSizerPort
@@ -17,6 +18,13 @@ class FakeJudgeRunner:
     ) -> list[JudgeReport]:
         self._captured.append(artifacts_dir)
         return self._verdicts
+
+
+class FailingJudgeRunner:
+    def run(
+        self, _evals_dir: Path, _artifacts_dir: Path, _judge: object
+    ) -> list[JudgeReport]:
+        raise ProviderAbortError("OpenCode timeout during judge")
 
 
 class FakeJudge:
@@ -85,3 +93,19 @@ class TestJudgeStrategy:
         assert outcome.mode == "judge"
         assert outcome.judge_verdicts == [verdict]
         assert outcome.structural_results == []
+
+    def test_judge_strategy_reports_provider_abort(self, tmp_path: Path) -> None:
+        evals_dir = tmp_path / "dataviz" / "evals"
+        (evals_dir / "fixtures" / "golden").mkdir(parents=True)
+
+        strategy = JudgeStrategy(
+            cast(RubricJudgeRunner, FailingJudgeRunner()),
+            cast(JudgePort, FakeJudge()),
+            cast(SkillInputSizerPort, FakeSizer()),
+        )
+
+        outcome = strategy.run("dataviz", evals_dir)
+
+        assert outcome.judge_verdicts[0].rubric_id == "judge_provider"
+        assert outcome.judge_verdicts[0].passed is False
+        assert "OpenCode timeout" in outcome.judge_verdicts[0].reasoning

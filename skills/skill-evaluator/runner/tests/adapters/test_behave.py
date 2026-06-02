@@ -7,6 +7,7 @@ import pytest
 from runner.adapters.behave import (
     BehaveStructuralRunner,
     _as_object_list,
+    _feature_scope_error,
     _scenario_failure,
     _scenario_status,
 )
@@ -53,6 +54,40 @@ class TestHelpers:
 
 
 class TestBehaveStructuralRunner:
+    def test_feature_scope_error_flags_mixed_feature_tags(self, tmp_path: Path) -> None:
+        evals_dir = tmp_path / "evals"
+        evals_dir.mkdir()
+        (evals_dir / "mixed.feature").write_text(
+            "@golden @generated\nFeature: mixed scope\n",
+            encoding="utf-8",
+        )
+
+        result = _feature_scope_error(evals_dir)
+
+        assert result is not None
+        assert result.status == "failed"
+        assert "WARNING: evaluation process" in str(result.failure)
+        assert "tagged with both @golden and @generated" in str(result.failure)
+
+    def test_feature_scope_error_allows_scenario_level_scope_tags(
+        self, tmp_path: Path
+    ) -> None:
+        evals_dir = tmp_path / "evals"
+        evals_dir.mkdir()
+        (evals_dir / "separated.feature").write_text(
+            "@implement_it\n"
+            "Feature: separated scope\n\n"
+            "  @golden\n"
+            "  Scenario: golden check\n"
+            "    Then ok\n\n"
+            "  @generated\n"
+            "  Scenario: generated check\n"
+            "    Then ok\n",
+            encoding="utf-8",
+        )
+
+        assert _feature_scope_error(evals_dir) is None
+
     def test_read_results_ignores_background_and_keeps_failure(
         self, tmp_path: Path
     ) -> None:

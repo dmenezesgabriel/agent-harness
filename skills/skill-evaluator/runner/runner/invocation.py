@@ -1,9 +1,14 @@
 from __future__ import annotations
 
 import shutil
+import time
 from pathlib import Path
 
+import structlog
+
 from runner.ports import AgentPort, BaselineAgentPort
+
+_log = structlog.get_logger()
 
 
 class SkillInvoker:
@@ -30,7 +35,19 @@ class SkillInvoker:
         for input_file in input_files:
             input_text = input_file.read_text(encoding="utf-8")
             print(f"  Invoking skill with fixture: {input_file.name}")
+            start = time.monotonic()
+            _log.info(
+                "fixture_invocation_start",
+                fixture=input_file.name,
+                prompt_chars=len(input_text),
+            )
             artifacts = adapter.invoke_skill(skill_name, input_text)
+            _log.info(
+                "fixture_invocation_done",
+                fixture=input_file.name,
+                elapsed_s=round(time.monotonic() - start, 1),
+                artifact_count=len(artifacts.files),
+            )
             output_dir = self._artifact_output_dir(
                 generated_dir, input_file, input_files
             )
@@ -51,7 +68,19 @@ class SkillInvoker:
         for input_file in input_files:
             input_text = input_file.read_text(encoding="utf-8")
             print(f"  Invoking baseline with fixture: {input_file.name}")
+            start = time.monotonic()
+            _log.info(
+                "baseline_invocation_start",
+                fixture=input_file.name,
+                prompt_chars=len(input_text),
+            )
             artifacts = agent.invoke_baseline(input_text)
+            _log.info(
+                "baseline_invocation_done",
+                fixture=input_file.name,
+                elapsed_s=round(time.monotonic() - start, 1),
+                artifact_count=len(artifacts.files),
+            )
             output_dir = self._artifact_output_dir(
                 baseline_dir, input_file, input_files
             )

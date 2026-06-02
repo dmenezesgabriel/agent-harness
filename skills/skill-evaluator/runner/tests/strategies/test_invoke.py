@@ -1,6 +1,7 @@
 from pathlib import Path
 from typing import cast
 
+from runner.exceptions import ProviderAbortError
 from runner.invocation import SkillInvoker
 from runner.models import ScenarioResult
 from runner.ports import AgentPort, SkillInputSizerPort, StructuralCheckPort
@@ -13,6 +14,11 @@ class FakeInvoker:
 
     def invoke(self, _skill_name: str, _evals_dir: Path, _agent: object) -> Path:
         return self._artifacts_dir
+
+
+class FailingInvoker:
+    def invoke(self, _skill_name: str, _evals_dir: Path, _agent: object) -> Path:
+        raise ProviderAbortError("OpenCode rate limit during invoke")
 
 
 class FakeStructuralRunner:
@@ -66,3 +72,19 @@ class TestInvokeStrategy:
         assert outcome.input_sizes == {"SKILL.md": 100}
         assert outcome.judge_verdicts == []
         assert outcome.trigger_report is None
+
+    def test_invoke_strategy_reports_provider_abort(self, tmp_path: Path) -> None:
+        evals_dir = tmp_path / "dataviz" / "evals"
+        evals_dir.mkdir(parents=True)
+
+        strategy = InvokeStrategy(
+            cast(SkillInvoker, FailingInvoker()),
+            cast(StructuralCheckPort, FakeStructuralRunner([])),
+            cast(AgentPort, FakeAgent()),
+            cast(SkillInputSizerPort, FakeSizer()),
+        )
+
+        outcome = strategy.run("dataviz", evals_dir)
+
+        assert outcome.structural_results[0].status == "failed"
+        assert "OpenCode rate limit" in str(outcome.structural_results[0].failure)

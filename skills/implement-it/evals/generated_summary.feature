@@ -16,3 +16,13 @@ Feature: implement-it generated summary validation
   Scenario: Generated summary has all required sections
     Given the generated implementation summary is loaded
     Then the summary has all required sections
+
+  Scenario: Generated artifacts include implementation code
+    Then the artifact set contains at least one implementation source file
+
+  Scenario: Generated artifacts include tests
+    Then the artifact set contains at least one test file
+
+  Scenario: Generated summary cites a concrete validation command
+    Given the generated implementation summary is loaded
+    Then the summary validation run is not empty

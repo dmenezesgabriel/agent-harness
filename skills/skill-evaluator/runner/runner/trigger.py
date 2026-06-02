@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import re
+import time
 from pathlib import Path
 from typing import Any
 
@@ -67,29 +68,58 @@ class TriggerEvaluator:
         description = _extract_skill_description(evals_dir.parent / "SKILL.md")
 
         results: list[TriggerResult] = []
-        for entry in raw.get("should_trigger", []):
+        for index, entry in enumerate(raw.get("should_trigger", []), start=1):
             query = entry["query"] if isinstance(entry, dict) else entry
+            start = time.monotonic()
+            _log.info(
+                "trigger_classify_start",
+                category="should_trigger",
+                index=index,
+                query_chars=len(query),
+            )
             actual = classifier.classify(description, query)
             results.append(TriggerResult(query=query, expected=True, actual=actual))
-            _log.debug(
-                "trigger_classified", query=query[:60], expected=True, actual=actual
+            _log.info(
+                "trigger_classified",
+                category="should_trigger",
+                index=index,
+                query=query[:60],
+                expected=True,
+                actual=actual,
+                elapsed_s=round(time.monotonic() - start, 1),
             )
 
-        for entry in raw.get("should_not_trigger", []):
+        for index, entry in enumerate(raw.get("should_not_trigger", []), start=1):
             query = entry["query"] if isinstance(entry, dict) else entry
+            start = time.monotonic()
+            _log.info(
+                "trigger_classify_start",
+                category="should_not_trigger",
+                index=index,
+                query_chars=len(query),
+            )
             actual = classifier.classify(description, query)
             results.append(TriggerResult(query=query, expected=False, actual=actual))
-            _log.debug(
-                "trigger_classified", query=query[:60], expected=False, actual=actual
+            _log.info(
+                "trigger_classified",
+                category="should_not_trigger",
+                index=index,
+                query=query[:60],
+                expected=False,
+                actual=actual,
+                elapsed_s=round(time.monotonic() - start, 1),
             )
 
         pass_rate = (
             sum(1 for r in results if r.passed) / len(results) if results else 1.0
         )
         passed = pass_rate >= _TRIGGER_PASS_THRESHOLD
+        passed_count = sum(1 for r in results if r.passed)
         _log.info(
             "trigger_eval_done",
             skill=skill_name,
+            total=len(results),
+            passed_count=passed_count,
             pass_rate=round(pass_rate, 2),
             passed=passed,
         )

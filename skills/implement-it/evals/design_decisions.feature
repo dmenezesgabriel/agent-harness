@@ -1,4 +1,4 @@
-@implement_it @golden @generated
+@implement_it
 Feature: implement-it design decision validation
   Design decision checks must correctly pass valid design choices
   and flag invalid ones without invoking the skill.
@@ -29,13 +29,3 @@ Feature: implement-it design decision validation
   Scenario: Invalid design overengineering is flagged
     Given the implementation summary "invalid_design_overengineering.md"
     Then the design notes apply a pattern without a valid reason
-
-  @generated
-  Scenario Outline: Generated summary references a design principle or justifies its absence
-    Given the generated implementation summary is loaded
-    Then the generated design notes contain design reasoning
-
-  @generated
-  Scenario Outline: Generated summary names at least one pattern or justifies why none is needed
-    Given the generated implementation summary is loaded
-    Then the generated design notes contain a pattern reference or explicit avoidance

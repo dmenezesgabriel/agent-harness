@@ -17,6 +17,19 @@ from typing import Protocol, cast
 
 from opencode_ai import Opencode
 
+from runner.adapters.contract import (
+    BASELINE_SYSTEM,
+    CLASSIFY_SYSTEM,
+    COMPARE_JUDGE_SYSTEM,
+    INVOKE_TOOLS,
+    JUDGE_SYSTEM,
+    AdapterCall,
+    build_classify_prompt,
+    build_compare_judge_prompt,
+    build_judge_prompt,
+    classify_token,
+    collect_text_artifacts,
+)
 from runner.adapters.judge_payloads import CompareJudgePayload, JudgePayload
 from runner.ports import ArtifactSet, JudgeVerdict
 
@@ -28,35 +41,7 @@ _INVOKE_PROVIDER = "openai-codex"
 _INVOKE_MODEL = "gpt-5.4-mini"
 _JUDGE_PROVIDER = "openai-codex"
 _JUDGE_MODEL = "chatgpt-5.4"
-_SKILL_RESOURCE_PARTS = frozenset({"SKILL.md", "assets", "references", "scripts"})
-_IGNORED_ARTIFACT_PARTS = (
-    frozenset({".git", "dist", "node_modules"}) | _SKILL_RESOURCE_PARTS
-)
-
-_JUDGE_SYSTEM = (
-    "You are an expert evaluator of AI-generated software artifacts. "
-    "Respond ONLY with a JSON object - no prose, no markdown fences: "
-    '{"passed": <bool>, "score": <float 0.0-1.0>, "reasoning": <one sentence>}'
-)
-
-# Evaluates Skill and Baseline in one call — saves one API round-trip per rubric.
-_COMPARE_JUDGE_SYSTEM = (
-    "You are an expert evaluator of AI-generated software artifacts. "
-    "You receive two artifacts — Skill (produced with skill guidance) and Baseline "
-    "(produced without guidance) — and a rubric. Evaluate each independently. "
-    "Respond ONLY with a JSON object — no prose, no markdown fences: "
-    '{"skill": {"passed": <bool>, "score": <float 0.0-1.0>, "reasoning": <one sentence>}, '
-    '"baseline": {"passed": <bool>, "score": <float 0.0-1.0>, "reasoning": <one sentence>}}'
-)
-_BASELINE_SYSTEM = "You are a helpful assistant. Complete the task the user describes."
-_CLASSIFY_SYSTEM = (
-    "You are an agent. You have access to one skill. "
-    "When a user message matches the skill's purpose you invoke it; "
-    "when it does not match you handle the request directly. "
-    "Given the skill description and user message below, "
-    "reply with exactly one word: INVOKE or SKIP. No explanation, no punctuation."
-)
-_INVOKE_TOOLS = {"bash": True, "read": True, "write": True}
+_ADAPTER_NAME = "OpenCode"
 
 
 class _OpenCodeSession(Protocol):
@@ -146,19 +131,21 @@ class OpenCodeAdapter:
                 system=skill_md,
                 provider_id=self._invoke_provider,
                 model_id=self._invoke_model,
-                tools=_INVOKE_TOOLS,
+                operation=f"invoke:{skill_name}",
+                tools=_opencode_tools(),
             )
-            return ArtifactSet(workdir=workdir, files=self._collect_dir(workdir))
+            return ArtifactSet(workdir=workdir, files=collect_text_artifacts(workdir))
 
     def judge(self, artifact_content: str, rubric: str, rubric_id: str) -> JudgeVerdict:
-        prompt = f"Rubric:\n{rubric}\n\nArtifact:\n{artifact_content}"
+        prompt = build_judge_prompt(artifact_content, rubric)
         with tempfile.TemporaryDirectory(prefix="eval-judge-") as tmp:
             stdout = self._chat_in_workdir(
                 Path(tmp),
                 prompt,
-                system=_JUDGE_SYSTEM,
+                system=JUDGE_SYSTEM,
                 provider_id=self._judge_provider,
                 model_id=self._judge_model,
+                operation=f"judge:{rubric_id}",
                 tools=None,
             )
         return JudgePayload.model_validate_json(stdout.strip()).to_verdict(rubric_id)
@@ -170,18 +157,15 @@ class OpenCodeAdapter:
         rubric: str,
         rubric_id: str,
     ) -> tuple[JudgeVerdict, JudgeVerdict]:
-        prompt = (
-            f"Rubric:\n{rubric}\n\n"
-            f"Artifact (Skill):\n{skill_content}\n\n"
-            f"Artifact (Baseline):\n{baseline_content}"
-        )
+        prompt = build_compare_judge_prompt(skill_content, baseline_content, rubric)
         with tempfile.TemporaryDirectory(prefix="eval-compare-judge-") as tmp:
             stdout = self._chat_in_workdir(
                 Path(tmp),
                 prompt,
-                system=_COMPARE_JUDGE_SYSTEM,
+                system=COMPARE_JUDGE_SYSTEM,
                 provider_id=self._judge_provider,
                 model_id=self._judge_model,
+                operation=f"compare_judge:{rubric_id}",
                 tools=None,
             )
         return CompareJudgePayload.model_validate_json(stdout.strip()).to_verdicts(
@@ -194,26 +178,27 @@ class OpenCodeAdapter:
             self._chat_in_workdir(
                 workdir,
                 prompt,
-                system=_BASELINE_SYSTEM,
+                system=BASELINE_SYSTEM,
                 provider_id=self._invoke_provider,
                 model_id=self._invoke_model,
-                tools=_INVOKE_TOOLS,
+                operation="baseline",
+                tools=_opencode_tools(),
             )
-            return ArtifactSet(workdir=workdir, files=self._collect_dir(workdir))
+            return ArtifactSet(workdir=workdir, files=collect_text_artifacts(workdir))
 
     def classify(self, skill_description: str, query: str) -> bool:
-        prompt = f"Skill description:\n{skill_description}\n\nUser message:\n{query}"
+        prompt = build_classify_prompt(skill_description, query)
         with tempfile.TemporaryDirectory(prefix="eval-classify-") as tmp:
             stdout = self._chat_in_workdir(
                 Path(tmp),
                 prompt,
-                system=_CLASSIFY_SYSTEM,
+                system=CLASSIFY_SYSTEM,
                 provider_id=self._judge_provider,
                 model_id=self._judge_model,
+                operation="classify",
                 tools=None,
             )
-        token = stdout.strip().upper().split()[0] if stdout.strip() else ""
-        return token == "INVOKE"  # nosec B105
+        return classify_token(stdout)
 
     def _chat_in_workdir(
         self,
@@ -222,37 +207,40 @@ class OpenCodeAdapter:
         system: str,
         provider_id: str,
         model_id: str,
+        operation: str,
         tools: dict[str, bool] | None,
     ) -> str:
         port = _free_port()
+        call = AdapterCall(
+            adapter=_ADAPTER_NAME,
+            operation=operation,
+            provider=provider_id,
+            model=model_id,
+            prompt_chars=len(prompt),
+            system_chars=len(system),
+            timeout=self._timeout,
+        )
+        start = call.start()
         with _OpenCodeServer(self._opencode_path, workdir, port):
             client = cast(
                 _OpenCodeClient,
                 self._client_factory(f"http://{_HOSTNAME}:{port}", self._timeout),
             )
             session = client.session.create()
-            message = client.session.chat(
-                session.id,
-                provider_id=provider_id,
-                model_id=model_id,
-                parts=[{"type": "text", "text": prompt}],
-                system=system,
-                tools=tools,
-                timeout=self._timeout,
-            )
+            try:
+                message = client.session.chat(
+                    session.id,
+                    provider_id=provider_id,
+                    model_id=model_id,
+                    parts=[{"type": "text", "text": prompt}],
+                    system=system,
+                    tools=tools,
+                    timeout=self._timeout,
+                )
+            except Exception as exc:
+                raise call.abort(exc) from exc
+            call.done(start)
             return _assistant_text(client.session.messages(session.id), message.id)
-
-    def _collect_dir(self, workdir: Path) -> dict[str, str]:
-        """Collect text files written by OpenCode to workdir."""
-        files: dict[str, str] = {}
-        for path in workdir.rglob("*"):
-            if not path.is_file():
-                continue
-            if _IGNORED_ARTIFACT_PARTS & set(path.relative_to(workdir).parts):
-                continue
-            with suppress(UnicodeDecodeError):
-                files[str(path.relative_to(workdir))] = path.read_text(encoding="utf-8")
-        return files
 
     def _load_skill_md(self, skill_name: str) -> str:
         path = self._skill_root / skill_name / "SKILL.md"
@@ -268,6 +256,10 @@ class OpenCodeAdapter:
             dirs_exist_ok=True,
             ignore=shutil.ignore_patterns("evals"),
         )
+
+
+def _opencode_tools() -> dict[str, bool]:
+    return dict.fromkeys(INVOKE_TOOLS, True)
 
 
 class _OpenCodeServer:

@@ -12,13 +12,31 @@ from __future__ import annotations
 import shutil
 import subprocess  # nosec B404
 import tempfile
-from contextlib import suppress
 from pathlib import Path
 
+from runner.adapters.contract import (
+    BASELINE_SYSTEM,
+    CLASSIFY_SYSTEM,
+    COMPARE_JUDGE_SYSTEM,
+    INVOKE_TOOLS,
+    JUDGE_SYSTEM,
+    AdapterCall,
+    build_classify_prompt,
+    build_compare_judge_prompt,
+    build_judge_prompt,
+    classify_token,
+    collect_text_artifacts,
+)
 from runner.adapters.judge_payloads import CompareJudgePayload, JudgePayload
 from runner.ports import ArtifactSet, JudgeVerdict
 
 _DEFAULT_TIMEOUT_SECONDS = 180
+_ADAPTER_NAME = "ClaudeCode"
+_PROVIDER_NAME = "claude-cli"
+_ERROR_PREVIEW_CHARS = 500
+_INVOKE_MODEL = "haiku"
+_JUDGE_MODEL = "sonnet"
+_CLASSIFY_MODEL = "haiku"
 
 
 class ClaudeCodeAdapter:
@@ -37,47 +55,6 @@ class ClaudeCodeAdapter:
         adapter = ClaudeCodeAdapter(skill_root=Path('skills'))
         artifacts = adapter.invoke_skill('dataviz', 'Make a line chart ...')
     """
-
-    _JUDGE_PASS_THRESHOLD = 0.7
-    _ERROR_PREVIEW_CHARS = 500
-    _INVOKE_MODEL = "haiku"
-    _JUDGE_MODEL = "sonnet"
-    # INVOKE/SKIP is a binary decision; haiku is sufficient and ~3x cheaper than sonnet
-    _CLASSIFY_MODEL = "haiku"
-
-    _JUDGE_SYSTEM = (
-        "You are an expert evaluator of AI-generated software artifacts. "
-        "Fail superficial compliance: correct structure but empty or placeholder content. "
-        "Respond ONLY with a JSON object — no prose, no markdown fences: "
-        '{"passed": <bool>, "score": <float 0.0-1.0>, "reasoning": <one sentence citing artifact evidence>}'
-    )
-
-    # Evaluates Skill and Baseline in one call — saves one API round-trip per rubric.
-    _COMPARE_JUDGE_SYSTEM = (
-        "You are an expert evaluator of AI-generated software artifacts. "
-        "You receive two artifacts — Skill (produced with skill guidance) and Baseline "
-        "(produced without guidance) — and a rubric. Evaluate each independently. "
-        "Respond ONLY with a JSON object — no prose, no markdown fences: "
-        '{"skill": {"passed": <bool>, "score": <float 0.0-1.0>, "reasoning": <one sentence>}, '
-        '"baseline": {"passed": <bool>, "score": <float 0.0-1.0>, "reasoning": <one sentence>}}'
-    )
-
-    _CLASSIFY_SYSTEM = (
-        "You are an agent. You have access to one skill. "
-        "When a user message matches the skill's purpose you invoke it; "
-        "when it does not match you handle the request directly. "
-        "Given the skill description and user message below, "
-        "reply with exactly one word: INVOKE or SKIP. No explanation, no punctuation."
-    )
-
-    # Neutral system prompt that gives no skill guidance — used for baseline comparison
-    _BASELINE_SYSTEM = (
-        "You are a helpful assistant. Complete the task the user describes."
-    )
-
-    # Tools the skill is allowed to use when building artifacts
-    _INVOKE_TOOLS = "Write Read Bash"
-    _SKILL_RESOURCE_PARTS = frozenset({"SKILL.md", "assets", "references", "scripts"})
 
     def __init__(
         self, skill_root: Path, timeout: int = _DEFAULT_TIMEOUT_SECONDS
@@ -99,49 +76,50 @@ class ClaudeCodeAdapter:
             self._run_in_dir(
                 prompt,
                 system=skill_md,
-                model=self._INVOKE_MODEL,
+                model=_INVOKE_MODEL,
                 workdir=workdir,
-                tools=self._INVOKE_TOOLS,
+                tools=_claude_tools(),
+                operation=f"invoke:{skill_name}",
                 append_system=True,
             )
-            files = self._collect_dir(workdir)
-            return ArtifactSet(workdir=workdir, files=files)
+            return ArtifactSet(workdir=workdir, files=collect_text_artifacts(workdir))
 
     def invoke_baseline(self, prompt: str) -> ArtifactSet:
         with tempfile.TemporaryDirectory(prefix="eval-baseline-") as tmp:
             workdir = Path(tmp)
             self._run_in_dir(
                 prompt,
-                system=self._BASELINE_SYSTEM,
-                model=self._INVOKE_MODEL,
+                system=BASELINE_SYSTEM,
+                model=_INVOKE_MODEL,
                 workdir=workdir,
-                tools=self._INVOKE_TOOLS,
+                tools=_claude_tools(),
+                operation="baseline",
                 append_system=False,
             )
-            files = self._collect_dir(workdir)
-            return ArtifactSet(workdir=workdir, files=files)
+            return ArtifactSet(workdir=workdir, files=collect_text_artifacts(workdir))
 
     def classify(self, skill_description: str, query: str) -> bool:
-        prompt = f"Skill description:\n{skill_description}\n\nUser message:\n{query}"
+        prompt = build_classify_prompt(skill_description, query)
         stdout = self._run_in_dir(
             prompt,
-            system=self._CLASSIFY_SYSTEM,
-            model=self._CLASSIFY_MODEL,
+            system=CLASSIFY_SYSTEM,
+            model=_CLASSIFY_MODEL,
             workdir=None,
             tools=None,
+            operation="classify",
             append_system=False,
         )
-        token = stdout.strip().upper().split()[0] if stdout.strip() else ""
-        return token == "INVOKE"  # nosec B105
+        return classify_token(stdout)
 
     def judge(self, artifact_content: str, rubric: str, rubric_id: str) -> JudgeVerdict:
-        prompt = f"Rubric:\n{rubric}\n\nArtifact:\n{artifact_content}"
+        prompt = build_judge_prompt(artifact_content, rubric)
         stdout = self._run_in_dir(
             prompt,
-            system=self._JUDGE_SYSTEM,
-            model=self._JUDGE_MODEL,
+            system=JUDGE_SYSTEM,
+            model=_JUDGE_MODEL,
             workdir=None,
             tools=None,
+            operation=f"judge:{rubric_id}",
             append_system=False,
         )
         return JudgePayload.model_validate_json(stdout.strip()).to_verdict(rubric_id)
@@ -153,17 +131,14 @@ class ClaudeCodeAdapter:
         rubric: str,
         rubric_id: str,
     ) -> tuple[JudgeVerdict, JudgeVerdict]:
-        prompt = (
-            f"Rubric:\n{rubric}\n\n"
-            f"Artifact (Skill):\n{skill_content}\n\n"
-            f"Artifact (Baseline):\n{baseline_content}"
-        )
+        prompt = build_compare_judge_prompt(skill_content, baseline_content, rubric)
         stdout = self._run_in_dir(
             prompt,
-            system=self._COMPARE_JUDGE_SYSTEM,
-            model=self._JUDGE_MODEL,
+            system=COMPARE_JUDGE_SYSTEM,
+            model=_JUDGE_MODEL,
             workdir=None,
             tools=None,
+            operation=f"compare_judge:{rubric_id}",
             append_system=False,
         )
         return CompareJudgePayload.model_validate_json(stdout.strip()).to_verdicts(
@@ -177,8 +152,19 @@ class ClaudeCodeAdapter:
         model: str,
         workdir: Path | None,
         tools: str | None,
+        operation: str,
         append_system: bool = False,
     ) -> str:
+        call = AdapterCall(
+            adapter=_ADAPTER_NAME,
+            operation=operation,
+            provider=_PROVIDER_NAME,
+            model=model,
+            prompt_chars=len(prompt),
+            system_chars=len(system),
+            timeout=self._timeout,
+        )
+        start = call.start()
         with tempfile.NamedTemporaryFile(
             mode="w", suffix=".md", delete=False, encoding="utf-8"
         ) as f:
@@ -213,31 +199,14 @@ class ClaudeCodeAdapter:
                     check=False,
                 )  # nosec B603
             except subprocess.TimeoutExpired as exc:
-                raise RuntimeError(
-                    f"claude timed out after {self._timeout}s while running model {model!r}"
-                ) from exc
+                raise call.abort(exc) from exc
         finally:
             Path(system_file).unlink(missing_ok=True)
 
         if result.returncode != 0:
-            raise RuntimeError(
-                f"claude exited {result.returncode}\n"
-                f"stderr: {result.stderr[: self._ERROR_PREVIEW_CHARS]}\n"
-                f"stdout: {result.stdout[: self._ERROR_PREVIEW_CHARS]}"
-            )
+            raise call.abort(_subprocess_error(result))
+        call.done(start)
         return result.stdout
-
-    def _collect_dir(self, workdir: Path) -> dict[str, str]:
-        """Collect text files written by the model to workdir."""
-        files: dict[str, str] = {}
-        for path in workdir.rglob("*"):
-            if not path.is_file():
-                continue
-            if path.relative_to(workdir).parts[0] in self._SKILL_RESOURCE_PARTS:
-                continue
-            with suppress(UnicodeDecodeError):
-                files[str(path.relative_to(workdir))] = path.read_text(encoding="utf-8")
-        return files
 
     def _stage_skill_resources(self, skill_name: str, workdir: Path) -> None:
         source = self._skill_root / skill_name
@@ -253,3 +222,15 @@ class ClaudeCodeAdapter:
         if not path.exists():
             raise FileNotFoundError(f"SKILL.md not found for {skill_name!r} at {path}")
         return path.read_text(encoding="utf-8")
+
+
+def _claude_tools() -> str:
+    return ",".join(tool.title() for tool in INVOKE_TOOLS)
+
+
+def _subprocess_error(result: subprocess.CompletedProcess[str]) -> RuntimeError:
+    return RuntimeError(
+        f"claude exited {result.returncode}\n"
+        f"stderr: {result.stderr[:_ERROR_PREVIEW_CHARS]}\n"
+        f"stdout: {result.stdout[:_ERROR_PREVIEW_CHARS]}"
+    )

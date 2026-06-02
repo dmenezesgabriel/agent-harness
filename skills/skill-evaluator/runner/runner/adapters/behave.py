@@ -26,6 +26,15 @@ class BehaveStructuralRunner:
     """
 
     def run(self, evals_dir: Path, artifacts_dir: Path) -> list[ScenarioResult]:
+        suite_error = _feature_scope_error(evals_dir)
+        if suite_error is not None:
+            _log.warning(
+                "eval_suite_scope_warning",
+                scenario=suite_error.scenario,
+                failure=suite_error.failure,
+            )
+            self._print_summary([suite_error])
+            return [suite_error]
         static_dir = evals_dir / "fixtures" / "golden"
         results = self._behave_pass(evals_dir, static_dir, tag="golden")
         if artifacts_dir != static_dir:
@@ -152,6 +161,50 @@ def _parse_behave_results(result_file: Path) -> list[ScenarioResult]:
                 )
             )
     return results
+
+
+def _feature_scope_error(evals_dir: Path) -> ScenarioResult | None:
+    for feature_file in sorted(evals_dir.glob("*.feature")):
+        error = _invalid_feature_scope(feature_file)
+        if error is None:
+            continue
+        return ScenarioResult(
+            feature="eval suite validation",
+            scenario=f"{feature_file.name} has unambiguous scope tags",
+            status="failed",
+            failure=error,
+        )
+    return None
+
+
+def _invalid_feature_scope(feature_file: Path) -> str | None:
+    lines = feature_file.read_text(encoding="utf-8").splitlines()
+    pending_tags: set[str] = set()
+    for line_number, line in enumerate(lines, start=1):
+        stripped = line.strip()
+        if stripped.startswith("@"):
+            pending_tags = {tag for tag in stripped.split() if tag.startswith("@")}
+            continue
+        if stripped.startswith("Feature:") and _has_mixed_scope_tags(pending_tags):
+            return _scope_error_message(feature_file, line_number, "Feature")
+        if stripped.startswith("Scenario") and _has_mixed_scope_tags(pending_tags):
+            return _scope_error_message(feature_file, line_number, "Scenario")
+        if stripped and not stripped.startswith("#"):
+            pending_tags = set()
+    return None
+
+
+def _has_mixed_scope_tags(tags: set[str]) -> bool:
+    return "@golden" in tags and "@generated" in tags
+
+
+def _scope_error_message(feature_file: Path, line_number: int, scope: str) -> str:
+    return (
+        "WARNING: evaluation process for this skill must be fixed before "
+        f"results can be trusted. {feature_file.name}:{line_number} {scope} "
+        "is tagged with both @golden and @generated. Split golden fixture "
+        "checks from generated artifact checks, or tag only individual scenarios."
+    )
 
 
 def _as_object_list(value: object) -> list[dict[str, object]]:

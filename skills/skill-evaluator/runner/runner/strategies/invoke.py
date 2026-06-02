@@ -3,8 +3,9 @@ from __future__ import annotations
 import time
 from pathlib import Path
 
+from runner.exceptions import ProviderAbortError
 from runner.invocation import SkillInvoker
-from runner.models import EvalOutcome, Mode
+from runner.models import EvalOutcome, Mode, ScenarioResult
 from runner.ports import AgentPort, SkillInputSizerPort, StructuralCheckPort
 from runner.strategies._timing import _log_elapsed
 
@@ -37,7 +38,22 @@ class InvokeStrategy:
         input_sizes = self._input_sizer.measure(evals_dir)
 
         start = time.monotonic()
-        artifacts_dir = self._invoker.invoke(skill_name, evals_dir, self._agent)
+        try:
+            artifacts_dir = self._invoker.invoke(skill_name, evals_dir, self._agent)
+        except ProviderAbortError as exc:
+            _log_elapsed("invocation_aborted", skill_name, start, reason=str(exc))
+            return EvalOutcome(
+                mode=Mode.INVOKE,
+                structural_results=[
+                    ScenarioResult(
+                        feature="skill-evaluator provider",
+                        scenario="invocation phase completed",
+                        status="failed",
+                        failure=str(exc),
+                    )
+                ],
+                input_sizes=input_sizes,
+            )
         _log_elapsed("invocation_done", skill_name, start)
 
         start = time.monotonic()

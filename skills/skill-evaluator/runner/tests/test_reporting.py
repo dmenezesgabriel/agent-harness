@@ -94,6 +94,8 @@ class TestMarkdownReportWriter:
         )
         assert "bad chart" in report
         assert "palette" in report
+        assert "Observability Notes" in report
+        assert "Provider/agent latency" in report
         assert "Skill input size" in report
         assert "SKILL.md" in report
         assert f"Pass rate**: 1/{_EXPECTED_REPORT_CHECKS}" in report

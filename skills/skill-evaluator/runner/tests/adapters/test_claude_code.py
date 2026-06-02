@@ -7,7 +7,9 @@ import pytest
 from pydantic import ValidationError
 
 from runner.adapters.claude_code import ClaudeCodeAdapter
+from runner.adapters.contract import collect_text_artifacts
 from runner.adapters.judge_payloads import JudgePayload
+from runner.exceptions import ProviderAbortError
 
 _TIMEOUT_SECONDS = 12
 _FAILURE_CODE = 2
@@ -71,10 +73,9 @@ class TestAdapterSetup:
         # Arrange
         (tmp_path / "chart.js").write_text("new Chart()", encoding="utf-8")
         (tmp_path / "image.bin").write_bytes(b"\xff\xfe")
-        adapter = _adapter_without_init(tmp_path)
 
         # Act
-        files = adapter._collect_dir(tmp_path)
+        files = collect_text_artifacts(tmp_path)
 
         # Assert
         assert files == {"chart.js": "new Chart()"}
@@ -103,6 +104,7 @@ class TestJudge:
             model="sonnet",
             workdir=None,
             tools=None,
+            operation="judge:quality",
             append_system=False,
         )
 
@@ -127,6 +129,7 @@ class TestClassify:
             model="haiku",
             workdir=None,
             tools=None,
+            operation="classify",
             append_system=False,
         )
 
@@ -160,7 +163,8 @@ class TestInvokeBaseline:
             system=ANY,
             model="haiku",
             workdir=ANY,
-            tools="Write Read Bash",
+            tools="Bash,Read,Write",
+            operation="baseline",
             append_system=False,
         )
         assert artifacts.files == {}
@@ -185,9 +189,14 @@ class TestRunInDir:
         monkeypatch.setattr("runner.adapters.claude_code.subprocess.run", run)
 
         # Act / Assert
-        with pytest.raises(RuntimeError, match="claude exited 2"):
+        with pytest.raises(ProviderAbortError, match="ClaudeCode provider failure"):
             adapter._run_in_dir(
-                "prompt", system="system", model="haiku", workdir=None, tools=None
+                "prompt",
+                system="system",
+                model="haiku",
+                workdir=None,
+                tools=None,
+                operation="classify",
             )
         assert run.call_count == 1
 
@@ -218,6 +227,7 @@ class TestRunInDir:
             model="haiku",
             workdir=tmp_path,
             tools="Write Read",
+            operation="invoke:dataviz",
         )
 
         # Assert
@@ -234,10 +244,9 @@ class TestRunInDir:
         (tmp_path / "tasks" / "issues" / "001-task.md").write_text(
             "task", encoding="utf-8"
         )
-        adapter = _adapter_without_init(tmp_path)
 
         # Act
-        files = adapter._collect_dir(tmp_path)
+        files = collect_text_artifacts(tmp_path)
 
         # Assert
         assert files == {"tasks/issues/001-task.md": "task"}

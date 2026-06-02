@@ -28,6 +28,37 @@ _REQUIRED_SECTIONS = [
     "## Unresolved Assumptions or Follow-Up",
 ]
 
+_SOURCE_EXTENSIONS = {
+    ".c",
+    ".cs",
+    ".css",
+    ".go",
+    ".html",
+    ".java",
+    ".js",
+    ".jsx",
+    ".kt",
+    ".php",
+    ".py",
+    ".rb",
+    ".rs",
+    ".swift",
+    ".ts",
+    ".tsx",
+}
+
+_SOURCE_ROOTS = (
+    "app/",
+    "cmd/",
+    "internal/",
+    "lib/",
+    "packages/",
+    "server/",
+    "src/",
+)
+
+_TEST_MARKERS = ("/test/", "/tests/", "tests/", "test/")
+
 
 class SummaryContext(Protocol):
     artifacts: dict[str, str]
@@ -89,6 +120,24 @@ def step_has_markdown_artifact(context: SummaryContext) -> None:
     assert md_files, (
         "no .md file found in generated artifacts; "
         "implement-it must produce an implementation summary"
+    )
+
+
+@then("the artifact set contains at least one implementation source file")
+def step_has_source_artifact(context: SummaryContext) -> None:
+    source_files = [name for name in context.artifacts if _is_source_file(name)]
+    assert source_files, (
+        "no implementation source file found in generated artifacts; "
+        "expected code under a source root such as src/, app/, lib/, or internal/"
+    )
+
+
+@then("the artifact set contains at least one test file")
+def step_has_test_artifact(context: SummaryContext) -> None:
+    test_files = [name for name in context.artifacts if _is_test_file(name)]
+    assert test_files, (
+        "no test file found in generated artifacts; "
+        "expected tests under tests/ or test/, or files named test_* / *.test.*"
     )
 
 
@@ -175,3 +224,32 @@ def step_validation_run_not_empty(context: SummaryContext) -> None:
         f"{context.current_file!r} '## Validation Run' contains only '{section.strip()}'; "
         "must include at least one concrete command"
     )
+
+
+def _is_source_file(name: str) -> bool:
+    path = name.replace("\\", "/")
+    if _is_test_file(path) or path.startswith("tasks/implementation/"):
+        return False
+    if not path.startswith(_SOURCE_ROOTS):
+        return False
+    return _extension(path) in _SOURCE_EXTENSIONS
+
+
+def _is_test_file(name: str) -> bool:
+    path = name.replace("\\", "/")
+    filename = path.rsplit("/", 1)[-1]
+    if _extension(path) not in _SOURCE_EXTENSIONS:
+        return False
+    return (
+        any(marker in path for marker in _TEST_MARKERS)
+        or filename.startswith("test_")
+        or ".test." in filename
+        or ".spec." in filename
+    )
+
+
+def _extension(path: str) -> str:
+    filename = path.rsplit("/", 1)[-1]
+    if "." not in filename:
+        return ""
+    return "." + filename.rsplit(".", 1)[-1]
