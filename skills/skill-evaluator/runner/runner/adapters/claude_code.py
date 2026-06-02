@@ -15,17 +15,10 @@ import tempfile
 from contextlib import suppress
 from pathlib import Path
 
-from pydantic import BaseModel, Field
-
+from runner.adapters.judge_payloads import CompareJudgePayload, JudgePayload
 from runner.ports import ArtifactSet, JudgeVerdict
 
 _DEFAULT_TIMEOUT_SECONDS = 180
-
-
-class _JudgePayload(BaseModel):
-    passed: bool | None = None
-    score: float = Field(ge=0.0, le=1.0)
-    reasoning: str
 
 
 class ClaudeCodeAdapter:
@@ -57,6 +50,16 @@ class ClaudeCodeAdapter:
         "Fail superficial compliance: correct structure but empty or placeholder content. "
         "Respond ONLY with a JSON object — no prose, no markdown fences: "
         '{"passed": <bool>, "score": <float 0.0-1.0>, "reasoning": <one sentence citing artifact evidence>}'
+    )
+
+    # Evaluates Skill and Baseline in one call — saves one API round-trip per rubric.
+    _COMPARE_JUDGE_SYSTEM = (
+        "You are an expert evaluator of AI-generated software artifacts. "
+        "You receive two artifacts — Skill (produced with skill guidance) and Baseline "
+        "(produced without guidance) — and a rubric. Evaluate each independently. "
+        "Respond ONLY with a JSON object — no prose, no markdown fences: "
+        '{"skill": {"passed": <bool>, "score": <float 0.0-1.0>, "reasoning": <one sentence>}, '
+        '"baseline": {"passed": <bool>, "score": <float 0.0-1.0>, "reasoning": <one sentence>}}'
     )
 
     _CLASSIFY_SYSTEM = (
@@ -139,14 +142,30 @@ class ClaudeCodeAdapter:
             tools=None,
             append_system=False,
         )
-        payload = _JudgePayload.model_validate_json(stdout.strip())
-        return JudgeVerdict(
-            rubric_id=rubric_id,
-            passed=payload.passed
-            if payload.passed is not None
-            else payload.score >= self._JUDGE_PASS_THRESHOLD,
-            score=payload.score,
-            reasoning=payload.reasoning,
+        return JudgePayload.model_validate_json(stdout.strip()).to_verdict(rubric_id)
+
+    def compare_judge(
+        self,
+        skill_content: str,
+        baseline_content: str,
+        rubric: str,
+        rubric_id: str,
+    ) -> tuple[JudgeVerdict, JudgeVerdict]:
+        prompt = (
+            f"Rubric:\n{rubric}\n\n"
+            f"Artifact (Skill):\n{skill_content}\n\n"
+            f"Artifact (Baseline):\n{baseline_content}"
+        )
+        stdout = self._run_in_dir(
+            prompt,
+            system=self._COMPARE_JUDGE_SYSTEM,
+            model=self._JUDGE_MODEL,
+            workdir=None,
+            tools=None,
+            append_system=False,
+        )
+        return CompareJudgePayload.model_validate_json(stdout.strip()).to_verdicts(
+            rubric_id
         )
 
     def _run_in_dir(

@@ -50,7 +50,8 @@ rubrics:
           configuration.
       (3) A data source or time range note anywhere in the output (footnote, caption, subtitle,
           annotation, or comment that names the source or time period).
-      (4) No chartjunk: no 3D effects, no decorative gradients, no excessive borders or shadows.
+      (4) No chartjunk: no 3D effects, no decorative gradients, no excessive borders or shadows,
+          and no dual y-axes (a second y-axis, e.g. y2, yAxisID, secondary axis configs).
       Score 1.0 if all four rules are satisfied.
       Score 0.7 if three of four are satisfied.
       Score 0.4 if only two are satisfied.

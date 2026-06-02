@@ -8,6 +8,8 @@ _PASSING_SCORE = 0.9
 
 
 class FakeRubricJudge:
+    """Fake for regular judge() calls (non-compare mode)."""
+
     def judge(self, artifact_content: str, rubric: str, rubric_id: str) -> JudgeVerdict:
         return JudgeVerdict(
             rubric_id=rubric_id,
@@ -129,6 +131,103 @@ class TestFindPrimaryChart:
 
         # Assert
         assert primary_chart == tmp_path / "chart.js"
+
+
+class FakeCompareJudge:
+    """Fake for compare_judge() calls — returns distinct scores for skill vs baseline."""
+
+    def judge(
+        self, _artifact_content: str, _rubric: str, rubric_id: str
+    ) -> JudgeVerdict:
+        return JudgeVerdict(
+            rubric_id=rubric_id, passed=True, score=_PASSING_SCORE, reasoning="ok"
+        )
+
+    def compare_judge(
+        self,
+        skill_content: str,
+        baseline_content: str,
+        _rubric: str,
+        rubric_id: str,
+    ) -> tuple[JudgeVerdict, JudgeVerdict]:
+        return (
+            JudgeVerdict(
+                rubric_id=rubric_id,
+                passed=True,
+                score=1.0,
+                reasoning=f"skill: {skill_content[:10]}",
+            ),
+            JudgeVerdict(
+                rubric_id=rubric_id,
+                passed=False,
+                score=0.3,
+                reasoning=f"baseline: {baseline_content[:10]}",
+            ),
+        )
+
+
+class TestCompareRun:
+    def test_compare_run_calls_compare_judge_for_generated_rubric(
+        self, tmp_path: Path
+    ) -> None:
+        # Arrange
+        evals_dir = tmp_path / "evals"
+        rubrics_dir = evals_dir / "rubrics"
+        skill_dir = tmp_path / "skill"
+        baseline_dir = tmp_path / "baseline"
+        rubrics_dir.mkdir(parents=True)
+        skill_dir.mkdir()
+        baseline_dir.mkdir()
+        (rubrics_dir / "gen.yaml").write_text(
+            "rubrics:\n  - id: gen\n    artifact_file: _generated_artifacts_primary_\n    prompt: check\n",
+            encoding="utf-8",
+        )
+        (skill_dir / "chart.js").write_text("new Chart(); skill", encoding="utf-8")
+        (baseline_dir / "chart.js").write_text("new Chart(); base", encoding="utf-8")
+
+        # Act
+        skill_v, baseline_v = RubricJudgeRunner().compare_run(
+            evals_dir, skill_dir, baseline_dir, FakeCompareJudge()
+        )
+
+        # Assert — one verdict each, derived from compare_judge
+        assert [v.rubric_id for v in skill_v] == ["gen"]
+        assert [v.rubric_id for v in baseline_v] == ["gen"]
+        assert skill_v[0].score == 1.0
+        assert baseline_v[0].score == 0.3
+
+    def test_compare_run_non_generated_rubric_judges_skill_only(
+        self, tmp_path: Path
+    ) -> None:
+        # Arrange
+        evals_dir = tmp_path / "evals"
+        rubrics_dir = evals_dir / "rubrics"
+        golden_dir = evals_dir / "fixtures" / "golden"
+        rubrics_dir.mkdir(parents=True)
+        golden_dir.mkdir(parents=True)
+        (golden_dir / "bar.js").write_text("new Chart();", encoding="utf-8")
+        (rubrics_dir / "static.yaml").write_text(
+            "rubrics:\n  - id: static\n    artifact_file: bar.js\n    prompt: pass\n",
+            encoding="utf-8",
+        )
+
+        # Act
+        skill_v, baseline_v = RubricJudgeRunner().compare_run(
+            evals_dir, tmp_path / "skill", tmp_path / "baseline", FakeCompareJudge()
+        )
+
+        # Assert — skill gets a verdict, baseline gets none (no fixtures)
+        assert [v.rubric_id for v in skill_v] == ["static"]
+        assert baseline_v == []
+
+    def test_compare_run_returns_empty_when_no_rubrics_dir(
+        self, tmp_path: Path
+    ) -> None:
+        skill_v, baseline_v = RubricJudgeRunner().compare_run(
+            tmp_path, tmp_path / "skill", tmp_path / "baseline", FakeCompareJudge()
+        )
+        assert skill_v == []
+        assert baseline_v == []
 
 
 class TestExtractSection:

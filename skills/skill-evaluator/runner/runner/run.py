@@ -28,6 +28,7 @@ from runner.models import CliArgs, Mode
 from runner.ports import (
     AgentPort,
     BaselineAgentPort,
+    CompareJudgePort,
     EvalModeStrategy,
     JudgePort,
     TriggerClassifierPort,
@@ -98,6 +99,10 @@ def _build_strategy(args: CliArgs, adapter: _EvaluationAdapter) -> EvalModeStrat
                 raise TypeError(
                     f"compare mode requires a baseline-capable adapter; got {type(adapter).__name__!r}"
                 )
+            if not isinstance(adapter, CompareJudgePort):
+                raise TypeError(
+                    f"compare mode requires a compare-judge-capable adapter; got {type(adapter).__name__!r}"
+                )
             return CompareStrategy(
                 SkillInvoker(),
                 BehaveStructuralRunner(),
@@ -105,7 +110,7 @@ def _build_strategy(args: CliArgs, adapter: _EvaluationAdapter) -> EvalModeStrat
                 adapter,
                 sizer,
                 RubricJudgeRunner(),
-                cast(JudgePort, adapter),
+                adapter,
             )
         case _:
             raise ValueError(

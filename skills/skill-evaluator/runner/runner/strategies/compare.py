@@ -9,7 +9,7 @@ from runner.models import EvalOutcome, Mode
 from runner.ports import (
     AgentPort,
     BaselineAgentPort,
-    JudgePort,
+    CompareJudgePort,
     SkillInputSizerPort,
     StructuralCheckPort,
 )
@@ -35,7 +35,7 @@ class CompareStrategy:
         baseline_agent: BaselineAgentPort,
         input_sizer: SkillInputSizerPort,
         judge_runner: RubricJudgeRunner,
-        judge: JudgePort,
+        judge: CompareJudgePort,
     ) -> None:
         self._invoker = invoker
         self._structural_runner = structural_runner
@@ -61,12 +61,6 @@ class CompareStrategy:
         _log_elapsed("structural_done", skill_name, start)
 
         start = time.monotonic()
-        judge_verdicts = self._judge_runner.run(evals_dir, artifacts_dir, self._judge)
-        _log_elapsed(
-            "judge_phase_done", skill_name, start, verdicts=len(judge_verdicts)
-        )
-
-        start = time.monotonic()
         baseline_dir = self._invoker.invoke_baseline(evals_dir, self._baseline_agent)
         _log_elapsed("baseline_invocation_done", skill_name, start)
 
@@ -75,14 +69,15 @@ class CompareStrategy:
         _log_elapsed("baseline_structural_done", skill_name, start)
 
         start = time.monotonic()
-        baseline_judge_verdicts = self._judge_runner.run(
-            evals_dir, baseline_dir, self._judge, generated_only=True
+        judge_verdicts, baseline_judge_verdicts = self._judge_runner.compare_run(
+            evals_dir, artifacts_dir, baseline_dir, self._judge
         )
         _log_elapsed(
-            "baseline_judge_phase_done",
+            "judge_phase_done",
             skill_name,
             start,
-            verdicts=len(baseline_judge_verdicts),
+            skill_verdicts=len(judge_verdicts),
+            baseline_verdicts=len(baseline_judge_verdicts),
         )
 
         return EvalOutcome(

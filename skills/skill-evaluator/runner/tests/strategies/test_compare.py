@@ -8,7 +8,7 @@ from runner.models import JudgeReport, ScenarioResult
 from runner.ports import (
     AgentPort,
     BaselineAgentPort,
-    JudgePort,
+    CompareJudgePort,
     JudgeVerdict,
     SkillInputSizerPort,
     StructuralCheckPort,
@@ -41,35 +41,45 @@ class FakeSizer:
 
 
 class FakeJudgeRunner:
-    """Returns pre-configured verdicts per artifacts_dir path."""
+    """Returns pre-configured verdicts from compare_run."""
 
     def __init__(
         self,
         skill_verdicts: list[JudgeReport],
         baseline_verdicts: list[JudgeReport],
-        skill_dir: Path,
     ) -> None:
         self._skill_verdicts = skill_verdicts
         self._baseline_verdicts = baseline_verdicts
-        self._skill_dir = skill_dir
 
-    def run(
+    def compare_run(
         self,
         _evals_dir: Path,
-        artifacts_dir: Path,
+        _skill_dir: Path,
+        _baseline_dir: Path,
         _judge: object,
-        **_kwargs: object,
-    ) -> list[JudgeReport]:
-        return (
-            self._skill_verdicts
-            if artifacts_dir == self._skill_dir
-            else self._baseline_verdicts
-        )
+    ) -> tuple[list[JudgeReport], list[JudgeReport]]:
+        return self._skill_verdicts, self._baseline_verdicts
 
 
 class FakeJudge:
     def judge(self, _content: str, _rubric: str, rubric_id: str) -> JudgeVerdict:
         return JudgeVerdict(rubric_id=rubric_id, passed=True, score=1.0, reasoning="ok")
+
+    def compare_judge(
+        self,
+        _skill: str,
+        _baseline: str,
+        _rubric: str,
+        rubric_id: str,
+    ) -> tuple[JudgeVerdict, JudgeVerdict]:
+        return (
+            JudgeVerdict(
+                rubric_id=rubric_id, passed=True, score=1.0, reasoning="skill ok"
+            ),
+            JudgeVerdict(
+                rubric_id=rubric_id, passed=False, score=0.5, reasoning="baseline weak"
+            ),
+        )
 
 
 def _make_strategy(
@@ -85,7 +95,7 @@ def _make_strategy(
         structural_runner = Mock()
         structural_runner.run.return_value = []
     if judge_runner is None:
-        judge_runner = FakeJudgeRunner([], [], skill_dir)
+        judge_runner = FakeJudgeRunner([], [])
     return CompareStrategy(
         cast(SkillInvoker, FakeInvoker(skill_dir, baseline_dir)),
         cast(StructuralCheckPort, structural_runner),
@@ -93,7 +103,7 @@ def _make_strategy(
         cast(BaselineAgentPort, object()),
         cast(SkillInputSizerPort, FakeSizer()),
         cast(RubricJudgeRunner, judge_runner),
-        cast(JudgePort, FakeJudge()),
+        cast(CompareJudgePort, FakeJudge()),
     )
 
 
@@ -159,8 +169,8 @@ class TestCompareStrategy:
             cast(AgentPort, object()),
             cast(BaselineAgentPort, object()),
             cast(SkillInputSizerPort, FakeSizer()),
-            cast(RubricJudgeRunner, FakeJudgeRunner([], [], skill_dir)),
-            cast(JudgePort, FakeJudge()),
+            cast(RubricJudgeRunner, FakeJudgeRunner([], [])),
+            cast(CompareJudgePort, FakeJudge()),
         )
 
         # Act
@@ -174,17 +184,15 @@ class TestCompareStrategy:
 
 
 class TestCompareStrategyJudge:
-    def test_judge_runner_called_twice_for_skill_then_baseline(
-        self, tmp_path: Path
-    ) -> None:
-        """UT-001 / OT-001: judge_runner.run is called once per artifacts dir."""
+    def test_compare_run_called_once_with_both_dirs(self, tmp_path: Path) -> None:
+        """compare_run replaces two separate run() calls — one call, both dirs."""
         # Arrange
         evals_dir = tmp_path / "dataviz" / "evals"
         evals_dir.mkdir(parents=True)
         skill_dir = tmp_path / "skill"
         baseline_dir = tmp_path / "baseline"
         judge_runner = Mock()
-        judge_runner.run.return_value = []
+        judge_runner.compare_run.return_value = ([], [])
         strategy = CompareStrategy(
             cast(SkillInvoker, FakeInvoker(skill_dir, baseline_dir)),
             cast(StructuralCheckPort, Mock(run=Mock(return_value=[]))),
@@ -192,31 +200,28 @@ class TestCompareStrategyJudge:
             cast(BaselineAgentPort, object()),
             cast(SkillInputSizerPort, FakeSizer()),
             cast(RubricJudgeRunner, judge_runner),
-            cast(JudgePort, FakeJudge()),
+            cast(CompareJudgePort, FakeJudge()),
         )
 
         # Act
         strategy.run("dataviz", evals_dir)
 
-        # Assert — two judge calls, first for skill dir, second for baseline dir
-        assert judge_runner.run.call_count == 2
-        assert judge_runner.run.call_args_list[0][0][1] == skill_dir
-        assert judge_runner.run.call_args_list[1][0][1] == baseline_dir
+        # Assert — exactly one compare_run call with skill_dir and baseline_dir
+        assert judge_runner.compare_run.call_count == 1
+        call_args = judge_runner.compare_run.call_args[0]
+        assert call_args[1] == skill_dir
+        assert call_args[2] == baseline_dir
 
     def test_judge_verdicts_assigned_to_correct_outcome_fields(
         self, tmp_path: Path
     ) -> None:
-        """UT-002 / AC-001: skill verdicts → judge_verdicts, baseline → baseline_judge_verdicts."""
+        """Skill verdicts → judge_verdicts, baseline verdicts → baseline_judge_verdicts."""
         # Arrange
         evals_dir = tmp_path / "dataviz" / "evals"
         evals_dir.mkdir(parents=True)
-        skill_dir = tmp_path / "skill"
         strategy = _make_strategy(
             tmp_path,
-            skill_dir=skill_dir,
-            judge_runner=FakeJudgeRunner(
-                [_SKILL_VERDICT], [_BASELINE_VERDICT], skill_dir
-            ),
+            judge_runner=FakeJudgeRunner([_SKILL_VERDICT], [_BASELINE_VERDICT]),
         )
 
         # Act
@@ -226,41 +231,10 @@ class TestCompareStrategyJudge:
         assert outcome.judge_verdicts == [_SKILL_VERDICT]
         assert outcome.baseline_judge_verdicts == [_BASELINE_VERDICT]
 
-    def test_baseline_judge_called_with_generated_only_true(
-        self, tmp_path: Path
-    ) -> None:
-        """Baseline judge run must pass generated_only=True to skip fixture rubrics."""
-        # Arrange
-        evals_dir = tmp_path / "dataviz" / "evals"
-        evals_dir.mkdir(parents=True)
-        skill_dir = tmp_path / "skill"
-        baseline_dir = tmp_path / "baseline"
-        judge_runner = Mock()
-        judge_runner.run.return_value = []
-        strategy = CompareStrategy(
-            cast(SkillInvoker, FakeInvoker(skill_dir, baseline_dir)),
-            cast(StructuralCheckPort, Mock(run=Mock(return_value=[]))),
-            cast(AgentPort, object()),
-            cast(BaselineAgentPort, object()),
-            cast(SkillInputSizerPort, FakeSizer()),
-            cast(RubricJudgeRunner, judge_runner),
-            cast(JudgePort, FakeJudge()),
-        )
-
-        # Act
-        strategy.run("dataviz", evals_dir)
-
-        # Assert — first judge call (skill) uses default generated_only=False,
-        # second call (baseline) must pass generated_only=True
-        skill_call_kwargs = judge_runner.run.call_args_list[0][1]
-        baseline_call_kwargs = judge_runner.run.call_args_list[1][1]
-        assert skill_call_kwargs.get("generated_only", False) is False
-        assert baseline_call_kwargs.get("generated_only") is True
-
     def test_empty_judge_verdicts_does_not_break_structural_results(
         self, tmp_path: Path
     ) -> None:
-        """UT-005: no regression on structural results when judge returns empty."""
+        """No regression on structural results when judge returns empty."""
         # Arrange
         evals_dir = tmp_path / "dataviz" / "evals"
         evals_dir.mkdir(parents=True)

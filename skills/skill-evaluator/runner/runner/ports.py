@@ -83,6 +83,30 @@ class JudgePort(Protocol):
     ) -> JudgeVerdict: ...
 
 
+@runtime_checkable
+class CompareJudgePort(Protocol):
+    """Judge skill and baseline artifacts in one call for compare mode.
+
+    Uses a single API round-trip per rubric instead of two, reducing token cost
+    and enabling relative scoring within the same context.
+
+    Usage:
+        skill_v, baseline_v = judge.compare_judge(skill_content, baseline_content, rubric, rubric_id='r1')
+    """
+
+    def judge(
+        self, artifact_content: str, rubric: str, rubric_id: str
+    ) -> JudgeVerdict: ...
+
+    def compare_judge(
+        self,
+        skill_content: str,
+        baseline_content: str,
+        rubric: str,
+        rubric_id: str,
+    ) -> tuple[JudgeVerdict, JudgeVerdict]: ...
+
+
 class StructuralCheckPort(Protocol):
     """Run structural checks for one eval directory.
 

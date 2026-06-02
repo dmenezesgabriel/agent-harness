@@ -6,7 +6,8 @@ from unittest.mock import ANY, Mock
 import pytest
 from pydantic import ValidationError
 
-from runner.adapters.claude_code import ClaudeCodeAdapter, _JudgePayload
+from runner.adapters.claude_code import ClaudeCodeAdapter
+from runner.adapters.judge_payloads import JudgePayload
 
 _TIMEOUT_SECONDS = 12
 _FAILURE_CODE = 2
@@ -27,14 +28,14 @@ class TestJudgePayload:
 
         # Act / Assert
         with pytest.raises(ValidationError):
-            _JudgePayload.model_validate(raw_payload)
+            JudgePayload.model_validate(raw_payload)
 
     def test_judge_payload_allows_missing_passed_flag(self) -> None:
         # Arrange
         raw_payload = {"score": 0.8, "reasoning": "good"}
 
         # Act
-        payload = _JudgePayload.model_validate(raw_payload)
+        payload = JudgePayload.model_validate(raw_payload)
 
         # Assert
         assert payload.passed is None

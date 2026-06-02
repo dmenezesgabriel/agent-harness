@@ -16,14 +16,13 @@ from pathlib import Path
 from typing import Protocol, cast
 
 from opencode_ai import Opencode
-from pydantic import BaseModel, Field
 
+from runner.adapters.judge_payloads import CompareJudgePayload, JudgePayload
 from runner.ports import ArtifactSet, JudgeVerdict
 
 _DEFAULT_TIMEOUT_SECONDS = 180
 _SERVER_START_TIMEOUT_SECONDS = 10.0
 _SERVER_POLL_SECONDS = 0.1
-_JUDGE_PASS_THRESHOLD = 0.7
 _ERROR_PREVIEW_CHARS = 500
 _HOSTNAME = "127.0.0.1"
 _INVOKE_PROVIDER = "openai-codex"
@@ -36,6 +35,16 @@ _JUDGE_SYSTEM = (
     "You are an expert evaluator of AI-generated software artifacts. "
     "Respond ONLY with a JSON object - no prose, no markdown fences: "
     '{"passed": <bool>, "score": <float 0.0-1.0>, "reasoning": <one sentence>}'
+)
+
+# Evaluates Skill and Baseline in one call — saves one API round-trip per rubric.
+_COMPARE_JUDGE_SYSTEM = (
+    "You are an expert evaluator of AI-generated software artifacts. "
+    "You receive two artifacts — Skill (produced with skill guidance) and Baseline "
+    "(produced without guidance) — and a rubric. Evaluate each independently. "
+    "Respond ONLY with a JSON object — no prose, no markdown fences: "
+    '{"skill": {"passed": <bool>, "score": <float 0.0-1.0>, "reasoning": <one sentence>}, '
+    '"baseline": {"passed": <bool>, "score": <float 0.0-1.0>, "reasoning": <one sentence>}}'
 )
 _BASELINE_SYSTEM = "You are a helpful assistant. Complete the task the user describes."
 _CLASSIFY_SYSTEM = (
@@ -85,12 +94,6 @@ class _OpenCodeSessionResource(Protocol):
 
 class _OpenCodeClient(Protocol):
     session: _OpenCodeSessionResource
-
-
-class _JudgePayload(BaseModel):
-    passed: bool | None = None
-    score: float = Field(ge=0.0, le=1.0)
-    reasoning: str
 
 
 class OpenCodeAdapter:
@@ -155,14 +158,31 @@ class OpenCodeAdapter:
                 model_id=self._judge_model,
                 tools=None,
             )
-        payload = _JudgePayload.model_validate_json(stdout.strip())
-        return JudgeVerdict(
-            rubric_id=rubric_id,
-            passed=payload.passed
-            if payload.passed is not None
-            else payload.score >= _JUDGE_PASS_THRESHOLD,
-            score=payload.score,
-            reasoning=payload.reasoning,
+        return JudgePayload.model_validate_json(stdout.strip()).to_verdict(rubric_id)
+
+    def compare_judge(
+        self,
+        skill_content: str,
+        baseline_content: str,
+        rubric: str,
+        rubric_id: str,
+    ) -> tuple[JudgeVerdict, JudgeVerdict]:
+        prompt = (
+            f"Rubric:\n{rubric}\n\n"
+            f"Artifact (Skill):\n{skill_content}\n\n"
+            f"Artifact (Baseline):\n{baseline_content}"
+        )
+        with tempfile.TemporaryDirectory(prefix="eval-compare-judge-") as tmp:
+            stdout = self._chat_in_workdir(
+                Path(tmp),
+                prompt,
+                system=_COMPARE_JUDGE_SYSTEM,
+                provider_id=self._judge_provider,
+                model_id=self._judge_model,
+                tools=None,
+            )
+        return CompareJudgePayload.model_validate_json(stdout.strip()).to_verdicts(
+            rubric_id
         )
 
     def invoke_baseline(self, prompt: str) -> ArtifactSet:

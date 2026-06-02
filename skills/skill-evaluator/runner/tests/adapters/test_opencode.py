@@ -9,7 +9,8 @@ import pytest
 from pydantic import ValidationError
 
 from runner.adapters import opencode
-from runner.adapters.opencode import OpenCodeAdapter, _JudgePayload
+from runner.adapters.judge_payloads import JudgePayload
+from runner.adapters.opencode import OpenCodeAdapter
 
 _TIMEOUT_SECONDS = 12
 
@@ -111,7 +112,7 @@ class TestJudgePayload:
         raw_payload = {"passed": True, "score": 1.2, "reasoning": "too high"}
 
         with pytest.raises(ValidationError):
-            _JudgePayload.model_validate(raw_payload)
+            JudgePayload.model_validate(raw_payload)
 
 
 class TestAdapterInit:
