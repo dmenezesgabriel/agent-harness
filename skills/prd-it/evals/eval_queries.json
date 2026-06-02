@@ -1,0 +1,55 @@
+{
+  "description": "Trigger accuracy queries for the prd-it skill. Tests that prd-it fires for product requirement definition and stays silent for planning, implementation, review, and architecture requests.",
+  "should_trigger": [
+    {
+      "query": "write a PRD for a team status summary feature",
+      "note": "explicit PRD request"
+    },
+    {
+      "query": "define the requirements for a new onboarding experience",
+      "note": "requirements definition"
+    },
+    {
+      "query": "capture the product spec for project invitations before design starts",
+      "note": "product spec before design"
+    },
+    {
+      "query": "what are we building for the customer portal MVP?",
+      "note": "defines what and why"
+    },
+    {
+      "query": "turn this feature brief into personas, stories, metrics, constraints, and non-goals",
+      "note": "PRD sections requested"
+    },
+    {
+      "query": "create product requirements for behavior changes to billing reminders",
+      "note": "behavior-change PRD"
+    }
+  ],
+  "should_not_trigger": [
+    {
+      "query": "plan the implementation tasks for project invitations",
+      "note": "planning belongs to plan-it"
+    },
+    {
+      "query": "implement the onboarding checklist from tasks/issues/001.md",
+      "note": "implementation request"
+    },
+    {
+      "query": "review this PRD for missing architecture decisions",
+      "note": "review request"
+    },
+    {
+      "query": "choose whether we should use Kafka or SQS",
+      "note": "architecture decision"
+    },
+    {
+      "query": "fix the typo in the product requirements doc",
+      "note": "small edit"
+    },
+    {
+      "query": "how does the current billing reminder flow work?",
+      "note": "exploratory question"
+    }
+  ]
+}

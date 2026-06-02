@@ -1,0 +1,17 @@
+rubrics:
+  - id: generated_prd_product_clarity
+    artifact_file: _generated_artifacts_primary_
+    artifact_selector:
+      extensions: [".md"]
+      path_patterns: ["docs/prd/*.md"]
+      content_patterns:
+        - "## Problem Statement"
+        - "## Success Metrics"
+        - "## Non-Goals"
+    prompt: |
+      Evaluate whether this PRD clearly defines the product problem and scope without relying on implementation assumptions.
+      Score 1.0 if it includes a problem statement focused on pain, personas with pain points, user stories, measurable success metrics, constraints from the brief, explicit non-goals, and relevant open questions.
+      Score 0.7 if one area is weak but product scope is still clear.
+      Score 0.4 if multiple areas are vague, invented, or missing.
+      Score 0.0 if the artifact is not a PRD or mainly describes implementation work.
+      Respond with JSON: {"passed": <bool>, "score": <float>, "reasoning": <one sentence citing artifact evidence>}
