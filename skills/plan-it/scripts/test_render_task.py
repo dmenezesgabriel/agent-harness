@@ -30,7 +30,8 @@ class PlanTaskRendererTest(unittest.TestCase):
             self.assertIn(
                 "- `FR-001`: The project name field rejects empty values.", content
             )
-            self.assertIn("### Observability Tests", content)
+            self.assertIn("### Risk Assessment", content)
+            self.assertIn("| Unit Tests | Yes", content)
 
     def test_uv_script_rejects_placeholder_content(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
@@ -52,6 +53,29 @@ class PlanTaskRendererTest(unittest.TestCase):
             # Assert
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("unresolved placeholder '<missing>'", result.stderr)
+            self.assertFalse(output_path.exists())
+
+    def test_uv_script_rejects_missing_risk_category(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            workspace = Path(temporary_directory)
+
+            # Arrange — omit the Observability Tests entry from the assessment
+            payload = _valid_task()
+            assessment = payload["required_tests"]
+            assert isinstance(assessment, list)
+            payload["required_tests"] = [
+                c for c in assessment if c.get("heading") != "Observability Tests"
+            ]
+            input_path = workspace / "task.json"
+            output_path = workspace / "tasks" / "issues" / "001-validate-project.md"
+            input_path.write_text(json.dumps(payload), encoding="utf-8")
+
+            # Act
+            result = _run_renderer(input_path, output_path, workspace)
+
+            # Assert
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("missing categories", result.stderr)
             self.assertFalse(output_path.exists())
 
     def test_uv_script_rejects_invalid_output_path(self) -> None:
@@ -140,47 +164,95 @@ def _valid_task() -> dict[str, object]:
                 "text": "**Given** an empty name, **When** Ana submits, **Then** an error appears.",
             }
         ],
-        "required_tests": _valid_tests(),
+        "required_tests": _valid_risk_assessment(),
         "definition_of_done": ["Required tests pass with the project test command."],
     }
 
 
-def _valid_tests() -> dict[str, list[dict[str, str]]]:
-    return {
-        "unit_tests": [
-            {
-                "id": "UT-001",
-                "text": "Validate name length rules.",
-                "covers": "`FR-001`",
-            }
-        ],
-        "integration_tests": [
-            _not_applicable("IT-001", "no integration boundary changes")
-        ],
-        "smoke_tests": [_not_applicable("SMK-001", "app startup is unchanged")],
-        "end_to_end_tests": [_not_applicable("E2E-001", "no new critical journey")],
-        "regression_tests": [_not_applicable("REG-001", "no known previous defect")],
-        "performance_tests": [
-            _not_applicable("PT-001", "short string validation only")
-        ],
-        "security_tests": [
-            _not_applicable("ST-001", "no auth or trust-boundary change")
-        ],
-        "usability_tests": [
-            {"id": "UX-001", "text": "Verify error placement.", "covers": "`AC-001`"}
-        ],
-        "observability_tests": [
-            {
-                "id": "OT-001",
-                "text": "Verify sensitive names are not logged.",
-                "covers": "`OBS-001`",
-            }
-        ],
-    }
-
-
-def _not_applicable(identifier: str, reason: str) -> dict[str, str]:
-    return {"id": identifier, "text": f"Not applicable — {reason}."}
+def _valid_risk_assessment() -> list[dict[str, object]]:
+    return [
+        {
+            "heading": "Unit Tests",
+            "prefix": "UT",
+            "risk_present": True,
+            "reason": "Isolation risk for name/description length rules",
+            "entries": [
+                {
+                    "id": "UT-001",
+                    "text": "Validate name length rules.",
+                    "covers": "`FR-001`",
+                }
+            ],
+        },
+        {
+            "heading": "Integration Tests",
+            "prefix": "IT",
+            "risk_present": False,
+            "reason": "No integration boundary changes",
+            "entries": [],
+        },
+        {
+            "heading": "Smoke Tests",
+            "prefix": "SMK",
+            "risk_present": False,
+            "reason": "App startup is unchanged",
+            "entries": [],
+        },
+        {
+            "heading": "End-to-End Tests",
+            "prefix": "E2E",
+            "risk_present": False,
+            "reason": "No new critical journey",
+            "entries": [],
+        },
+        {
+            "heading": "Regression Tests",
+            "prefix": "REG",
+            "risk_present": False,
+            "reason": "No known previous defect",
+            "entries": [],
+        },
+        {
+            "heading": "Performance Tests",
+            "prefix": "PT",
+            "risk_present": False,
+            "reason": "Short string validation only",
+            "entries": [],
+        },
+        {
+            "heading": "Security Tests",
+            "prefix": "ST",
+            "risk_present": False,
+            "reason": "No auth or trust-boundary change",
+            "entries": [],
+        },
+        {
+            "heading": "Usability Tests",
+            "prefix": "UX",
+            "risk_present": True,
+            "reason": "Error placement and feedback affects UX",
+            "entries": [
+                {
+                    "id": "UX-001",
+                    "text": "Verify error placement.",
+                    "covers": "`AC-001`",
+                }
+            ],
+        },
+        {
+            "heading": "Observability Tests",
+            "prefix": "OT",
+            "risk_present": True,
+            "reason": "Sensitive-name logging rule must be verified",
+            "entries": [
+                {
+                    "id": "OT-001",
+                    "text": "Verify sensitive names are not logged.",
+                    "covers": "`OBS-001`",
+                }
+            ],
+        },
+    ]
 
 
 if __name__ == "__main__":
