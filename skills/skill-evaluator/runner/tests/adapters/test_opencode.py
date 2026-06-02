@@ -262,7 +262,9 @@ class TestClassify:
         adapter = _adapter(tmp_path, monkeypatch)
         adapter._client_factory = lambda _base_url, _timeout: fake_client
 
-        with pytest.raises(ProviderAbortError, match="OpenCode timeout during classify"):
+        with pytest.raises(
+            ProviderAbortError, match="OpenCode timeout during classify"
+        ):
             adapter.classify("Generates charts from data", "plot my sales data")
 
 
