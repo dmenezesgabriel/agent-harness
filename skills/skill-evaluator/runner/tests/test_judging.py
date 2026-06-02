@@ -132,6 +132,27 @@ class TestFindPrimaryChart:
         # Assert
         assert primary_chart == tmp_path / "chart.js"
 
+    def test_find_primary_chart_selects_largest_in_multi_file_project(
+        self, tmp_path: Path
+    ) -> None:
+        # Arrange
+        (tmp_path / "index.html").write_text(
+            '<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js">'
+            '</script><script type="module" src="/src/main.js"></script>',
+            encoding="utf-8",
+        )
+        (tmp_path / "src").mkdir()
+        large_javascript = (
+            "new Chart(ctx, {type: 'line', data: {datasets: []}, options: {}});\n" * 50
+        )
+        (tmp_path / "src" / "main.js").write_text(large_javascript, encoding="utf-8")
+
+        # Act
+        primary_chart = _find_primary_chart(tmp_path)
+
+        # Assert
+        assert primary_chart == tmp_path / "src" / "main.js"
+
 
 class FakeCompareJudge:
     """Fake for compare_judge() calls — returns distinct scores for skill vs baseline."""

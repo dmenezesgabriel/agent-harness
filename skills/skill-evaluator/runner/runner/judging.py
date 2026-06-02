@@ -233,18 +233,24 @@ _IGNORED_ARTIFACT_PARTS = frozenset({".git", "dist", "node_modules"})
 
 
 def _find_primary_chart(artifacts_dir: Path) -> Path | None:
-    """Return the first visualization file found in artifacts_dir, by extension priority."""
+    """Return the largest visualization file in artifacts_dir.
+
+    Size distinguishes entry-point scaffolds (small) from chart implementations
+    (large) without requiring structural metadata about the project layout.
+    """
+    best: tuple[int, Path] | None = None
     for ext in _VIZ_EXTENSIONS:
-        candidates = sorted(artifacts_dir.rglob(f"*{ext}"))
-        for path in candidates:
+        for path in sorted(artifacts_dir.rglob(f"*{ext}")):
             if _IGNORED_ARTIFACT_PARTS & set(path.relative_to(artifacts_dir).parts):
                 continue
             with suppress(OSError):
-                if _VIZ_KEYWORDS_PAT.search(
-                    path.read_text(encoding="utf-8", errors="ignore")
-                ):
-                    return path
-    return None
+                content = path.read_text(encoding="utf-8", errors="ignore")
+                if not _VIZ_KEYWORDS_PAT.search(content):
+                    continue
+                size = len(content)
+                if best is None or size > best[0]:
+                    best = (size, path)
+    return best[1] if best is not None else None
 
 
 def _extract_section(content: str, heading: str) -> str:

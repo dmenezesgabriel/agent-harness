@@ -214,16 +214,20 @@ def step_has_chart_artifact(context: ChartContext) -> None:
 @given("the generated chart artifact")
 def step_load_generated_artifact(context: ChartContext) -> None:
     """Load the primary visualization file regardless of framework or extension."""
-    for ext in _VIZ_EXTENSIONS:
-        candidates = sorted(
-            k
-            for k, v in context.artifacts.items()
-            if k.endswith(ext) and _VIZ_KEYWORDS.search(v)
-        )
-        if candidates:
-            context.current_file = candidates[0]
-            context.current_content = context.artifacts[candidates[0]]
-            return
+    best_key: str | None = None
+    best_size: int = -1
+    for key, content in context.artifacts.items():
+        if not any(key.endswith(ext) for ext in _VIZ_EXTENSIONS):
+            continue
+        if not _VIZ_KEYWORDS.search(content):
+            continue
+        if len(content) > best_size:
+            best_size = len(content)
+            best_key = key
+    if best_key is not None:
+        context.current_file = best_key
+        context.current_content = context.artifacts[best_key]
+        return
     if "output.txt" in context.artifacts:
         context.current_file = "output.txt"
         context.current_content = context.artifacts["output.txt"]
