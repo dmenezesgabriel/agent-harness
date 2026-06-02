@@ -9,6 +9,7 @@ from pathlib import Path
 import structlog
 import yaml
 
+from runner.eval_layout import has_ignored_part
 from runner.models import (
     GENERATED_ARTIFACTS_PRIMARY,
     ArtifactSelector,
@@ -220,9 +221,6 @@ def _missing_generated_artifact_verdict(rubric_id: str) -> JudgeReport:
     )
 
 
-_IGNORED_ARTIFACT_PARTS = frozenset({".git", "dist", "node_modules"})
-
-
 def _select_generated_artifact(
     artifacts_dir: Path, rubric: RubricDefinition
 ) -> Path | None:
@@ -255,17 +253,13 @@ def _matches_selector(
     if not path.is_file():
         return False
     relative_path = path.relative_to(artifacts_dir)
-    if _is_ignored_artifact(relative_path):
+    if has_ignored_part(relative_path):
         return False
     if not _matches_extension(path, selector):
         return False
     if not _matches_path_pattern(relative_path, selector):
         return False
     return _matches_content_patterns(path, selector)
-
-
-def _is_ignored_artifact(relative_path: Path) -> bool:
-    return bool(_IGNORED_ARTIFACT_PARTS & set(relative_path.parts))
 
 
 def _matches_extension(path: Path, selector: ArtifactSelector) -> bool:

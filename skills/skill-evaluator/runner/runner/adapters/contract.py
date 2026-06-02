@@ -8,6 +8,7 @@ from pathlib import Path
 
 import structlog
 
+from runner.eval_layout import has_ignored_part
 from runner.exceptions import ProviderAbortError
 
 _log = structlog.get_logger()
@@ -40,9 +41,9 @@ BASELINE_SYSTEM = "You are a helpful assistant. Complete the task the user descr
 
 INVOKE_TOOLS = ("bash", "read", "write")
 
-IGNORED_ARTIFACT_PARTS = frozenset(
-    {".git", "dist", "node_modules", "SKILL.md", "assets", "references", "scripts"}
-)
+# Skill source files staged into the invocation workdir; never generated artifacts.
+# Extends the shared VCS/build base in eval_layout.has_ignored_part.
+_STAGED_SKILL_PARTS = frozenset({"SKILL.md", "assets", "references", "scripts"})
 
 
 class ProviderFailureReason(StrEnum):
@@ -74,7 +75,9 @@ class AdapterCall:
 
     def abort(self, exc: Exception) -> ProviderAbortError:
         reason = provider_failure_reason(exc)
-        _log.error("adapter_call_aborted", reason=reason, error=repr(exc), **self._fields())
+        _log.error(
+            "adapter_call_aborted", reason=reason, error=repr(exc), **self._fields()
+        )
         return ProviderAbortError(self.abort_message(reason, exc))
 
     def abort_message(self, reason: ProviderFailureReason, exc: Exception) -> str:
@@ -136,11 +139,8 @@ def provider_failure_reason(exc: Exception) -> ProviderFailureReason:
 
 
 def _collect_text_file(workdir: Path, path: Path, files: dict[str, str]) -> None:
-    if not path.is_file() or _has_ignored_part(path.relative_to(workdir)):
+    relative_path = path.relative_to(workdir)
+    if not path.is_file() or has_ignored_part(relative_path, _STAGED_SKILL_PARTS):
         return
     with suppress(UnicodeDecodeError):
-        files[str(path.relative_to(workdir))] = path.read_text(encoding="utf-8")
-
-
-def _has_ignored_part(relative_path: Path) -> bool:
-    return bool(IGNORED_ARTIFACT_PARTS & set(relative_path.parts))
+        files[str(relative_path)] = path.read_text(encoding="utf-8")
