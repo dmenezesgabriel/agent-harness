@@ -11,7 +11,11 @@ Create one or more self-contained implementation task files.
 
 Method: enforce exact templates, guide with decision gates, measure before final response.
 
-When planning is requested, create files. A prose-only plan is a failed output. Use the file-writing tool to write each task file. Every task file path must start with `tasks/issues/`; every ADR file path must start with `docs/adrs/`. Root-level Markdown files are failed output.
+When planning is requested, create files. A prose-only plan is a failed output. Render each task file with `uv run scripts/render_task.py --input <task.json> --output tasks/issues/NNN-kebab-slug.md`. Every task file path must start with `tasks/issues/`; every ADR file path must start with `docs/adrs/`. Root-level Markdown files are failed output.
+
+## Available Scripts
+
+- `scripts/render_task.py` — renders and validates a task Markdown file from task JSON using the exact task template.
 
 ## Required workflow
 
@@ -20,7 +24,7 @@ When planning is requested, create files. A prose-only plan is a failed output. 
 3. Ask only sequencing blockers, one numbered question at a time, with one `(recommended)` option.
 4. Plan cohesive tracer-bullet tasks; no artificial splits or horizontal-only layers.
 5. Keep irreversible decisions open until a task depends on them.
-6. Write issue files in `tasks/issues/` with `assets/task-template.md` exactly.
+6. Write issue files in `tasks/issues/` by creating task JSON and running the renderer script; do not hand-write task Markdown.
 7. Write ADR stubs in `docs/adrs/` only when the ADR gate requires one.
 8. Update `CONTEXT.md` only for newly defined or clarified domain terms.
 9. Do not write `PLAN_SUMMARY.md` as a substitute for issue files.
@@ -61,9 +65,17 @@ issue-file-contract:
   path: tasks/issues/NNN-kebab-slug.md
   prefix: exactly three digits, starting from the issue counter
   frontmatter: id | created | updated | status=active
-  headings: use assets/task-template.md exactly
+  headings: renderer emits assets/task-template.md headings exactly
   forbidden: root-level issue files | PLAN_SUMMARY.md as substitute | alternate sections | four-digit issue prefixes | Pending status
   required_output: at least one task issue file; never create only metadata files such as `.gitignore`
+```
+
+```text
+renderer-contract:
+  command: uv run scripts/render_task.py --input <task.json> --output tasks/issues/NNN-kebab-slug.md
+  input: JSON object; no Markdown task hand-writing
+  validates: path | frontmatter | headings | bullets | IDs | AFK/HITL | placeholders | required test categories
+  on_error: fix the JSON field named in the error and rerun the renderer
 ```
 
 If `assets/task-template.md` is unavailable, enforce this inline task schema exactly:
@@ -116,6 +128,7 @@ Load only what the current gate needs:
 - [test-selection.md](references/test-selection.md): required tests or not-applicable reasons.
 - [diagram-rules.md](references/diagram-rules.md): possible Mermaid diagram.
 - [output-files.md](references/output-files.md): file numbering, naming, and ordering before writing.
+- [scripts/render_task.py](scripts/render_task.py): required task renderer and JSON contract.
 - [assets/task-template.md](assets/task-template.md), [assets/adr-template.md](assets/adr-template.md), [assets/context-template.md](assets/context-template.md): exact schemas.
 
 ## Completion checks

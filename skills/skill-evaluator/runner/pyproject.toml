@@ -76,11 +76,15 @@ strict = true
 disallow_untyped_decorators = false
 warn_return_any = true
 warn_unused_configs = true
-files = ["runner", "tests", "scripts"]
+files = ["runner", "tests", "scripts", "../../plan-it/scripts"]
 
 # Ignore missing stubs for third-party libs that don't ship them.
 [[tool.mypy.overrides]]
 module = ["behave.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["jinja2.*"]
 ignore_missing_imports = true
 
 [tool.radon]
@@ -88,7 +92,7 @@ ignore_missing_imports = true
 cc_min = "C"
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["tests", "../../plan-it/scripts"]
 addopts = ["-q", "--tb=short", "-ra"]
 
 [tool.coverage.run]
