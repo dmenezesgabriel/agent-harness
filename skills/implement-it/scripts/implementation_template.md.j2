@@ -1,0 +1,58 @@
+---
+id: "{{ summary.id }}"
+issue: {{ summary.issue }}
+created: {{ summary.created }}
+updated: {{ summary.updated }}
+---
+
+# Implementation Summary: {{ summary.title }}
+
+## Related Task
+
+{{ summary.related_task }}
+
+## Files Changed
+
+{% for file in summary.files_changed -%}
+- `{{ file.path }}` — {{ file.reason }}
+{% endfor %}
+
+## Behavior Implemented
+
+{{ summary.behavior }}
+
+## Design Notes
+
+{{ summary.design_notes }}
+
+## Tests Added or Updated
+
+{{ summary.tests }}
+
+## Test Categories Not Applicable
+
+{% for category in summary.test_categories_na -%}
+- {{ category }}
+{% endfor %}
+
+## Validation Run
+
+```text
+{{ summary.validation_run }}
+```
+
+## Accessibility Notes
+
+{{ summary.accessibility_notes }}
+
+## Observability Changes
+
+{{ summary.observability_changes }}
+
+## ADR Updates
+
+{{ summary.adr_updates }}
+
+## Unresolved Assumptions or Follow-Up
+
+{{ summary.unresolved_assumptions }}
