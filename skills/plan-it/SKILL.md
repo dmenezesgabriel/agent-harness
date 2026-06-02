@@ -15,10 +15,14 @@ When planning is requested, create files. A prose-only plan is a failed output. 
 
 ## Available Scripts
 
-- `scripts/render_task.py --help` — renders and validates task Markdown from task JSON using the exact task template.
-- `scripts/ensure-issues-dir.sh` — creates `tasks/issues/` when needed.
-- `scripts/ensure-adrs-dir.sh` — creates `docs/adrs/` when needed.
-- `scripts/next-issue-number.sh` — reserves and prints the next three-digit task number.
+| Script | When to run | Output |
+|--------|-------------|--------|
+| `scripts/ensure-issues-dir.sh` | First, before writing any task files | Creates `tasks/issues/` |
+| `scripts/ensure-adrs-dir.sh` | First, before writing any ADR stubs | Creates `docs/adrs/` |
+| `scripts/next-issue-number.sh` | Once per task, before writing the JSON | Prints "001"-style number |
+| `scripts/render_task.py --input... --output...` | Once per task, after writing the JSON | Validated task Markdown |
+
+All scripts support `--help` / `-h` for full usage details.
 
 ## Required workflow
 
