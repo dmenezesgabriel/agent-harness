@@ -89,6 +89,7 @@ cc_min = "C"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+addopts = ["-q", "--tb=short", "-ra"]
 
 [tool.coverage.run]
 branch = true
