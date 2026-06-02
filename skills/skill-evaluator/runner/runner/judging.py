@@ -34,7 +34,6 @@ class RubricJudgeRunner:
         evals_dir: Path,
         artifacts_dir: Path,
         judge: JudgePort,
-        generated_only: bool = False,
     ) -> list[JudgeReport]:
         rubrics_dir = evals_dir / "rubrics"
         if not rubrics_dir.exists():
@@ -47,11 +46,6 @@ class RubricJudgeRunner:
                 yaml.safe_load(rubric_file.read_text(encoding="utf-8"))
             )
             for rubric in rubric_file_model.rubrics:
-                if (
-                    generated_only
-                    and rubric.artifact_file != GENERATED_ARTIFACTS_PRIMARY
-                ):
-                    continue
                 artifact_file = _resolve_artifact_file(evals_dir, artifacts_dir, rubric)
                 if artifact_file is None:
                     if rubric.artifact_file == GENERATED_ARTIFACTS_PRIMARY:

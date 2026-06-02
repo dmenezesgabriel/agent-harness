@@ -523,7 +523,7 @@ class TestMarkdownReportWriterJudgeComparison:
                 rubric_id="generated_rubric", passed=True, score=1.0, reasoning="great"
             ),
         ]
-        # Baseline only ran generated rubrics (generated_only=True)
+        # Baseline is judged only on generated rubrics, not golden-fixture ones.
         baseline_verdicts = [
             JudgeReport(
                 rubric_id="generated_rubric", passed=False, score=0.3, reasoning="weak"

@@ -80,39 +80,6 @@ class TestRubricJudgeRunner:
         # Assert
         assert verdicts[0].reasoning == "judged golden content"
 
-    def test_generated_only_skips_fixture_rubrics(self, tmp_path: Path) -> None:
-        # Arrange
-        evals_dir = tmp_path / "dataviz" / "evals"
-        rubrics_dir = evals_dir / "rubrics"
-        artifacts_dir = evals_dir / "fixtures" / "_generated_artifacts"
-        golden_dir = evals_dir / "fixtures" / "golden"
-        rubrics_dir.mkdir(parents=True)
-        artifacts_dir.mkdir(parents=True)
-        golden_dir.mkdir(parents=True)
-        (golden_dir / "bar.js").write_text("new Chart();", encoding="utf-8")
-        (artifacts_dir / "chart.js").write_text("new Chart();", encoding="utf-8")
-        (rubrics_dir / "mixed.yaml").write_text(
-            "rubrics:\n"
-            "  - id: fixture_rubric\n"
-            "    artifact_file: bar.js\n"
-            "    prompt: pass\n"
-            "  - id: generated_rubric\n"
-            "    artifact_file: _generated_artifacts_primary_\n"
-            "    artifact_selector:\n"
-            "      extensions: ['.js']\n"
-            "      content_patterns: ['new Chart']\n"
-            "    prompt: pass\n",
-            encoding="utf-8",
-        )
-
-        # Act
-        verdicts = RubricJudgeRunner().run(
-            evals_dir, artifacts_dir, FakeRubricJudge(), generated_only=True
-        )
-
-        # Assert — only the generated rubric ran
-        assert [v.rubric_id for v in verdicts] == ["generated_rubric"]
-
     def test_run_skips_when_rubrics_dir_is_missing(self, tmp_path: Path) -> None:
         # Arrange
         evals_dir = tmp_path / "dataviz" / "evals"
