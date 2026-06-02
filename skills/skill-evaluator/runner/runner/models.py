@@ -22,6 +22,7 @@ class CliArgs(BaseModel):
     mode: Mode = Mode.INVOKE
     adapter: AdapterName = "claude"
     input_fixture_limit: int = Field(default=2, ge=1)
+    claude_timeout: int = 180
     opencode_invoke_provider: str = "openai-codex"
     opencode_invoke_model: str = "gpt-5.4-mini"
     opencode_judge_provider: str = "openai-codex"
@@ -43,11 +44,26 @@ class JudgeReport(BaseModel):
     reasoning: str
 
 
+class ArtifactSelector(BaseModel):
+    """Select a generated artifact for judge rubrics.
+
+    Usage:
+        selector = ArtifactSelector(path_patterns=["tasks/issues/*.md"])
+    """
+
+    extensions: list[str] = Field(default_factory=list)
+    path_patterns: list[str] = Field(default_factory=list)
+    exclude_path_patterns: list[str] = Field(default_factory=list)
+    content_patterns: list[str] = Field(default_factory=list)
+    prefer_largest: bool = True
+
+
 class RubricDefinition(BaseModel):
     id: str
     artifact_file: str
     prompt: str
     artifact_section: str | None = None
+    artifact_selector: ArtifactSelector | None = None
 
 
 class RubricFile(BaseModel):

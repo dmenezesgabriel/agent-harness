@@ -1,6 +1,6 @@
 .PHONY: check format lint type test coverage test-structure security arch deps dead-code complexity semgrep
 
-PYTHON_TARGETS := runner ../../dataviz/evals
+PYTHON_TARGETS := runner ../../dataviz/evals ../../plan-it/evals ../../prd-it/evals
 QUALITY_TARGETS := $(PYTHON_TARGETS) tests scripts
 
 check: format lint type coverage test-structure deps dead-code complexity security arch semgrep

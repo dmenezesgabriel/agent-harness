@@ -3,12 +3,13 @@ from __future__ import annotations
 import re
 import time
 from contextlib import suppress
+from fnmatch import fnmatch
 from pathlib import Path
 
 import structlog
 import yaml
 
-from runner.models import JudgeReport, RubricFile
+from runner.models import ArtifactSelector, JudgeReport, RubricDefinition, RubricFile
 from runner.ports import CompareJudgePort, JudgePort
 
 _log = structlog.get_logger()
@@ -33,7 +34,6 @@ class RubricJudgeRunner:
             print("  No rubrics/ directory found - skipping judge")
             return []
 
-        primary_chart: Path | None = None
         verdicts: list[JudgeReport] = []
         for rubric_file in sorted(rubrics_dir.glob("*.yaml")):
             rubric_file_model = RubricFile.model_validate(
@@ -45,18 +45,14 @@ class RubricJudgeRunner:
                     and rubric.artifact_file != "_generated_artifacts_primary_"
                 ):
                     continue
-                if (
-                    rubric.artifact_file == "_generated_artifacts_primary_"
-                    and primary_chart is None
-                ):
-                    primary_chart = _find_primary_chart(artifacts_dir)
-                artifact_file = _resolve_artifact_file(
-                    evals_dir, rubric.artifact_file, primary_chart
-                )
+                artifact_file = _resolve_artifact_file(evals_dir, artifacts_dir, rubric)
                 if artifact_file is None:
-                    print(
-                        f"  Rubric {rubric.id!r}: no primary chart artifact found - skipping"
-                    )
+                    if rubric.artifact_file == "_generated_artifacts_primary_":
+                        verdicts.append(_missing_generated_artifact_verdict(rubric.id))
+                    else:
+                        print(
+                            f"  Rubric {rubric.id!r}: no matching generated artifact found - skipping"
+                        )
                     continue
                 if not artifact_file.exists():
                     print(
@@ -102,8 +98,6 @@ class RubricJudgeRunner:
             print("  No rubrics/ directory found - skipping judge")
             return [], []
 
-        skill_primary: Path | None = None
-        baseline_primary: Path | None = None
         skill_verdicts: list[JudgeReport] = []
         baseline_verdicts: list[JudgeReport] = []
 
@@ -113,17 +107,18 @@ class RubricJudgeRunner:
             )
             for rubric in rubric_file_model.rubrics:
                 if rubric.artifact_file == "_generated_artifacts_primary_":
-                    skill_primary = skill_primary or _find_primary_chart(skill_dir)
-                    baseline_primary = baseline_primary or _find_primary_chart(
-                        baseline_dir
-                    )
-                    if skill_primary is None or baseline_primary is None:
-                        print(
-                            f"  Rubric {rubric.id!r}: chart artifact missing - skipping"
+                    skill_artifact = _select_generated_artifact(skill_dir, rubric)
+                    baseline_artifact = _select_generated_artifact(baseline_dir, rubric)
+                    if skill_artifact is None or baseline_artifact is None:
+                        skill_verdicts.append(
+                            _missing_generated_artifact_verdict(rubric.id)
+                        )
+                        baseline_verdicts.append(
+                            _missing_generated_artifact_verdict(rubric.id)
                         )
                         continue
-                    skill_content = skill_primary.read_text(encoding="utf-8")
-                    baseline_content = baseline_primary.read_text(encoding="utf-8")
+                    skill_content = skill_artifact.read_text(encoding="utf-8")
+                    baseline_content = baseline_artifact.read_text(encoding="utf-8")
                     _log.info(
                         "compare_judge_start",
                         rubric_id=rubric.id,
@@ -147,9 +142,7 @@ class RubricJudgeRunner:
                         JudgeReport.model_validate(bv.model_dump())
                     )
                 else:
-                    artifact_file = _resolve_artifact_file(
-                        evals_dir, rubric.artifact_file, None
-                    )
+                    artifact_file = _resolve_artifact_file(evals_dir, skill_dir, rubric)
                     if artifact_file is None or not artifact_file.exists():
                         print(f"  Rubric {rubric.id!r}: fixture not found - skipping")
                         continue
@@ -209,48 +202,101 @@ class RubricJudgeRunner:
 
 
 def _resolve_artifact_file(
-    evals_dir: Path, artifact_name: str, primary_chart: Path | None
+    evals_dir: Path, artifacts_dir: Path, rubric: RubricDefinition
 ) -> Path | None:
-    if artifact_name == "_generated_artifacts_primary_":
-        return primary_chart
-    return evals_dir / "fixtures" / "golden" / artifact_name
+    if rubric.artifact_file == "_generated_artifacts_primary_":
+        return _select_generated_artifact(artifacts_dir, rubric)
+    return evals_dir / "fixtures" / "golden" / rubric.artifact_file
 
 
-_VIZ_KEYWORDS_PAT = re.compile(
-    r"new\s+Chart\b|Chart\.js"
-    r"|plotly|go\.Figure|px\.\w+\("
-    r"|alt\.Chart\b|\.mark_line\(\)|\.mark_bar\(\)"
-    r"|import\s+matplotlib|plt\.(plot|bar|scatter)\b"
-    r'|"mark"\s*:\s*"(?:line|bar|area|point)"'
-    r"|<svg\b|createElementNS\([^)]*['\"]path['\"]"
-    r"|d3\.select\b"
-    r"|from\s+['\"](?:recharts|victory|echarts|highcharts|apexcharts|@nivo/\w+)['\"]"
-    r"|(?:LineChart|BarChart|AreaChart|PieChart|ScatterChart)\b",
-    re.IGNORECASE,
-)
-_VIZ_EXTENSIONS = (".html", ".js", ".jsx", ".tsx", ".py", ".ipynb", ".json")
+def _missing_generated_artifact_verdict(rubric_id: str) -> JudgeReport:
+    return JudgeReport(
+        rubric_id=rubric_id,
+        passed=False,
+        score=0.0,
+        reasoning="No generated artifact matched the rubric artifact_selector.",
+    )
+
+
 _IGNORED_ARTIFACT_PARTS = frozenset({".git", "dist", "node_modules"})
 
 
-def _find_primary_chart(artifacts_dir: Path) -> Path | None:
-    """Return the largest visualization file in artifacts_dir.
+def _select_generated_artifact(
+    artifacts_dir: Path, rubric: RubricDefinition
+) -> Path | None:
+    if rubric.artifact_selector is None:
+        return None
+    return _select_artifact(artifacts_dir, rubric.artifact_selector)
 
-    Size distinguishes entry-point scaffolds (small) from chart implementations
-    (large) without requiring structural metadata about the project layout.
+
+def _select_artifact(artifacts_dir: Path, selector: ArtifactSelector) -> Path | None:
+    """Select the best generated artifact matching explicit rubric criteria.
+
+    Usage:
+        _select_artifact(Path("out"), ArtifactSelector(path_patterns=["tasks/issues/*.md"]))
     """
-    best: tuple[int, Path] | None = None
-    for ext in _VIZ_EXTENSIONS:
-        for path in sorted(artifacts_dir.rglob(f"*{ext}")):
-            if _IGNORED_ARTIFACT_PARTS & set(path.relative_to(artifacts_dir).parts):
-                continue
-            with suppress(OSError):
-                content = path.read_text(encoding="utf-8", errors="ignore")
-                if not _VIZ_KEYWORDS_PAT.search(content):
-                    continue
-                size = len(content)
-                if best is None or size > best[0]:
-                    best = (size, path)
-    return best[1] if best is not None else None
+    matches = [
+        path
+        for path in sorted(artifacts_dir.rglob("*"))
+        if _matches_selector(path, artifacts_dir, selector)
+    ]
+    if not matches:
+        return None
+    if not selector.prefer_largest:
+        return matches[0]
+    return max(matches, key=_artifact_size)
+
+
+def _matches_selector(
+    path: Path, artifacts_dir: Path, selector: ArtifactSelector
+) -> bool:
+    if not path.is_file():
+        return False
+    relative_path = path.relative_to(artifacts_dir)
+    if _is_ignored_artifact(relative_path):
+        return False
+    if not _matches_extension(path, selector):
+        return False
+    if not _matches_path_pattern(relative_path, selector):
+        return False
+    return _matches_content_patterns(path, selector)
+
+
+def _is_ignored_artifact(relative_path: Path) -> bool:
+    return bool(_IGNORED_ARTIFACT_PARTS & set(relative_path.parts))
+
+
+def _matches_extension(path: Path, selector: ArtifactSelector) -> bool:
+    return not selector.extensions or path.suffix in selector.extensions
+
+
+def _matches_path_pattern(relative_path: Path, selector: ArtifactSelector) -> bool:
+    relative_name = relative_path.as_posix()
+    if any(
+        fnmatch(relative_name, pattern) for pattern in selector.exclude_path_patterns
+    ):
+        return False
+    if not selector.path_patterns:
+        return True
+    return any(fnmatch(relative_name, pattern) for pattern in selector.path_patterns)
+
+
+def _matches_content_patterns(path: Path, selector: ArtifactSelector) -> bool:
+    if not selector.content_patterns:
+        return True
+    with suppress(OSError):
+        content = path.read_text(encoding="utf-8", errors="ignore")
+        return all(
+            re.search(pattern, content, re.IGNORECASE)
+            for pattern in selector.content_patterns
+        )
+    return False
+
+
+def _artifact_size(path: Path) -> int:
+    with suppress(OSError):
+        return len(path.read_text(encoding="utf-8", errors="ignore"))
+    return -1
 
 
 def _extract_section(content: str, heading: str) -> str:

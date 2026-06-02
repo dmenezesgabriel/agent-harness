@@ -51,7 +51,9 @@ class TestBuildApp:
 
         # Assert
         assert app.__class__.__name__ == "SkillEvaluationApp"
-        adapter_constructor.assert_called_once_with(skill_root=_SKILLS_ROOT)
+        adapter_constructor.assert_called_once_with(
+            skill_root=_SKILLS_ROOT, timeout=180
+        )
 
     def test_build_app_does_not_construct_adapter_for_unused_mode(
         self,
@@ -65,7 +67,9 @@ class TestBuildApp:
         _build_app(CliArgs(mode=Mode.INVOKE))
 
         # Assert
-        adapter_constructor.assert_called_once_with(skill_root=_SKILLS_ROOT)
+        adapter_constructor.assert_called_once_with(
+            skill_root=_SKILLS_ROOT, timeout=180
+        )
 
     def test_build_app_constructs_opencode_adapter_with_requested_models(
         self,

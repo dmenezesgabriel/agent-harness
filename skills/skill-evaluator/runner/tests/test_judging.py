@@ -1,7 +1,7 @@
 from pathlib import Path
 
-from runner.judging import RubricJudgeRunner, _extract_section, _find_primary_chart
-from runner.models import JudgeReport
+from runner.judging import RubricJudgeRunner, _extract_section, _select_artifact
+from runner.models import ArtifactSelector, JudgeReport
 from runner.ports import JudgeVerdict
 
 _PASSING_SCORE = 0.9
@@ -30,7 +30,13 @@ class TestRubricJudgeRunner:
         rubrics_dir.mkdir(parents=True)
         artifacts_dir.mkdir(parents=True)
         (rubrics_dir / "live.yaml").write_text(
-            "rubrics:\n  - id: live\n    artifact_file: _generated_artifacts_primary_\n    prompt: pass\n",
+            "rubrics:\n"
+            "  - id: live\n"
+            "    artifact_file: _generated_artifacts_primary_\n"
+            "    artifact_selector:\n"
+            "      extensions: ['.js']\n"
+            "      content_patterns: ['new Chart']\n"
+            "    prompt: pass\n",
             encoding="utf-8",
         )
         (artifacts_dir / "chart.js").write_text("new Chart();", encoding="utf-8")
@@ -93,6 +99,9 @@ class TestRubricJudgeRunner:
             "    prompt: pass\n"
             "  - id: generated_rubric\n"
             "    artifact_file: _generated_artifacts_primary_\n"
+            "    artifact_selector:\n"
+            "      extensions: ['.js']\n"
+            "      content_patterns: ['new Chart']\n"
             "    prompt: pass\n",
             encoding="utf-8",
         )
@@ -117,9 +126,40 @@ class TestRubricJudgeRunner:
         # Assert
         assert verdicts == []
 
+    def test_run_fails_generated_rubric_without_artifact_selector(
+        self, tmp_path: Path
+    ) -> None:
+        # Arrange
+        evals_dir = tmp_path / "dataviz" / "evals"
+        rubrics_dir = evals_dir / "rubrics"
+        artifacts_dir = evals_dir / "fixtures" / "_generated_artifacts"
+        rubrics_dir.mkdir(parents=True)
+        artifacts_dir.mkdir(parents=True)
+        (rubrics_dir / "live.yaml").write_text(
+            "rubrics:\n"
+            "  - id: live\n"
+            "    artifact_file: _generated_artifacts_primary_\n"
+            "    prompt: pass\n",
+            encoding="utf-8",
+        )
+        (artifacts_dir / "chart.js").write_text("new Chart();", encoding="utf-8")
 
-class TestFindPrimaryChart:
-    def test_find_primary_chart_prefers_visualization_file(
+        # Act
+        verdicts = RubricJudgeRunner().run(evals_dir, artifacts_dir, FakeRubricJudge())
+
+        # Assert
+        assert verdicts == [
+            JudgeReport(
+                rubric_id="live",
+                passed=False,
+                score=0.0,
+                reasoning="No generated artifact matched the rubric artifact_selector.",
+            )
+        ]
+
+
+class TestSelectArtifact:
+    def test_select_artifact_matches_explicit_extension_and_content(
         self, tmp_path: Path
     ) -> None:
         # Arrange
@@ -127,12 +167,15 @@ class TestFindPrimaryChart:
         (tmp_path / "chart.js").write_text("new Chart();", encoding="utf-8")
 
         # Act
-        primary_chart = _find_primary_chart(tmp_path)
+        artifact = _select_artifact(
+            tmp_path,
+            ArtifactSelector(extensions=[".js"], content_patterns=[r"new\s+Chart"]),
+        )
 
         # Assert
-        assert primary_chart == tmp_path / "chart.js"
+        assert artifact == tmp_path / "chart.js"
 
-    def test_find_primary_chart_selects_largest_in_multi_file_project(
+    def test_select_artifact_selects_largest_matching_file(
         self, tmp_path: Path
     ) -> None:
         # Arrange
@@ -148,10 +191,110 @@ class TestFindPrimaryChart:
         (tmp_path / "src" / "main.js").write_text(large_javascript, encoding="utf-8")
 
         # Act
-        primary_chart = _find_primary_chart(tmp_path)
+        artifact = _select_artifact(
+            tmp_path,
+            ArtifactSelector(extensions=[".html", ".js"], content_patterns=[r"Chart"]),
+        )
 
         # Assert
-        assert primary_chart == tmp_path / "src" / "main.js"
+        assert artifact == tmp_path / "src" / "main.js"
+
+    def test_select_artifact_uses_path_and_content_filters(
+        self, tmp_path: Path
+    ) -> None:
+        # Arrange
+        (tmp_path / "notes.md").write_text("# Task\nwrong path", encoding="utf-8")
+        (tmp_path / "tasks" / "issues").mkdir(parents=True)
+        (tmp_path / "tasks" / "issues" / "001-small.md").write_text(
+            "# Task\nshort", encoding="utf-8"
+        )
+        (tmp_path / "tasks" / "issues" / "002-large.md").write_text(
+            "# Task\n## Acceptance Criteria\n" + "detailed plan\n" * 20,
+            encoding="utf-8",
+        )
+
+        # Act
+        artifact = _select_artifact(
+            tmp_path,
+            ArtifactSelector(
+                extensions=[".md"],
+                path_patterns=["tasks/issues/*.md"],
+                content_patterns=[r"## Acceptance Criteria"],
+            ),
+        )
+
+        # Assert
+        assert artifact == tmp_path / "tasks" / "issues" / "002-large.md"
+
+    def test_select_artifact_can_return_first_match_instead_of_largest(
+        self, tmp_path: Path
+    ) -> None:
+        # Arrange
+        (tmp_path / "tasks" / "issues").mkdir(parents=True)
+        (tmp_path / "tasks" / "issues" / "001-small.md").write_text(
+            "# Task\nshort", encoding="utf-8"
+        )
+        (tmp_path / "tasks" / "issues" / "002-large.md").write_text(
+            "# Task\n" + "detailed plan\n" * 20, encoding="utf-8"
+        )
+
+        # Act
+        artifact = _select_artifact(
+            tmp_path,
+            ArtifactSelector(
+                extensions=[".md"],
+                path_patterns=["tasks/issues/*.md"],
+                prefer_largest=False,
+            ),
+        )
+
+        # Assert
+        assert artifact == tmp_path / "tasks" / "issues" / "001-small.md"
+
+    def test_select_artifact_returns_none_without_explicit_match(
+        self, tmp_path: Path
+    ) -> None:
+        # Arrange
+        (tmp_path / "tasks" / "issues").mkdir(parents=True)
+        (tmp_path / "tasks" / "issues" / "001-task.md").write_text(
+            "# Task\nmissing acceptance heading", encoding="utf-8"
+        )
+
+        # Act
+        artifact = _select_artifact(
+            tmp_path,
+            ArtifactSelector(
+                extensions=[".md"],
+                path_patterns=["tasks/issues/*.md"],
+                content_patterns=[r"## Acceptance Criteria"],
+            ),
+        )
+
+        # Assert
+        assert artifact is None
+
+    def test_select_artifact_excludes_matching_path_patterns(
+        self, tmp_path: Path
+    ) -> None:
+        # Arrange
+        (tmp_path / "package-lock.json").write_text(
+            '{"dependencies":{"chart.js":"4.0.0"}}' * 20, encoding="utf-8"
+        )
+        (tmp_path / "src").mkdir()
+        (tmp_path / "src" / "main.js").write_text("new Chart();", encoding="utf-8")
+
+        # Act
+        artifact = _select_artifact(
+            tmp_path,
+            ArtifactSelector(
+                extensions=[".js", ".json"],
+                exclude_path_patterns=["package*.json"],
+                content_patterns=[r"Chart"],
+            ),
+        )
+
+        # Assert
+        assert artifact == tmp_path / "src" / "main.js"
 
 
 class FakeCompareJudge:
@@ -200,7 +343,13 @@ class TestCompareRun:
         skill_dir.mkdir()
         baseline_dir.mkdir()
         (rubrics_dir / "gen.yaml").write_text(
-            "rubrics:\n  - id: gen\n    artifact_file: _generated_artifacts_primary_\n    prompt: check\n",
+            "rubrics:\n"
+            "  - id: gen\n"
+            "    artifact_file: _generated_artifacts_primary_\n"
+            "    artifact_selector:\n"
+            "      extensions: ['.js']\n"
+            "      content_patterns: ['new Chart']\n"
+            "    prompt: check\n",
             encoding="utf-8",
         )
         (skill_dir / "chart.js").write_text("new Chart(); skill", encoding="utf-8")

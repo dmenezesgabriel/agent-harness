@@ -5,7 +5,14 @@ from pathlib import Path
 
 from runner.invocation import SkillInvoker
 from runner.judging import RubricJudgeRunner
-from runner.models import EvalOutcome, Mode
+from runner.models import (
+    EvalOutcome,
+    JudgeReport,
+    Mode,
+    ScenarioResult,
+    TriggerReport,
+    TriggerResult,
+)
 from runner.ports import (
     AgentPort,
     JudgePort,
@@ -55,21 +62,52 @@ class AllStrategy:
         input_sizes = self._input_sizer.measure(evals_dir)
 
         start = time.monotonic()
-        artifacts_dir = self._invoker.invoke(skill_name, evals_dir, self._agent)
+        artifacts_dir = evals_dir / "fixtures" / "golden"
+        structural_results: list[ScenarioResult] = []
+        judge_verdicts: list[JudgeReport] = []
+        invocation_failure: str | None = None
+        try:
+            artifacts_dir = self._invoker.invoke(skill_name, evals_dir, self._agent)
+        except Exception as exc:
+            invocation_failure = str(exc)
+            structural_results.append(_phase_failure("invocation", invocation_failure))
         _log_elapsed("invocation_done", skill_name, start)
 
-        start = time.monotonic()
-        structural_results = self._structural_runner.run(evals_dir, artifacts_dir)
-        _log_elapsed("structural_done", skill_name, start)
+        if not structural_results:
+            start = time.monotonic()
+            try:
+                structural_results = self._structural_runner.run(
+                    evals_dir, artifacts_dir
+                )
+            except Exception as exc:
+                structural_results = [_phase_failure("structural", str(exc))]
+            _log_elapsed("structural_done", skill_name, start)
 
         start = time.monotonic()
-        verdicts = self._judge_runner.run(evals_dir, artifacts_dir, self._judge)
-        _log_elapsed("judge_phase_done", skill_name, start, verdicts=len(verdicts))
-
-        start = time.monotonic()
-        trigger_report = self._trigger_evaluator.evaluate(
-            skill_name, evals_dir, self._classifier
+        if invocation_failure is not None:
+            judge_verdicts = [
+                _judge_failure(
+                    f"skipped because invocation failed: {invocation_failure}"
+                )
+            ]
+        else:
+            try:
+                judge_verdicts = self._judge_runner.run(
+                    evals_dir, artifacts_dir, self._judge
+                )
+            except Exception as exc:
+                judge_verdicts = [_judge_failure(str(exc))]
+        _log_elapsed(
+            "judge_phase_done", skill_name, start, verdicts=len(judge_verdicts)
         )
+
+        start = time.monotonic()
+        try:
+            trigger_report = self._trigger_evaluator.evaluate(
+                skill_name, evals_dir, self._classifier
+            )
+        except Exception as exc:
+            trigger_report = _trigger_failure(str(exc))
         _log_elapsed(
             "trigger_phase_done", skill_name, start, passed=trigger_report.passed
         )
@@ -77,7 +115,33 @@ class AllStrategy:
         return EvalOutcome(
             mode=Mode.ALL,
             structural_results=structural_results,
-            judge_verdicts=verdicts,
+            judge_verdicts=judge_verdicts,
             trigger_report=trigger_report,
             input_sizes=input_sizes,
         )
+
+
+def _phase_failure(phase: str, failure: str) -> ScenarioResult:
+    return ScenarioResult(
+        feature="skill-evaluator phase",
+        scenario=f"{phase} phase completed",
+        status="failed",
+        failure=failure,
+    )
+
+
+def _judge_failure(reasoning: str) -> JudgeReport:
+    return JudgeReport(
+        rubric_id="judge_phase",
+        passed=False,
+        score=0.0,
+        reasoning=reasoning,
+    )
+
+
+def _trigger_failure(reasoning: str) -> TriggerReport:
+    return TriggerReport(
+        results=[TriggerResult(query=reasoning, expected=True, actual=False)],
+        pass_rate=0.0,
+        passed=False,
+    )

@@ -200,15 +200,20 @@ class ClaudeCodeAdapter:
             if tools:
                 cmd += ["--allowedTools", tools.replace(" ", ",")]
 
-            result = subprocess.run(
-                cmd,
-                input=prompt,
-                cwd=str(workdir) if workdir else None,
-                timeout=self._timeout,
-                capture_output=True,
-                text=True,
-                check=False,
-            )  # nosec B603
+            try:
+                result = subprocess.run(
+                    cmd,
+                    input=prompt,
+                    cwd=str(workdir) if workdir else None,
+                    timeout=self._timeout,
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )  # nosec B603
+            except subprocess.TimeoutExpired as exc:
+                raise RuntimeError(
+                    f"claude timed out after {self._timeout}s while running model {model!r}"
+                ) from exc
         finally:
             Path(system_file).unlink(missing_ok=True)
 

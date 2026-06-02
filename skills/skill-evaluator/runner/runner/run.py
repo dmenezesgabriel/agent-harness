@@ -121,7 +121,7 @@ def _build_strategy(args: CliArgs, adapter: _EvaluationAdapter) -> EvalModeStrat
 
 def _build_adapter(args: CliArgs) -> _EvaluationAdapter:
     if args.adapter == "claude":
-        return ClaudeCodeAdapter(skill_root=_SKILLS_ROOT)
+        return ClaudeCodeAdapter(skill_root=_SKILLS_ROOT, timeout=args.claude_timeout)
     if args.adapter == "opencode":
         return OpenCodeAdapter(
             skill_root=_SKILLS_ROOT,
@@ -154,6 +154,12 @@ def _parse_args() -> CliArgs:
         type=int,
         default=int(os.getenv("EVAL_INPUT_FIXTURE_LIMIT", "2")),
         help="Maximum input fixtures to invoke per skill (default: 2)",
+    )
+    parser.add_argument(
+        "--claude-timeout",
+        type=int,
+        default=int(os.getenv("CLAUDE_TIMEOUT", "180")),
+        help="Claude subprocess timeout in seconds (default: 180)",
     )
     _add_opencode_args(parser)
     return CliArgs.model_validate(vars(parser.parse_args()))

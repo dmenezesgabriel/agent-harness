@@ -24,10 +24,13 @@ from runner.trigger import TriggerEvaluator
 
 
 class FakeInvoker:
-    def __init__(self, artifacts_dir: Path) -> None:
+    def __init__(self, artifacts_dir: Path, failure: Exception | None = None) -> None:
         self._artifacts_dir = artifacts_dir
+        self._failure = failure
 
     def invoke(self, _skill_name: str, _evals_dir: Path, _agent: object) -> Path:
+        if self._failure is not None:
+            raise self._failure
         return self._artifacts_dir
 
 
@@ -85,11 +88,12 @@ def _make_strategy(
     tmp_path: Path,
     structural_results: list[ScenarioResult] | None = None,
     judge_verdicts: list[JudgeReport] | None = None,
+    invoker_failure: Exception | None = None,
 ) -> AllStrategy:
     artifacts_dir = tmp_path / "fixtures" / "_generated_artifacts"
     artifacts_dir.mkdir(parents=True)
     return AllStrategy(
-        cast(SkillInvoker, FakeInvoker(artifacts_dir)),
+        cast(SkillInvoker, FakeInvoker(artifacts_dir, invoker_failure)),
         cast(StructuralCheckPort, FakeStructuralRunner(structural_results or [])),
         cast(AgentPort, object()),
         cast(RubricJudgeRunner, FakeJudgeRunner(judge_verdicts or [])),
@@ -132,3 +136,21 @@ class TestAllStrategy:
 
         assert outcome.structural_results == []
         assert outcome.judge_verdicts == []
+
+    def test_run_records_invocation_failure_and_still_runs_trigger(
+        self, tmp_path: Path
+    ) -> None:
+        evals_dir = tmp_path / "dataviz" / "evals"
+        evals_dir.mkdir(parents=True)
+
+        outcome = _make_strategy(tmp_path, invoker_failure=RuntimeError("timeout")).run(
+            "dataviz", evals_dir
+        )
+
+        assert outcome.structural_results[0].status == "failed"
+        assert "timeout" in str(outcome.structural_results[0].failure)
+        assert outcome.judge_verdicts[0].passed is False
+        assert (
+            "skipped because invocation failed" in outcome.judge_verdicts[0].reasoning
+        )
+        assert outcome.trigger_report == _PASSING_TRIGGER
