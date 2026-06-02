@@ -1,0 +1,72 @@
+---
+id: "{{ task.id }}"
+created: {{ task.created }}
+updated: {{ task.updated }}
+status: active
+---
+
+# Task: {{ task.title }}
+
+## Priority
+
+{{ task.priority }}
+
+## Dependencies
+
+{% for dependency in task.dependencies -%}
+- {{ dependency }}
+{% endfor %}
+## Assignability
+
+**{{ task.assignability.mode }}** — {{ task.assignability.reason }}
+
+## Context
+
+{% for item in task.context -%}
+{{ item }}
+
+{% endfor -%}
+## Use Cases
+
+{% for item in task.use_cases -%}
+- {{ item }}
+{% endfor %}
+## Definition of Ready
+
+{% for item in task.definition_of_ready -%}
+- {{ item }}
+{% endfor %}
+## Functional Requirements
+
+{% for requirement in task.functional_requirements -%}
+- `{{ requirement.id }}`: {{ requirement.text }}
+{% endfor %}
+## Non-Functional Requirements
+
+{% for requirement in task.non_functional_requirements -%}
+- `{{ requirement.id }}`: {{ requirement.text }}
+{% endfor %}
+## Observability Requirements
+
+{% for requirement in task.observability_requirements -%}
+- `{{ requirement.id }}`: {{ requirement.text }}
+{% endfor %}
+## Acceptance Criteria
+
+{% for criterion in task.acceptance_criteria -%}
+- `{{ criterion.id }}`: {{ criterion.text }}
+{% endfor %}
+## Required Tests
+
+{% for category in task.required_tests -%}
+### {{ category.heading }}
+
+{% for test in category.entries -%}
+- `{{ test.id }}`: {{ test.text }}{% if test.covers %} Covers {{ test.covers }}.{% endif %}
+{% endfor %}
+{% endfor -%}
+## Definition of Done
+
+{% for item in task.definition_of_done -%}
+- {{ item }}
+{% endfor -%}

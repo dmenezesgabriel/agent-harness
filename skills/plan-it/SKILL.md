@@ -15,7 +15,10 @@ When planning is requested, create files. A prose-only plan is a failed output. 
 
 ## Available Scripts
 
-- `scripts/render_task.py` — renders and validates a task Markdown file from task JSON using the exact task template.
+- `scripts/render_task.py --help` — renders and validates task Markdown from task JSON using the exact task template.
+- `scripts/ensure-issues-dir.sh` — creates `tasks/issues/` when needed.
+- `scripts/ensure-adrs-dir.sh` — creates `docs/adrs/` when needed.
+- `scripts/next-issue-number.sh` — reserves and prints the next three-digit task number.
 
 ## Required workflow
 
@@ -24,7 +27,7 @@ When planning is requested, create files. A prose-only plan is a failed output. 
 3. Ask only sequencing blockers, one numbered question at a time, with one `(recommended)` option.
 4. Plan cohesive tracer-bullet tasks; no artificial splits or horizontal-only layers.
 5. Keep irreversible decisions open until a task depends on them.
-6. Write issue files in `tasks/issues/` by creating task JSON and running the renderer script; do not hand-write task Markdown.
+6. For each task, write a small JSON input file, then run `uv run scripts/render_task.py --input <task.json> --output tasks/issues/NNN-kebab-slug.md`; do not hand-write task Markdown.
 7. Write ADR stubs in `docs/adrs/` only when the ADR gate requires one.
 8. Update `CONTEXT.md` only for newly defined or clarified domain terms.
 9. Do not write `PLAN_SUMMARY.md` as a substitute for issue files.
@@ -73,6 +76,7 @@ issue-file-contract:
 ```text
 renderer-contract:
   command: uv run scripts/render_task.py --input <task.json> --output tasks/issues/NNN-kebab-slug.md
+  sequence: write JSON -> run renderer -> inspect renderer error if any -> fix JSON -> rerun renderer
   input: JSON object; no Markdown task hand-writing
   validates: path | frontmatter | headings | bullets | IDs | AFK/HITL | placeholders | required test categories
   on_error: fix the JSON field named in the error and rerun the renderer

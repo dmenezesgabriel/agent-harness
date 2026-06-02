@@ -1,59 +1,96 @@
 import json
 import shutil
 import subprocess  # nosec B404
+import tempfile
+import unittest
 from pathlib import Path
 from typing import cast
 
 _SCRIPT = Path(__file__).with_name("render_task.py")
 
 
-class TestPlanTaskRenderer:
-    def test_uv_script_renders_valid_task_markdown(self, tmp_path: Path) -> None:
-        input_path = tmp_path / "task.json"
-        output_path = tmp_path / "tasks" / "issues" / "001-validate-project.md"
-        input_path.write_text(json.dumps(_valid_task()), encoding="utf-8")
+class PlanTaskRendererTest(unittest.TestCase):
+    def test_uv_script_renders_valid_task_markdown(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            workspace = Path(temporary_directory)
 
-        result = _run_renderer(input_path, output_path, tmp_path)
+            # Arrange
+            input_path = workspace / "task.json"
+            output_path = workspace / "tasks" / "issues" / "001-validate-project.md"
+            input_path.write_text(json.dumps(_valid_task()), encoding="utf-8")
 
-        assert result.returncode == 0, result.stderr
-        content = output_path.read_text(encoding="utf-8")
-        assert "# Task: Validate project settings form" in content
-        assert "## Dependencies\n\n- No task dependency" in content
-        assert "- `FR-001`: The project name field rejects empty values." in content
-        assert "### Observability Tests" in content
+            # Act
+            result = _run_renderer(input_path, output_path, workspace)
 
-    def test_uv_script_rejects_placeholder_content(self, tmp_path: Path) -> None:
-        payload = _valid_task()
-        functional_requirements = cast(
-            list[dict[str, str]], payload["functional_requirements"]
-        )
-        functional_requirements[0]["text"] = "Implement <missing>."
-        input_path = tmp_path / "task.json"
-        output_path = tmp_path / "tasks" / "issues" / "001-validate-project.md"
-        input_path.write_text(json.dumps(payload), encoding="utf-8")
+            # Assert
+            self.assertEqual(result.returncode, 0, result.stderr)
+            content = output_path.read_text(encoding="utf-8")
+            self.assertIn("# Task: Validate project settings form", content)
+            self.assertIn("## Dependencies\n\n- No task dependency", content)
+            self.assertIn(
+                "- `FR-001`: The project name field rejects empty values.", content
+            )
+            self.assertIn("### Observability Tests", content)
 
-        result = _run_renderer(input_path, output_path, tmp_path)
+    def test_uv_script_rejects_placeholder_content(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            workspace = Path(temporary_directory)
 
-        assert result.returncode != 0
-        assert "unresolved placeholder '<missing>'" in result.stderr
-        assert not output_path.exists()
+            # Arrange
+            payload = _valid_task()
+            functional_requirements = cast(
+                list[dict[str, str]], payload["functional_requirements"]
+            )
+            functional_requirements[0]["text"] = "Implement <missing>."
+            input_path = workspace / "task.json"
+            output_path = workspace / "tasks" / "issues" / "001-validate-project.md"
+            input_path.write_text(json.dumps(payload), encoding="utf-8")
+
+            # Act
+            result = _run_renderer(input_path, output_path, workspace)
+
+            # Assert
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("unresolved placeholder '<missing>'", result.stderr)
+            self.assertFalse(output_path.exists())
+
+    def test_uv_script_rejects_invalid_output_path(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            workspace = Path(temporary_directory)
+
+            # Arrange
+            input_path = workspace / "task.json"
+            output_path = workspace / "001-validate-project.md"
+            input_path.write_text(json.dumps(_valid_task()), encoding="utf-8")
+
+            # Act
+            result = _run_renderer(input_path, output_path, workspace)
+
+            # Assert
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("expected tasks/issues/NNN-kebab-slug.md", result.stderr)
+            self.assertFalse(output_path.exists())
 
 
 def _run_renderer(
     input_path: Path, output_path: Path, cwd: Path
 ) -> subprocess.CompletedProcess[str]:
-    uv_path = shutil.which("uv")
-    assert uv_path is not None, "uv must be installed to test inline script metadata"
-    return subprocess.run(  # nosec B603
+    return _run_script(
         [
-            uv_path,
-            "run",
-            str(_SCRIPT),
             "--input",
             str(input_path),
             "--output",
             output_path.relative_to(cwd).as_posix(),
         ],
+        cwd,
+    )
+
+
+def _run_script(args: list[str], cwd: Path) -> subprocess.CompletedProcess[str]:
+    uv_path = shutil.which("uv")
+    assert uv_path is not None, "uv must be installed to test inline script metadata"
+    return subprocess.run(  # nosec B603
+        [uv_path, "run", str(_SCRIPT), *args],
         cwd=cwd,
         capture_output=True,
         text=True,
@@ -144,3 +181,7 @@ def _valid_tests() -> dict[str, list[dict[str, str]]]:
 
 def _not_applicable(identifier: str, reason: str) -> dict[str, str]:
     return {"id": identifier, "text": f"Not applicable — {reason}."}
+
+
+if __name__ == "__main__":
+    unittest.main()

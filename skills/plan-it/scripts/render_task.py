@@ -10,7 +10,7 @@
 """Render a validated plan-it task file from JSON.
 
 Usage:
-    uv run skills/plan-it/scripts/render_task.py --input task.json --output tasks/issues/001-example.md
+    uv run scripts/render_task.py --input task.json --output tasks/issues/001-example.md
 """
 
 from __future__ import annotations
@@ -18,115 +18,197 @@ from __future__ import annotations
 import argparse
 import json
 import re
+from collections.abc import Sequence
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Protocol
 
 from jinja2 import Template
 
+JsonObject = dict[str, object]
 _TASK_PATH = re.compile(r"^tasks/issues/\d{3}-[a-z0-9]+(?:-[a-z0-9]+)*\.md$")
 _ISSUE_ID = re.compile(r"^\d{3}$")
 _DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 _PLACEHOLDER = re.compile(r"<[^>]+>|\{\{[^}]+\}\}")
-_REQUIREMENT_PREFIXES = {
-    "functional_requirements": "FR",
-    "non_functional_requirements": "NFR",
-    "observability_requirements": "OBS",
-}
-_TEST_CATEGORIES = {
-    "unit_tests": ("Unit Tests", "UT"),
-    "integration_tests": ("Integration Tests", "IT"),
-    "smoke_tests": ("Smoke Tests", "SMK"),
-    "end_to_end_tests": ("End-to-End Tests", "E2E"),
-    "regression_tests": ("Regression Tests", "REG"),
-    "performance_tests": ("Performance Tests", "PT"),
-    "security_tests": ("Security Tests", "ST"),
-    "usability_tests": ("Usability Tests", "UX"),
-    "observability_tests": ("Observability Tests", "OT"),
-}
+_TEMPLATE_PATH = Path(__file__).with_name("task_template.md.j2")
 
-_TEMPLATE = Template(
-    """---
-id: "{{ task.id }}"
-created: {{ task.created }}
-updated: {{ task.updated }}
-status: active
----
 
-# Task: {{ task.title }}
+class TaskRule(Protocol):
+    def check(self, task: JsonObject) -> None:
+        """Validate one task concern.
 
-## Priority
+        Example:
+            ScalarRule("id", _ISSUE_ID, "three digits").check({"id": "001"})
+        """
 
-{{ task.priority }}
 
-## Dependencies
+@dataclass(frozen=True)
+class RequirementGroup:
+    field: str
+    prefix: str
 
-{% for dependency in task.dependencies -%}
-- {{ dependency }}
-{% endfor %}
-## Assignability
 
-**{{ task.assignability.mode }}** — {{ task.assignability.reason }}
+@dataclass(frozen=True)
+class TestCategory:
+    field: str
+    heading: str
+    prefix: str
 
-## Context
 
-{% for item in task.context -%}
-{{ item }}
+@dataclass(frozen=True)
+class ScalarRule:
+    field: str
+    pattern: re.Pattern[str]
+    expected: str
 
-{% endfor -%}
-## Use Cases
+    def check(self, task: JsonObject) -> None:
+        value = task.get(self.field)
+        if isinstance(value, str) and self.pattern.match(value):
+            return
+        raise ScriptError(f"invalid {self.field} {value!r}; expected {self.expected}")
 
-{% for item in task.use_cases -%}
-- {{ item }}
-{% endfor %}
-## Definition of Ready
 
-{% for item in task.definition_of_ready -%}
-- {{ item }}
-{% endfor %}
-## Functional Requirements
+@dataclass(frozen=True)
+class TextRule:
+    field: str
 
-{% for requirement in task.functional_requirements -%}
-- `{{ requirement.id }}`: {{ requirement.text }}
-{% endfor %}
-## Non-Functional Requirements
+    def check(self, task: JsonObject) -> None:
+        value = task.get(self.field)
+        validate_text(self.field, value)
 
-{% for requirement in task.non_functional_requirements -%}
-- `{{ requirement.id }}`: {{ requirement.text }}
-{% endfor %}
-## Observability Requirements
 
-{% for requirement in task.observability_requirements -%}
-- `{{ requirement.id }}`: {{ requirement.text }}
-{% endfor %}
-## Acceptance Criteria
+@dataclass(frozen=True)
+class TextListRule:
+    field: str
 
-{% for criterion in task.acceptance_criteria -%}
-- `{{ criterion.id }}`: {{ criterion.text }}
-{% endfor %}
-## Required Tests
+    def check(self, task: JsonObject) -> None:
+        value = task.get(self.field)
+        validate_text_list(self.field, value)
 
-{% for category in task.required_tests -%}
-### {{ category.heading }}
 
-{% for test in category.entries -%}
-- `{{ test.id }}`: {{ test.text }}{% if test.covers %} Covers {{ test.covers }}.{% endif %}
-{% endfor %}
-{% endfor -%}
-## Definition of Done
+@dataclass(frozen=True)
+class ItemListRule:
+    field: str
+    prefix: str
 
-{% for item in task.definition_of_done -%}
-- {{ item }}
-{% endfor -%}
-"""
-)
+    def check(self, task: JsonObject) -> None:
+        validate_item_list(self.field, task.get(self.field), self.prefix)
+
+
+class AssignabilityRule:
+    def check(self, task: JsonObject) -> None:
+        value = task.get("assignability")
+        if not isinstance(value, dict):
+            raise ScriptError(f"invalid assignability {value!r}; expected object")
+        mode = value.get("mode")
+        reason = value.get("reason")
+        if mode in {"AFK", "HITL"} and isinstance(reason, str) and reason.strip():
+            reject_placeholder("assignability.reason", reason)
+            return
+        raise ScriptError(f"invalid assignability {value!r}; expected AFK/HITL reason")
+
+
+class RequiredTestsRule:
+    def __init__(self, categories: Sequence[TestCategory]) -> None:
+        self._categories = categories
+
+    def check(self, task: JsonObject) -> None:
+        raw_tests = task.get("required_tests")
+        if not isinstance(raw_tests, dict):
+            raise ScriptError(f"invalid required_tests {raw_tests!r}; expected object")
+        task["required_tests"] = [
+            self._normalize_category(raw_tests, category)
+            for category in self._categories
+        ]
+
+    def _normalize_category(
+        self, raw_tests: JsonObject, category: TestCategory
+    ) -> JsonObject:
+        entries = validate_test_entries(
+            category.field, raw_tests.get(category.field), category.prefix
+        )
+        return {"heading": category.heading, "entries": entries}
+
+
+class ScriptError(RuntimeError):
+    pass
+
+
+class TaskLoader:
+    def load(self, path: Path) -> JsonObject:
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as exc:
+            raise ScriptError(f"invalid JSON in {path}: {exc}") from exc
+        if isinstance(payload, dict):
+            return payload
+        raise ScriptError(
+            f"invalid task input {type(payload).__name__}; expected object"
+        )
+
+
+class TaskNormalizer:
+    def normalize(self, payload: JsonObject) -> JsonObject:
+        today = datetime.now(UTC).date().isoformat()
+        task = dict(payload)
+        task.setdefault("created", today)
+        task.setdefault("updated", task["created"])
+        return task
+
+
+class TaskValidator:
+    def __init__(self, rules: Sequence[TaskRule]) -> None:
+        self._rules = rules
+
+    def validate(self, task: JsonObject) -> None:
+        for rule in self._rules:
+            rule.check(task)
+
+
+class TaskRenderer:
+    def render(self, task: JsonObject) -> str:
+        rendered = str(
+            Template(_TEMPLATE_PATH.read_text(encoding="utf-8")).render(task=task)
+        )
+        return rendered.rstrip() + "\n"
+
+
+class TaskWriter:
+    def write(self, path: Path, content: str) -> None:
+        self.validate_path(path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(content, encoding="utf-8")
+
+    def validate_path(self, path: Path) -> None:
+        normalized = path.as_posix()
+        if _TASK_PATH.match(normalized):
+            return
+        raise ScriptError(
+            f"invalid output path {normalized!r}; expected tasks/issues/NNN-kebab-slug.md"
+        )
+
+
+class TaskRenderFacade:
+    def __init__(self, validator: TaskValidator) -> None:
+        self._loader = TaskLoader()
+        self._normalizer = TaskNormalizer()
+        self._validator = validator
+        self._renderer = TaskRenderer()
+        self._writer = TaskWriter()
+
+    def render_file(self, input_path: Path, output_path: Path) -> None:
+        task = self._normalizer.normalize(self._loader.load(input_path))
+        self._validator.validate(task)
+        self._writer.write(output_path, self._renderer.render(task))
 
 
 def main() -> None:
-    args = _parse_args()
-    task = _load_task(args.input)
-    _validate_output_path(args.output)
-    rendered = _render(task)
-    _write_output(args.output, rendered)
+    try:
+        args = _parse_args()
+        TaskRenderFacade(default_validator()).render_file(args.input, args.output)
+    except ScriptError as exc:
+        raise SystemExit(str(exc)) from exc
 
 
 def _parse_args() -> argparse.Namespace:
@@ -136,43 +218,23 @@ def _parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def _load_task(path: Path) -> dict[str, object]:
-    try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError as exc:
-        raise SystemExit(f"invalid JSON in {path}: {exc}") from exc
-    if not isinstance(payload, dict):
-        raise SystemExit(
-            f"invalid task input {type(payload).__name__}; expected object"
-        )
-    return _normalize_task(payload)
+def default_validator() -> TaskValidator:
+    rules: list[TaskRule] = [
+        ScalarRule("id", _ISSUE_ID, "three digits such as 001"),
+        ScalarRule("created", _DATE, "YYYY-MM-DD"),
+        ScalarRule("updated", _DATE, "YYYY-MM-DD"),
+        TextRule("title"),
+        TextRule("priority"),
+        AssignabilityRule(),
+        *[TextListRule(field) for field in text_list_fields()],
+        *[ItemListRule(group.field, group.prefix) for group in requirement_groups()],
+        ItemListRule("acceptance_criteria", "AC"),
+        RequiredTestsRule(test_categories()),
+    ]
+    return TaskValidator(rules)
 
 
-def _normalize_task(payload: dict[str, object]) -> dict[str, object]:
-    today = datetime.now(UTC).date().isoformat()
-    task = dict(payload)
-    task.setdefault("created", today)
-    task.setdefault("updated", task["created"])
-    _validate_task(task)
-    task["required_tests"] = _normalize_tests(task["required_tests"])
-    return task
-
-
-def _validate_task(task: dict[str, object]) -> None:
-    _validate_scalar(task, "id", _ISSUE_ID, "three digits such as 001")
-    _validate_scalar(task, "created", _DATE, "YYYY-MM-DD")
-    _validate_scalar(task, "updated", _DATE, "YYYY-MM-DD")
-    for key in ("title", "priority"):
-        _validate_text(task, key)
-    _validate_assignability(task.get("assignability"))
-    for key in _list_sections():
-        _validate_text_list(task, key)
-    for key, prefix in _REQUIREMENT_PREFIXES.items():
-        _validate_items(task, key, prefix)
-    _validate_items(task, "acceptance_criteria", "AC")
-
-
-def _list_sections() -> tuple[str, ...]:
+def text_list_fields() -> tuple[str, ...]:
     return (
         "dependencies",
         "context",
@@ -182,142 +244,100 @@ def _list_sections() -> tuple[str, ...]:
     )
 
 
-def _validate_scalar(
-    task: dict[str, object], key: str, pattern: re.Pattern[str], expected: str
-) -> None:
-    value = task.get(key)
-    if not isinstance(value, str) or not pattern.match(value):
-        raise SystemExit(f"invalid {key} {value!r}; expected {expected}")
+def requirement_groups() -> tuple[RequirementGroup, ...]:
+    return (
+        RequirementGroup("functional_requirements", "FR"),
+        RequirementGroup("non_functional_requirements", "NFR"),
+        RequirementGroup("observability_requirements", "OBS"),
+    )
 
 
-def _validate_text(task: dict[str, object], key: str) -> None:
-    value = task.get(key)
-    if not isinstance(value, str) or not value.strip():
-        raise SystemExit(f"invalid {key} {value!r}; expected non-empty string")
-    _reject_placeholder(key, value)
+def test_categories() -> tuple[TestCategory, ...]:
+    return (
+        TestCategory("unit_tests", "Unit Tests", "UT"),
+        TestCategory("integration_tests", "Integration Tests", "IT"),
+        TestCategory("smoke_tests", "Smoke Tests", "SMK"),
+        TestCategory("end_to_end_tests", "End-to-End Tests", "E2E"),
+        TestCategory("regression_tests", "Regression Tests", "REG"),
+        TestCategory("performance_tests", "Performance Tests", "PT"),
+        TestCategory("security_tests", "Security Tests", "ST"),
+        TestCategory("usability_tests", "Usability Tests", "UX"),
+        TestCategory("observability_tests", "Observability Tests", "OT"),
+    )
 
 
-def _validate_text_list(task: dict[str, object], key: str) -> None:
-    value = task.get(key)
+def validate_text(label: str, value: object) -> str:
+    if isinstance(value, str) and value.strip():
+        reject_placeholder(label, value)
+        return value
+    raise ScriptError(f"invalid {label} {value!r}; expected non-empty string")
+
+
+def validate_text_list(label: str, value: object) -> list[str]:
     if not isinstance(value, list) or not value:
-        raise SystemExit(f"invalid {key} {value!r}; expected non-empty string list")
-    for index, item in enumerate(value):
-        if not isinstance(item, str) or not item.strip():
-            raise SystemExit(
-                f"invalid {key}[{index}] {item!r}; expected non-empty string"
-            )
-        _reject_placeholder(f"{key}[{index}]", item)
-
-
-def _validate_assignability(value: object) -> None:
-    if not isinstance(value, dict):
-        raise SystemExit(f"invalid assignability {value!r}; expected object")
-    mode = value.get("mode")
-    reason = value.get("reason")
-    if mode not in {"AFK", "HITL"} or not isinstance(reason, str) or not reason.strip():
-        raise SystemExit(
-            f"invalid assignability {value!r}; expected mode AFK/HITL and reason"
-        )
-    _reject_placeholder("assignability.reason", reason)
-
-
-def _validate_items(task: dict[str, object], key: str, prefix: str) -> None:
-    value = task.get(key)
-    if not isinstance(value, list) or not value:
-        raise SystemExit(f"invalid {key} {value!r}; expected non-empty item list")
-    for index, item in enumerate(value):
-        _validate_item(key, index, item, prefix)
-
-
-def _validate_item(key: str, index: int, item: object, prefix: str) -> None:
-    if not isinstance(item, dict):
-        raise SystemExit(f"invalid {key}[{index}] {item!r}; expected object")
-    expected_id = f"{prefix}-{index + 1:03d}"
-    if item.get("id") != expected_id:
-        raise SystemExit(
-            f"invalid {key}[{index}].id {item.get('id')!r}; expected {expected_id}"
-        )
-    text = item.get("text")
-    if not isinstance(text, str) or not text.strip():
-        raise SystemExit(
-            f"invalid {key}[{index}].text {text!r}; expected non-empty string"
-        )
-    _reject_placeholder(f"{key}[{index}].text", text)
-
-
-def _normalize_tests(raw_tests: object) -> list[dict[str, object]]:
-    if not isinstance(raw_tests, dict):
-        raise SystemExit(f"invalid required_tests {raw_tests!r}; expected object")
+        raise ScriptError(f"invalid {label} {value!r}; expected non-empty string list")
     return [
-        {"heading": heading, "entries": _test_entries(raw_tests, key, prefix)}
-        for key, (heading, prefix) in _TEST_CATEGORIES.items()
+        validate_text(f"{label}[{index}]", item) for index, item in enumerate(value)
     ]
 
 
-def _test_entries(
-    raw_tests: dict[str, object], key: str, prefix: str
-) -> list[dict[str, str]]:
-    value = raw_tests.get(key)
+def validate_item_list(label: str, value: object, prefix: str) -> None:
     if not isinstance(value, list) or not value:
-        raise SystemExit(
-            f"invalid required_tests.{key} {value!r}; expected non-empty list"
-        )
-    entries = []
+        raise ScriptError(f"invalid {label} {value!r}; expected non-empty item list")
     for index, item in enumerate(value):
-        entries.append(_normalize_test_entry(key, index, item, prefix))
-    return entries
+        validate_item(label, index, item, prefix)
 
 
-def _normalize_test_entry(
-    key: str, index: int, item: object, prefix: str
-) -> dict[str, str]:
+def validate_item(label: str, index: int, item: object, prefix: str) -> None:
     if not isinstance(item, dict):
-        raise SystemExit(
-            f"invalid required_tests.{key}[{index}] {item!r}; expected object"
+        raise ScriptError(f"invalid {label}[{index}] {item!r}; expected object")
+    expected_id = f"{prefix}-{index + 1:03d}"
+    if item.get("id") != expected_id:
+        raise ScriptError(
+            f"invalid {label}[{index}].id {item.get('id')!r}; expected {expected_id}"
+        )
+    validate_text(f"{label}[{index}].text", item.get("text"))
+
+
+def validate_test_entries(label: str, value: object, prefix: str) -> list[JsonObject]:
+    if not isinstance(value, list) or not value:
+        raise ScriptError(
+            f"invalid required_tests.{label} {value!r}; expected non-empty list"
+        )
+    return [
+        validate_test_entry(label, index, item, prefix)
+        for index, item in enumerate(value)
+    ]
+
+
+def validate_test_entry(
+    label: str, index: int, item: object, prefix: str
+) -> JsonObject:
+    if not isinstance(item, dict):
+        raise ScriptError(
+            f"invalid required_tests.{label}[{index}] {item!r}; expected object"
         )
     expected_id = f"{prefix}-{index + 1:03d}"
     if item.get("id") != expected_id:
-        raise SystemExit(
-            f"invalid required_tests.{key}[{index}].id {item.get('id')!r}; expected {expected_id}"
+        raise ScriptError(
+            f"invalid required_tests.{label}[{index}].id {item.get('id')!r}; expected {expected_id}"
         )
-    text = item.get("text")
-    if not isinstance(text, str) or not text.strip():
-        raise SystemExit(
-            f"invalid required_tests.{key}[{index}].text {text!r}; expected non-empty string"
-        )
+    text = validate_text(f"required_tests.{label}[{index}].text", item.get("text"))
     covers = item.get("covers", "")
     if not isinstance(covers, str):
-        raise SystemExit(
-            f"invalid required_tests.{key}[{index}].covers {covers!r}; expected string"
+        raise ScriptError(
+            f"invalid required_tests.{label}[{index}].covers {covers!r}; expected string"
         )
-    _reject_placeholder(f"required_tests.{key}[{index}]", text + covers)
+    reject_placeholder(f"required_tests.{label}[{index}].covers", covers)
     return {"id": expected_id, "text": text, "covers": covers}
 
 
-def _reject_placeholder(label: str, value: str) -> None:
+def reject_placeholder(label: str, value: str) -> None:
     match = _PLACEHOLDER.search(value)
     if match:
-        raise SystemExit(
+        raise ScriptError(
             f"invalid {label} {value!r}; unresolved placeholder {match.group(0)!r}"
         )
-
-
-def _validate_output_path(path: Path) -> None:
-    normalized = path.as_posix()
-    if not _TASK_PATH.match(normalized):
-        raise SystemExit(
-            f"invalid output path {normalized!r}; expected tasks/issues/NNN-kebab-slug.md"
-        )
-
-
-def _render(task: dict[str, object]) -> str:
-    rendered = str(_TEMPLATE.render(task=task))
-    return rendered.rstrip() + "\n"
-
-
-def _write_output(path: Path, content: str) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(content, encoding="utf-8")
 
 
 if __name__ == "__main__":
