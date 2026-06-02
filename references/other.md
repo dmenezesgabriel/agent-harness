@@ -12,6 +12,7 @@
 - [Open WebUI](https://github.com/open-webui/open-webui) — A user-friendly self-hosted WebUI for LLMs (formerly Ollama WebUI).
 - https://dev.to/truongpx396/learn-harness-engineering-by-building-a-mini-claude-code-45a9
 - https://github.com/shareAI-lab/learn-claude-code
+- https://github.com/mattpocock/sandcastle
 
 ### **Platforms and Specifications**
 - [LM Studio](https://lmstudio.ai/) — A desktop application for discovering and running local LLMs.
