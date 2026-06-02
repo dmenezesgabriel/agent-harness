@@ -10,6 +10,7 @@ import structlog
 
 from runner.eval_layout import has_ignored_part
 from runner.exceptions import ProviderAbortError
+from runner.metrics import CallMetric, CallMetricsCollector
 
 _log = structlog.get_logger()
 
@@ -61,17 +62,24 @@ class AdapterCall:
     prompt_chars: int
     system_chars: int
     timeout: int
+    collector: CallMetricsCollector | None = None
 
     def start(self) -> float:
         _log.info("adapter_call_start", **self._fields())
         return time.monotonic()
 
     def done(self, started_at: float) -> None:
-        _log.info(
-            "adapter_call_done",
-            elapsed_s=round(time.monotonic() - started_at, 1),
-            **self._fields(),
-        )
+        elapsed_s = round(time.monotonic() - started_at, 1)
+        _log.info("adapter_call_done", elapsed_s=elapsed_s, **self._fields())
+        if self.collector is not None:
+            self.collector.record(
+                CallMetric(
+                    operation=self.operation,
+                    elapsed_s=elapsed_s,
+                    prompt_chars=self.prompt_chars,
+                    system_chars=self.system_chars,
+                )
+            )
 
     def abort(self, exc: Exception) -> ProviderAbortError:
         reason = provider_failure_reason(exc)

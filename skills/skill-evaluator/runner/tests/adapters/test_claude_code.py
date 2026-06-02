@@ -20,6 +20,7 @@ def _adapter_without_init(tmp_path: Path) -> ClaudeCodeAdapter:
     adapter._skill_root = tmp_path
     adapter._timeout = _TIMEOUT_SECONDS
     adapter._claude_path = "claude"
+    adapter._collector = None
     return adapter
 
 

@@ -31,6 +31,7 @@ from runner.adapters.contract import (
     collect_text_artifacts,
 )
 from runner.adapters.judge_payloads import CompareJudgePayload, JudgePayload
+from runner.metrics import CallMetricsCollector
 from runner.models import (
     DEFAULT_OPENCODE_INVOKE_MODEL,
     DEFAULT_OPENCODE_INVOKE_PROVIDER,
@@ -107,6 +108,7 @@ class OpenCodeAdapter:
         judge_provider: str = DEFAULT_OPENCODE_JUDGE_PROVIDER,
         judge_model: str = DEFAULT_OPENCODE_JUDGE_MODEL,
         client_factory: Callable[[str, int], object] | None = None,
+        collector: CallMetricsCollector | None = None,
     ) -> None:
         opencode_path = shutil.which("opencode")
         if not opencode_path:
@@ -122,6 +124,7 @@ class OpenCodeAdapter:
         self._judge_provider = judge_provider
         self._judge_model = judge_model
         self._client_factory = client_factory or _create_client
+        self._collector = collector
 
     def invoke_skill(self, skill_name: str, prompt: str) -> ArtifactSet:
         skill_md = self._load_skill_md(skill_name)
@@ -222,6 +225,7 @@ class OpenCodeAdapter:
             prompt_chars=len(prompt),
             system_chars=len(system),
             timeout=self._timeout,
+            collector=self._collector,
         )
         start = call.start()
         with _OpenCodeServer(self._opencode_path, workdir, port):

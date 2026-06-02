@@ -28,6 +28,7 @@ from runner.adapters.contract import (
     collect_text_artifacts,
 )
 from runner.adapters.judge_payloads import CompareJudgePayload, JudgePayload
+from runner.metrics import CallMetricsCollector
 from runner.models import JudgeReport
 from runner.ports import ArtifactSet
 
@@ -58,7 +59,10 @@ class ClaudeCodeAdapter:
     """
 
     def __init__(
-        self, skill_root: Path, timeout: int = _DEFAULT_TIMEOUT_SECONDS
+        self,
+        skill_root: Path,
+        timeout: int = _DEFAULT_TIMEOUT_SECONDS,
+        collector: CallMetricsCollector | None = None,
     ) -> None:
         claude_path = shutil.which("claude")
         if not claude_path:
@@ -68,6 +72,7 @@ class ClaudeCodeAdapter:
         self._skill_root = skill_root
         self._timeout = timeout
         self._claude_path = claude_path
+        self._collector = collector
 
     def invoke_skill(self, skill_name: str, prompt: str) -> ArtifactSet:
         skill_md = self._load_skill_md(skill_name)
@@ -164,6 +169,7 @@ class ClaudeCodeAdapter:
             prompt_chars=len(prompt),
             system_chars=len(system),
             timeout=self._timeout,
+            collector=self._collector,
         )
         start = call.start()
         with tempfile.NamedTemporaryFile(

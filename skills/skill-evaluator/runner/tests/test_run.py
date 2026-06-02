@@ -2,6 +2,7 @@ from unittest.mock import Mock
 
 import pytest
 
+from runner.metrics import CallMetricsCollector
 from runner.models import CliArgs, Mode
 from runner.run import _SKILLS_ROOT, _build_app, _parse_args
 
@@ -45,14 +46,15 @@ class TestBuildApp:
         # Arrange
         adapter_constructor = Mock(return_value=None)
         monkeypatch.setattr("runner.run.ClaudeCodeAdapter", adapter_constructor)
+        collector = CallMetricsCollector()
 
         # Act
-        app = _build_app(CliArgs(mode=Mode.JUDGE))
+        app = _build_app(CliArgs(mode=Mode.JUDGE), collector)
 
         # Assert
         assert app.__class__.__name__ == "SkillEvaluationApp"
         adapter_constructor.assert_called_once_with(
-            skill_root=_SKILLS_ROOT, timeout=180
+            skill_root=_SKILLS_ROOT, timeout=180, collector=collector
         )
 
     def test_build_app_does_not_construct_adapter_for_unused_mode(
@@ -62,13 +64,14 @@ class TestBuildApp:
         # Arrange
         adapter_constructor = Mock(return_value=None)
         monkeypatch.setattr("runner.run.ClaudeCodeAdapter", adapter_constructor)
+        collector = CallMetricsCollector()
 
         # Act
-        _build_app(CliArgs(mode=Mode.INVOKE))
+        _build_app(CliArgs(mode=Mode.INVOKE), collector)
 
         # Assert
         adapter_constructor.assert_called_once_with(
-            skill_root=_SKILLS_ROOT, timeout=180
+            skill_root=_SKILLS_ROOT, timeout=180, collector=collector
         )
 
     def test_build_app_constructs_opencode_adapter_with_requested_models(
@@ -80,6 +83,7 @@ class TestBuildApp:
         opencode_constructor = Mock(return_value=None)
         monkeypatch.setattr("runner.run.ClaudeCodeAdapter", claude_constructor)
         monkeypatch.setattr("runner.run.OpenCodeAdapter", opencode_constructor)
+        collector = CallMetricsCollector()
 
         # Act
         _build_app(
@@ -90,7 +94,8 @@ class TestBuildApp:
                 opencode_invoke_model="gpt-5.4-mini",
                 opencode_judge_provider="openai-codex",
                 opencode_judge_model="chatgpt-5.5",
-            )
+            ),
+            collector,
         )
 
         # Assert
@@ -102,4 +107,5 @@ class TestBuildApp:
             invoke_model="gpt-5.4-mini",
             judge_provider="openai-codex",
             judge_model="chatgpt-5.5",
+            collector=collector,
         )

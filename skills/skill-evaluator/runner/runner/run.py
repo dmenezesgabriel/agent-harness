@@ -17,6 +17,8 @@ import os
 from pathlib import Path
 from typing import Protocol, cast, get_args
 
+import structlog
+
 from runner.adapters.behave import BehaveStructuralRunner
 from runner.adapters.claude_code import ClaudeCodeAdapter
 from runner.adapters.opencode import OpenCodeAdapter
@@ -25,6 +27,7 @@ from runner.evaluation import SkillEvaluationApp, SkillEvaluator
 from runner.invocation import SkillInvoker
 from runner.judging import RubricJudgeRunner
 from runner.log_setup import configure as _configure_logging
+from runner.metrics import CallMetricsCollector
 from runner.models import (
     DEFAULT_OPENCODE_INVOKE_MODEL,
     DEFAULT_OPENCODE_INVOKE_PROVIDER,
@@ -55,6 +58,7 @@ from runner.trigger import TriggerEvaluator
 _SKILLS_ROOT = Path(__file__).parent.parent.parent.parent  # agent-harness/skills/
 _MODES = tuple(mode.value for mode in Mode)
 _ADAPTERS = get_args(AdapterName)
+_log = structlog.get_logger()
 
 
 class _EvaluationAdapter(AgentPort, JudgePort, Protocol):
@@ -64,11 +68,26 @@ class _EvaluationAdapter(AgentPort, JudgePort, Protocol):
 def main() -> None:
     _configure_logging()
     args = _parse_args()
-    raise SystemExit(_build_app(args).run(args))
+    collector = CallMetricsCollector()
+    exit_code = _build_app(args, collector).run(args)
+    _emit_run_metrics(collector)
+    raise SystemExit(exit_code)
 
 
-def _build_app(args: CliArgs) -> SkillEvaluationApp:
-    adapter = _build_adapter(args)
+def _emit_run_metrics(collector: CallMetricsCollector) -> None:
+    summary = collector.summary()
+    _log.info(
+        "run_metrics_summary",
+        total_calls=summary.total_calls,
+        total_elapsed_s=summary.total_elapsed_s,
+        total_prompt_chars=summary.total_prompt_chars,
+        total_system_chars=summary.total_system_chars,
+        elapsed_s_by_operation=summary.elapsed_s_by_operation,
+    )
+
+
+def _build_app(args: CliArgs, collector: CallMetricsCollector) -> SkillEvaluationApp:
+    adapter = _build_adapter(args, collector)
     strategy = _build_strategy(args, adapter)
     evaluator = SkillEvaluator(strategy=strategy, report_writer=MarkdownReportWriter())
     return SkillEvaluationApp(
@@ -127,9 +146,15 @@ def _build_strategy(args: CliArgs, adapter: _EvaluationAdapter) -> EvalModeStrat
             )
 
 
-def _build_adapter(args: CliArgs) -> _EvaluationAdapter:
+def _build_adapter(
+    args: CliArgs, collector: CallMetricsCollector
+) -> _EvaluationAdapter:
     if args.adapter == "claude":
-        return ClaudeCodeAdapter(skill_root=_SKILLS_ROOT, timeout=args.claude_timeout)
+        return ClaudeCodeAdapter(
+            skill_root=_SKILLS_ROOT,
+            timeout=args.claude_timeout,
+            collector=collector,
+        )
     if args.adapter == "opencode":
         return OpenCodeAdapter(
             skill_root=_SKILLS_ROOT,
@@ -138,6 +163,7 @@ def _build_adapter(args: CliArgs) -> _EvaluationAdapter:
             invoke_model=args.opencode_invoke_model,
             judge_provider=args.opencode_judge_provider,
             judge_model=args.opencode_judge_model,
+            collector=collector,
         )
     raise ValueError(f"Unknown adapter {args.adapter!r}; expected one of {_ADAPTERS}")
 
