@@ -54,7 +54,11 @@ class FakeJudgeRunner:
         self._skill_dir = skill_dir
 
     def run(
-        self, _evals_dir: Path, artifacts_dir: Path, _judge: object
+        self,
+        _evals_dir: Path,
+        artifacts_dir: Path,
+        _judge: object,
+        **_kwargs: object,
     ) -> list[JudgeReport]:
         return (
             self._skill_verdicts
@@ -221,6 +225,37 @@ class TestCompareStrategyJudge:
         # Assert
         assert outcome.judge_verdicts == [_SKILL_VERDICT]
         assert outcome.baseline_judge_verdicts == [_BASELINE_VERDICT]
+
+    def test_baseline_judge_called_with_generated_only_true(
+        self, tmp_path: Path
+    ) -> None:
+        """Baseline judge run must pass generated_only=True to skip fixture rubrics."""
+        # Arrange
+        evals_dir = tmp_path / "dataviz" / "evals"
+        evals_dir.mkdir(parents=True)
+        skill_dir = tmp_path / "skill"
+        baseline_dir = tmp_path / "baseline"
+        judge_runner = Mock()
+        judge_runner.run.return_value = []
+        strategy = CompareStrategy(
+            cast(SkillInvoker, FakeInvoker(skill_dir, baseline_dir)),
+            cast(StructuralCheckPort, Mock(run=Mock(return_value=[]))),
+            cast(AgentPort, object()),
+            cast(BaselineAgentPort, object()),
+            cast(SkillInputSizerPort, FakeSizer()),
+            cast(RubricJudgeRunner, judge_runner),
+            cast(JudgePort, FakeJudge()),
+        )
+
+        # Act
+        strategy.run("dataviz", evals_dir)
+
+        # Assert — first judge call (skill) uses default generated_only=False,
+        # second call (baseline) must pass generated_only=True
+        skill_call_kwargs = judge_runner.run.call_args_list[0][1]
+        baseline_call_kwargs = judge_runner.run.call_args_list[1][1]
+        assert skill_call_kwargs.get("generated_only", False) is False
+        assert baseline_call_kwargs.get("generated_only") is True
 
     def test_empty_judge_verdicts_does_not_break_structural_results(
         self, tmp_path: Path

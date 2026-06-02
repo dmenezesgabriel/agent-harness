@@ -76,7 +76,7 @@ class CompareStrategy:
 
         start = time.monotonic()
         baseline_judge_verdicts = self._judge_runner.run(
-            evals_dir, baseline_dir, self._judge
+            evals_dir, baseline_dir, self._judge, generated_only=True
         )
         _log_elapsed(
             "baseline_judge_phase_done",
