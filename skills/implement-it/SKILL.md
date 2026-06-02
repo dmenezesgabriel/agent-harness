@@ -9,7 +9,7 @@ metadata:
 
 Implement one or more existing tasks, issues, stories, or plan items. Satisfy requirements without adding unnecessary complexity or unrelated changes.
 
-Method: enforce exact summary template, guide with decision gates, measure before final response.
+Method: enforce (don't instruct) — guide (don't prescribe) — measure (don't assume). Enforce exact summary template, guide with decision gates, measure before final response.
 
 When implementation is requested, code and summarize. An implementation with no summary file is a failed output. Render each summary with `uv run scripts/render_implementation.py --input <summary.json> --output tasks/implementation/NNN-kebab-slug-summary.md`. Every summary file path must start with `tasks/implementation/`. Root-level Markdown files are failed output.
 
@@ -43,7 +43,7 @@ All scripts support `--help` / `-h` for full usage details.
 6. Use TDD for logic, APIs, services, domain rules, data flows, permissions, and regressions. See [implementation-rules.md — TDD workflow](references/implementation-rules.md#tdd-workflow).
 7. For frontend UI work, use CDD. See [implementation-rules.md — CDD workflow](references/implementation-rules.md#component-driven-development-workflow).
 8. Use semantic HTML and native controls before ARIA. Treat accessibility as component behavior, not final polish.
-9. Apply design principles selectively — read [design-rules.md](references/design-rules.md) when a design decision arises. For named patterns, see [design-patterns.md](references/design-patterns.md). For domain classes and Value Objects, see [oop-calisthenics.md](references/oop-calisthenics.md).
+9. Walk the design decision tree — read [solid-design-decisions.md](references/solid-design-decisions.md) when a SOLID signal arises. Read [design-rules.md](references/design-rules.md) for broader design guidance. For named patterns, see [design-patterns.md](references/design-patterns.md). For domain classes and Value Objects, see [oop-calisthenics.md](references/oop-calisthenics.md).
 10. Preserve architecture boundaries and dependency direction.
 11. Add or update only meaningful tests. Every new test must run with the project's single test command without manual setup. Automating required infrastructure is part of this task. Read [testing-rules.md](references/testing-rules.md) before adding or changing any test type.
 12. Add or update logs, metrics, traces, and analytics only when required by the task. Use structured format: `event=`, `field=`, `value=`.
@@ -107,11 +107,27 @@ renderer-contract:
   on_error: fix the JSON field named in the error and rerun the renderer
 ```
 
+```text
+design-decision-tree:
+  signal: one_class_multiple_reasons
+    -> SRP -> Facade [ref](references/solid-design-decisions.md#srp--facade)
+  signal: new_behavior_changes_existing_code
+    -> OCP -> Strategy + Factory [ref](references/solid-design-decisions.md#ocp--strategy--factory)
+  signal: subtype_breaks_substitution
+    -> LSP -> pre/post/invariant checks [ref](references/solid-design-decisions.md#lsp--pre-conditions-post-conditions-invariants)
+  signal: wide_interface_forces_unused_methods
+    -> ISP -> segregated interfaces [ref](references/solid-design-decisions.md#isp--interface-segregation)
+  signal: high_level_depends_on_low_level
+    -> DIP -> Adapter [ref](references/solid-design-decisions.md#dip--adapter)
+  lazy: load solid-design-decisions.md only when a signal triggers
+```
+
 ## Lazy references
 
 Load only what the current gate needs:
 - [implementation-rules.md](references/implementation-rules.md): codebase exploration, vertical slicing, TDD, CDD, validation loop.
-- [design-rules.md](references/design-rules.md): design decisions and principles.
+- [solid-design-decisions.md](references/solid-design-decisions.md): SOLID principle decision tree with pattern mappings and examples.
+- [design-rules.md](references/design-rules.md): general design decisions and principles.
 - [design-patterns.md](references/design-patterns.md): named pattern references.
 - [oop-calisthenics.md](references/oop-calisthenics.md): Value Objects and domain modeling.
 - [testing-rules.md](references/testing-rules.md): test selection and type decisions.

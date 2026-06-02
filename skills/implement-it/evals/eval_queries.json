@@ -1,9 +1,17 @@
 {
-  "description": "Trigger accuracy queries for the implement-it skill. Tests that the skill fires on concrete implementation requests backed by a defined task, and stays silent for exploratory, review, planning, or documentation requests.",
+  "description": "Trigger accuracy queries for the implement-it skill. Tests that the skill fires on concrete implementation requests backed by a defined task, and stays silent for exploratory, review, planning, or documentation requests. Design-decision queries test that the skill activates when a task signals a specific SOLID principle need.",
   "should_trigger": [
     {
       "query": "implement the login endpoint from issue #42",
       "note": "explicit implement verb + named issue"
+    },
+    {
+      "query": "implement the SendGrid email notification per the design task in tasks/010-email-notification.md, using Dependency Inversion and Adapter pattern",
+      "note": "design-decision query: DIP signal with third-party SDK integration"
+    },
+    {
+      "query": "code the payment processing strategy per the task in tasks/011-payment-processing.md, following Open/Closed Principle",
+      "note": "design-decision query: OCP signal with multiple algorithm variants"
     },
     {
       "query": "code the task in tasks/003-add-search.md",

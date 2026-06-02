@@ -1,7 +1,7 @@
 # OOP Object Calisthenics
 
 Apply selectively — use when they remove duplication, enforce invariants, or prevent silent invalid states.
-Code snippets use Python-style pseudocode readable in any OO language.
+Code snippets use TypeScript-style pseudocode (public, private, protected, constructor) readable in any OO language.
 
 ## Primitive Obsession and Value Objects
 
@@ -21,114 +21,142 @@ Don't wrap when:
 
 ### Value Object construction
 
-```
-# Bad — constraint enforcement deferred to callers
-def create_project(name: str, owner_id: str, max_members: int): ...
-create_project("", "not-a-uuid", -1)  # invalid state, detected late
+```typescript
+// Bad — constraint enforcement deferred to callers
+function createProject(name: string, ownerId: string, maxMembers: number): void { ... }
+createProject("", "not-a-uuid", -1)  // invalid state, detected late
 
-# Good — Value Objects validate at construction, fail at the boundary
-class ProjectName:
-    def __init__(self, value: str):
-        value = value.strip() if value else ""
-        if not value:
-            raise ValueError(f"ProjectName cannot be blank; got {value!r}")
-        if len(value) > 100:
-            raise ValueError(f"ProjectName exceeds 100 chars; got len={len(value)}")
-        self.value = value
+// Good — Value Objects validate at construction, fail at the boundary
+class ProjectName {
+  readonly value: string
 
-    def __eq__(self, other) -> bool:
-        return type(other) is type(self) and other.value == self.value
+  constructor(raw: string) {
+    const trimmed = raw.trim()
+    if (!trimmed) {
+      throw new Error(`ProjectName cannot be blank; got ${raw}`)
+    }
+    if (trimmed.length > 100) {
+      throw new Error(`ProjectName exceeds 100 chars; got len=${trimmed.length}`)
+    }
+    this.value = trimmed
+  }
 
-    def __hash__(self) -> int:
-        return hash(self.value)
+  equals(other: unknown): boolean {
+    return other instanceof ProjectName && other.value === this.value
+  }
+}
 ```
 
 ### Validation in Value Objects
 
 All format and constraint checks belong in the Value Object constructor — not in services, controllers, or repositories.
 
-```
-class Email:
-    def __init__(self, value: str):
-        if not value or "@" not in value:
-            raise ValueError(f"Email must contain @; got {value!r}")
-        self.value = value
+```typescript
+class Email {
+  readonly value: string
 
-class Price:
-    def __init__(self, amount: int, currency: str):
-        if amount < 0:
-            raise ValueError(f"Price amount must be >= 0; got {amount!r}")
-        if not currency or len(currency) != 3:
-            raise ValueError(f"Currency must be 3-letter ISO code; got {currency!r}")
-        self.amount = amount
-        self.currency = currency
+  constructor(value: string) {
+    if (!value || !value.includes("@")) {
+      throw new Error(`Email must contain @; got ${value}`)
+    }
+    this.value = value
+  }
+}
+
+class Price {
+  readonly amount: number
+  readonly currency: string
+
+  constructor(amount: number, currency: string) {
+    if (amount < 0) {
+      throw new Error(`Price amount must be >= 0; got ${amount}`)
+    }
+    if (!currency || currency.length !== 3) {
+      throw new Error(`Currency must be 3-letter ISO code; got ${currency}`)
+    }
+    this.amount = amount
+    this.currency = currency
+  }
+}
 ```
 
 ### Validation in entities
 
 Entities accept only pre-validated Value Objects — never raw primitives.
 
-```
-# Bad — entity re-validates raw strings; same rules duplicated in every caller
-class Project:
-    def __init__(self, name: str, owner_id: str):
-        if not name or not name.strip():
-            raise ValueError("name required")
+```typescript
+// Bad — entity re-validates raw strings; same rules duplicated in every caller
+class Project {
+  constructor(name: string, ownerId: string) {
+    if (!name || !name.trim()) {
+      throw new Error("name required")
+    }
+  }
+}
 
-# Good — entity is a composition of already-valid types; constructor adds no checks
-class Project:
-    def __init__(self, name: ProjectName, owner: UserId, price: Price):
-        self.name = name
-        self.owner = owner
-        self.price = price
+// Good — entity is a composition of already-valid types; constructor adds no checks
+class Project {
+  constructor(
+    readonly name: ProjectName,
+    readonly owner: UserId,
+    readonly price: Price
+  ) {}
+}
 ```
 
 ### First-class collections
 
 When a collection of domain objects carries a rule (max size, uniqueness, non-empty), wrap it.
 
-```
-# Bad — enforcement scattered across callers
-members: list[str] = []
-if len(members) >= max_members:
-    raise Exception("Too many members")
+```typescript
+// Bad — enforcement scattered across callers
+const members: string[] = []
+if (members.length >= maxMembers) {
+  throw new Error("Too many members")
+}
 
-# Good — rule owned by the collection type
-class MemberList:
-    def __init__(self, members: list[UserId], capacity: MaxMembers):
-        if len(members) > capacity.value:
-            raise ValueError(
-                f"MemberList exceeds capacity: {len(members)} > {capacity.value}"
-            )
-        self._members = list(members)
+// Good — rule owned by the collection type
+class MemberList {
+  private readonly members: readonly UserId[]
 
-    def add(self, member: UserId) -> "MemberList":
-        return MemberList([*self._members, member], self._capacity)
+  constructor(members: readonly UserId[], private capacity: MaxMembers) {
+    if (members.length > capacity.value) {
+      throw new Error(
+        `MemberList exceeds capacity: ${members.length} > ${capacity.value}`
+      )
+    }
+    this.members = [...members]
+  }
+
+  add(member: UserId): MemberList {
+    return new MemberList([...this.members, member], this.capacity)
+  }
+}
 ```
 
 ### Equality
 
 Value Objects compare by value, not reference. Implement structural equality.
 
-```
-# Good
-assert Email("user@example.com") == Email("user@example.com")  # True
+```typescript
+// Good — structural equality
+new Email("user@example.com").equals(new Email("user@example.com"))  // True
 
-# Bad — reference equality makes equal-value objects always unequal
-a = Email("user@example.com")
-b = Email("user@example.com")
-a == b  # False — different objects, wrong result
+// Bad — reference equality makes equal-value objects always unequal
+const a = new Email("user@example.com")
+const b = new Email("user@example.com")
+a === b  // False — different objects, wrong result
 ```
 
 ## Law of Demeter — One Dot per Line
 
 Call methods only on: itself, objects it created, objects passed as parameters, or objects it directly owns. Each extra dot couples the caller to internals it shouldn't see.
 
-```
-# Bad — caller walks through three objects
+```typescript
+// Bad — caller walks through three objects
 order.customer().address().city()
 
-# Good — ask the nearest neighbor
+// Good — ask the nearest neighbor
 order.shipping_city()
 ```
 
@@ -146,31 +174,34 @@ Bad: One class validates input, sends email, writes to the database, formats res
 
 Many instance variables signal multiple responsibilities. Use as a design signal, not a hard limit — if three variables clearly belong together and splitting would produce meaningless wrappers, keep them.
 
-```
-# Bad — four variables across two unrelated concerns
-class Order:
-    customer_name: str
-    customer_email: str
-    amount: int
-    currency: str
+```typescript
+// Bad — four variables across two unrelated concerns
+class Order {
+  customerName: string
+  customerEmail: string
+  amount: number
+  currency: string
+}
 
-# Good — composed of focused types
-class Order:
-    customer: Customer
-    price: Price
+// Good — composed of focused types
+class Order {
+  customer: Customer
+  price: Price
+}
 ```
 
 ## Tell, Don't Ask — No Getters or Setters
 
 Don't pull data out of an object to act on it externally. Tell the object to do the work itself.
 
-```
-# Bad — caller extracts state, decides, pushes result back
-if order.get_total() > 1000:
-    order.set_discount(0.1)
+```typescript
+// Bad — caller extracts state, decides, pushes result back
+if (order.getTotal() > 1000) {
+  order.setDiscount(0.1)
+}
 
-# Good — object applies its own rule
-order.apply_loyalty_discount()
+// Good — object applies its own rule
+order.applyLoyaltyDiscount()
 ```
 
 Exception: read models, DTOs, and serialization boundaries exist to carry data outward — accessors there are expected.
@@ -181,37 +212,41 @@ Exception: read models, DTOs, and serialization boundaries exist to carry data o
 
 Each method body should have at most one level of indentation. Deeper nesting signals a need for guard clauses or extraction.
 
-```
-# Bad — two levels of nesting inside the method body
-def process(order):
-    if order.is_valid():
-        if order.has_stock():
-            charge(order)
+```typescript
+// Bad — two levels of nesting inside the method body
+function process(order: Order): void {
+  if (order.isValid()) {
+    if (order.hasStock()) {
+      charge(order)
+    }
+  }
+}
 
-# Good — guard clauses flatten the path
-def process(order):
-    if not order.is_valid():
-        return
-    if not order.has_stock():
-        return
-    charge(order)
+// Good — guard clauses flatten the path
+function process(order: Order): void {
+  if (!order.isValid()) return
+  if (!order.hasStock()) return
+  charge(order)
+}
 ```
 
 ### Never use else
 
 `else` is always replaceable with an early return or a guard clause. Eliminating `else` forces the happy path to the left margin and makes error paths explicit.
 
-```
-# Bad
-def get_discount(user):
-    if user.is_premium():
-        return 0.2
-    else:
-        return 0.0
-
-# Good — early return, no else needed
-def get_discount(user):
-    if user.is_premium():
-        return 0.2
+```typescript
+// Bad
+function getDiscount(user: User): number {
+  if (user.isPremium()) {
+    return 0.2
+  } else {
     return 0.0
+  }
+}
+
+// Good — early return, no else needed
+function getDiscount(user: User): number {
+  if (user.isPremium()) return 0.2
+  return 0.0
+}
 ```

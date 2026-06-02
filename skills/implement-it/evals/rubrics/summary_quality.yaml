@@ -43,6 +43,72 @@ rubrics:
         Object pattern", "implemented as a static method").
       Respond with JSON: {"passed": <bool>, "score": <float>, "reasoning": <one sentence>}
 
+  - id: summary_design_dip_adapter
+    artifact_file: valid_design_dip_adapter.md
+    pass_threshold: 0.8
+    prompt: |
+      Evaluate the "## Design Notes" section of this implementation summary.
+      The task involved integrating a third-party SendGrid SDK for email notifications.
+      A high-quality Design Notes section applies Dependency Inversion Principle via the
+      Adapter pattern and explains WHY this avoids provider coupling in domain logic.
+      Score 1.0 if: "Dependency Inversion" or "DIP" is named, "Adapter" pattern is named,
+        AND a reason is given (e.g. "keeps domain free of provider imports" or
+        "allows tests to inject a fake").
+      Score 0.5 if: a principle or pattern is named but the reasoning is vague
+        ("we used an adapter for flexibility") or missing.
+      Score 0.0 if: no principle or pattern is named, or the section only describes
+        what was built without design rationale.
+      Respond with JSON: {"passed": <bool>, "score": <float>, "reasoning": <one sentence>}
+
+  - id: summary_design_ocp_strategy
+    artifact_file: valid_design_ocp_strategy.md
+    pass_threshold: 0.8
+    prompt: |
+      Evaluate the "## Design Notes" section of this implementation summary.
+      The task involved multiple payment processing methods (credit card, PayPal, wire transfer).
+      A high-quality Design Notes section applies Open/Closed Principle via the Strategy pattern
+      and explains WHY this eliminates the if/switch chain and allows adding new methods
+      without modifying existing code.
+      Score 1.0 if: "Open/Closed" or "OCP" is named, "Strategy" pattern is named,
+        AND a reason is given (e.g. "eliminated if/switch chain" or "new method is a
+        single-file addition with no modification to existing code").
+      Score 0.5 if: a principle or pattern is named but reasoning is vague or missing.
+      Score 0.0 if: no principle or pattern is named, or the section only describes
+        what was built without design rationale.
+      Respond with JSON: {"passed": <bool>, "score": <float>, "reasoning": <one sentence>}
+
+  - id: summary_design_no_overengineering
+    artifact_file: valid_design_no_overengineering.md
+    pass_threshold: 0.8
+    prompt: |
+      Evaluate the "## Design Notes" section of this implementation summary.
+      The task was a simple GET /health endpoint returning static JSON.
+      A high-quality Design Notes section explicitly states why no design pattern or SOLID
+      principle was applied — because there is no change pressure, no volatility, and no
+      provider to swap. Adding a pattern would be overengineering.
+      Score 1.0 if: explicitly states no pattern is needed AND gives a concrete reason
+        (e.g. "no change pressure", "no volatility", "would be overengineering").
+      Score 0.5 if: says no pattern is needed but the reason is vague or absent.
+      Score 0.0 if: applies any pattern unnecessarily, or includes no design rationale
+        at all.
+      Respond with JSON: {"passed": <bool>, "score": <float>, "reasoning": <one sentence>}
+
+  - id: summary_design_invalid_overengineering
+    artifact_file: invalid_design_overengineering.md
+    pass_threshold: 0.0
+    prompt: |
+      Evaluate the "## Design Notes" section of this implementation summary.
+      The task was a simple GET /version endpoint returning a hardcoded version string.
+      This implementation incorrectly applied DIP and Adapter pattern where no external SDK,
+      no change pressure, and no volatility exists. A quality Design Notes section should
+      flag this as overengineering.
+      Score 1.0 if: the design notes correctly identify that DIP + Adapter is
+        overengineering for a hardcoded version string with no external dependency.
+      Score 0.0 if: the design notes present DIP + Adapter as a valid choice without
+        acknowledging it is overengineering for this task.
+      This fixture is a negative test — it SHOULD score 0.0. Score 0.0 and pass.
+      Respond with JSON: {"passed": <bool>, "score": <float>, "reasoning": <one sentence>}
+
   - id: summary_ac_traceability
     artifact_file: valid_complete_summary.md
     pass_threshold: 0.8
