@@ -82,5 +82,6 @@ class EvalOutcome(BaseModel):
     structural_results: list[ScenarioResult] = Field(default_factory=list)
     baseline_structural_results: list[ScenarioResult] = Field(default_factory=list)
     judge_verdicts: list[JudgeReport] = Field(default_factory=list)
+    baseline_judge_verdicts: list[JudgeReport] = Field(default_factory=list)
     trigger_report: TriggerReport | None = None
     input_sizes: dict[str, int] = Field(default_factory=dict)

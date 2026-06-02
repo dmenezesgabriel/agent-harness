@@ -42,6 +42,7 @@ class MarkdownReportWriter:
         input_sizes: dict[str, int] | None = None,
         trigger_report: TriggerReport | None = None,
         baseline_structural_results: list[ScenarioResult] | None = None,
+        baseline_judge_verdicts: list[JudgeReport] | None = None,
     ) -> Path:
         reports_dir = evals_dir / "reports"
         reports_dir.mkdir(parents=True, exist_ok=True)
@@ -58,6 +59,7 @@ class MarkdownReportWriter:
             input_sizes=input_sizes,
             trigger_report=trigger_report,
             baseline_structural_results=baseline_structural_results,
+            baseline_judge_verdicts=baseline_judge_verdicts,
         )
         report_path.write_text("\n".join(lines), encoding="utf-8")
         return report_path
@@ -76,6 +78,7 @@ class MarkdownReportWriter:
         input_sizes: dict[str, int] | None,
         trigger_report: TriggerReport | None = None,
         baseline_structural_results: list[ScenarioResult] | None = None,
+        baseline_judge_verdicts: list[JudgeReport] | None = None,
     ) -> list[str]:
         lines = [
             f"# Eval Report: {skill_name}",
@@ -88,6 +91,9 @@ class MarkdownReportWriter:
             active_structural, baseline_structural_results
         )
         lines += MarkdownReportWriter._judge_lines(judge_verdicts)
+        lines += MarkdownReportWriter._judge_comparison_lines(
+            judge_verdicts, baseline_judge_verdicts
+        )
         lines += MarkdownReportWriter._trigger_lines(trigger_report)
         lines += MarkdownReportWriter._input_size_lines(input_sizes)
         lines += MarkdownReportWriter._pass_rate_lines(
@@ -170,6 +176,31 @@ class MarkdownReportWriter:
             icon = MarkdownReportWriter._status_icon(verdict.passed)
             lines.append(
                 f"| {verdict.rubric_id} | {verdict.score:.2f} | {icon} | {verdict.reasoning} |"
+            )
+        lines.append("")
+        return lines
+
+    @staticmethod
+    def _judge_comparison_lines(
+        judge_verdicts: list[JudgeReport],
+        baseline_judge_verdicts: list[JudgeReport] | None,
+    ) -> list[str]:
+        if not baseline_judge_verdicts:
+            return []
+        baseline_by_id = {v.rubric_id: v for v in baseline_judge_verdicts}
+        lines = [
+            "## Judge comparison",
+            "",
+            "| Rubric | Skill | Baseline | Delta |",
+            "|--------|-------|----------|-------|",
+        ]
+        for verdict in judge_verdicts:
+            baseline = baseline_by_id.get(verdict.rubric_id)
+            baseline_score = baseline.score if baseline is not None else 0.0
+            delta = verdict.score - baseline_score
+            delta_label = f"+{delta:.2f}" if delta >= 0 else f"{delta:.2f}"
+            lines.append(
+                f"| {verdict.rubric_id} | {verdict.score:.2f} | {baseline_score:.2f} | {delta_label} |"
             )
         lines.append("")
         return lines

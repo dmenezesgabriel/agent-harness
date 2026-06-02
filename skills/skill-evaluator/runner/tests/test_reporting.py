@@ -189,3 +189,81 @@ class TestMarkdownReportWriterComparison:
 
         # Assert
         assert "Baseline comparison" not in report_path.read_text(encoding="utf-8")
+
+
+class TestMarkdownReportWriterJudgeComparison:
+    def test_renders_judge_comparison_section_with_delta(self, tmp_path: Path) -> None:
+        """UT-003 / AC-002 / AC-005: judge comparison table with correct delta values."""
+        # Arrange
+        evals_dir = tmp_path / "dataviz" / "evals"
+        skill_verdicts = [
+            JudgeReport(rubric_id="palette", passed=True, score=0.9, reasoning="good")
+        ]
+        baseline_verdicts = [
+            JudgeReport(rubric_id="palette", passed=False, score=0.6, reasoning="weak")
+        ]
+
+        # Act
+        report = (
+            MarkdownReportWriter()
+            .write(
+                "dataviz",
+                evals_dir,
+                Mode.COMPARE,
+                [],
+                skill_verdicts,
+                baseline_judge_verdicts=baseline_verdicts,
+            )
+            .read_text(encoding="utf-8")
+        )
+
+        # Assert
+        assert "## Judge comparison" in report
+        assert "palette" in report
+        assert "0.90" in report
+        assert "0.60" in report
+        assert "+0.30" in report
+
+    def test_omits_judge_comparison_section_when_no_baseline_verdicts(
+        self, tmp_path: Path
+    ) -> None:
+        """UT-004 / AC-003 / FR-007: section is absent when baseline_judge_verdicts is empty."""
+        # Arrange
+        evals_dir = tmp_path / "dataviz" / "evals"
+        skill_verdicts = [
+            JudgeReport(rubric_id="palette", passed=True, score=0.9, reasoning="good")
+        ]
+
+        # Act
+        report = (
+            MarkdownReportWriter()
+            .write(
+                "dataviz",
+                evals_dir,
+                Mode.COMPARE,
+                [],
+                skill_verdicts,
+                baseline_judge_verdicts=[],
+            )
+            .read_text(encoding="utf-8")
+        )
+
+        # Assert
+        assert "## Judge comparison" not in report
+
+    def test_omits_judge_comparison_section_when_baseline_verdicts_is_none(
+        self, tmp_path: Path
+    ) -> None:
+        """FR-007: section is absent when baseline_judge_verdicts is None."""
+        # Arrange
+        evals_dir = tmp_path / "dataviz" / "evals"
+
+        # Act
+        report = (
+            MarkdownReportWriter()
+            .write("dataviz", evals_dir, Mode.COMPARE, [], [])
+            .read_text(encoding="utf-8")
+        )
+
+        # Assert
+        assert "## Judge comparison" not in report

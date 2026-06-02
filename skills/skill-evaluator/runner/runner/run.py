@@ -104,6 +104,8 @@ def _build_strategy(args: CliArgs, adapter: _EvaluationAdapter) -> EvalModeStrat
                 cast(AgentPort, adapter),
                 adapter,
                 sizer,
+                RubricJudgeRunner(),
+                cast(JudgePort, adapter),
             )
         case _:
             raise ValueError(

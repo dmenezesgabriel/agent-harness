@@ -62,6 +62,7 @@ class SkillEvaluator:
             outcome.input_sizes,
             outcome.trigger_report,
             baseline_structural_results=outcome.baseline_structural_results or None,
+            baseline_judge_verdicts=outcome.baseline_judge_verdicts or None,
         )
         print(f"\nReport: {report_path}")
         return _is_successful(outcome)

@@ -133,4 +133,5 @@ class ReportWriterPort(Protocol):
         input_sizes: dict[str, int] | None = None,
         trigger_report: TriggerReport | None = None,
         baseline_structural_results: list[ScenarioResult] | None = None,
+        baseline_judge_verdicts: list[JudgeReport] | None = None,
     ) -> Path: ...
