@@ -24,3 +24,16 @@ def has_ignored_part(relative_path: Path, extra: frozenset[str] = frozenset()) -
         has_ignored_part(Path("SKILL.md"), frozenset({"SKILL.md"}))  # True
     """
     return bool((IGNORED_VCS_BUILD_PARTS | extra) & set(relative_path.parts))
+
+
+def fixture_input_files(evals_dir: Path, limit: int) -> list[Path]:
+    """The first `limit` sorted input-prompt fixtures for a skill's eval dir.
+
+    Single definition of "which input fixtures a run invokes" so the invoker and
+    the input-size reporter always agree on the set.
+
+    Usage:
+        fixture_input_files(Path("skills/dataviz/evals"), 2)
+    """
+    inputs = sorted((evals_dir / "fixtures" / "inputs").glob("*.md"))
+    return inputs[:limit]

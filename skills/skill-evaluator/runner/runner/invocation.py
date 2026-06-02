@@ -6,6 +6,7 @@ from pathlib import Path
 
 import structlog
 
+from runner.eval_layout import fixture_input_files
 from runner.ports import AgentPort, BaselineAgentPort
 
 _log = structlog.get_logger()
@@ -88,8 +89,7 @@ class SkillInvoker:
         return baseline_dir
 
     def _input_files(self, evals_dir: Path) -> list[Path]:
-        input_files = sorted((evals_dir / "fixtures" / "inputs").glob("*.md"))
-        return input_files[: self._input_fixture_limit]
+        return fixture_input_files(evals_dir, self._input_fixture_limit)
 
     def _artifact_output_dir(
         self, artifacts_dir: Path, input_file: Path, input_files: list[Path]

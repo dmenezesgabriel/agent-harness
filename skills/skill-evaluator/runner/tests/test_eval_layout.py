@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from runner.eval_layout import has_ignored_part
+from runner.eval_layout import fixture_input_files, has_ignored_part
 
 
 class TestHasIgnoredPart:
@@ -21,3 +21,22 @@ class TestHasIgnoredPart:
         assert has_ignored_part(Path("SKILL.md"), extra) is True
         # Base set is unchanged for callers that pass no extras.
         assert has_ignored_part(Path("references/rules.md")) is False
+
+
+class TestFixtureInputFiles:
+    def test_returns_sorted_inputs_capped_at_limit(self, tmp_path: Path) -> None:
+        # Arrange
+        inputs = tmp_path / "fixtures" / "inputs"
+        inputs.mkdir(parents=True)
+        for name in ("input_b.md", "input_a.md", "input_c.md"):
+            (inputs / name).write_text("x", encoding="utf-8")
+        (inputs / "notes.txt").write_text("ignored", encoding="utf-8")
+
+        # Act
+        selected = fixture_input_files(tmp_path, limit=2)
+
+        # Assert
+        assert [path.name for path in selected] == ["input_a.md", "input_b.md"]
+
+    def test_returns_empty_when_inputs_dir_absent(self, tmp_path: Path) -> None:
+        assert fixture_input_files(tmp_path, limit=2) == []

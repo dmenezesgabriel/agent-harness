@@ -4,6 +4,7 @@ from contextlib import suppress
 from datetime import datetime
 from pathlib import Path
 
+from runner.eval_layout import fixture_input_files
 from runner.models import JudgeReport, Mode, ScenarioResult, TriggerReport
 
 _PERCENT_SCALE = 100
@@ -23,8 +24,7 @@ class SkillInputSizer:
         sizes: dict[str, int] = {}
         skill_file = evals_dir.parent / "SKILL.md"
         _measure_file(skill_file, "SKILL.md", sizes)
-        input_files = sorted((evals_dir / "fixtures" / "inputs").glob("*.md"))
-        for input_file in input_files[: self._input_fixture_limit]:
+        for input_file in fixture_input_files(evals_dir, self._input_fixture_limit):
             _measure_file(input_file, f"fixtures/inputs/{input_file.name}", sizes)
         return sizes
 
