@@ -111,7 +111,7 @@ class MarkdownReportWriter:
         return [
             "## Observability Notes",
             "",
-            "Provider/agent latency is emitted as structured `opencode_call_done` events. Evaluator overhead is emitted separately as `fixture_invocation_done`, `behave_done`, `judge_phase_done`, and `trigger_phase_done` events.",
+            "Provider/agent latency is emitted by both adapters as structured `adapter_call_done` events. Evaluator overhead is emitted separately as `fixture_invocation_done`, `behave_done`, `judge_phase_done`, and `trigger_phase_done` events.",
             "Use provider call timings for model response latency; use phase timings for evaluator throughput and orchestration overhead.",
             "",
         ]
