@@ -11,6 +11,7 @@ from typing import Literal
 
 import structlog
 
+from runner.eval_layout import is_input_artifact_dir
 from runner.models import ScenarioResult
 
 _log = structlog.get_logger()
@@ -122,9 +123,7 @@ def _summary_line(active: list[ScenarioResult], skipped: int) -> str:
 
 def _input_artifact_dirs(artifacts_dir: Path) -> list[Path]:
     return [
-        path
-        for path in sorted(artifacts_dir.iterdir())
-        if path.is_dir() and path.name.startswith("input_")
+        path for path in sorted(artifacts_dir.iterdir()) if is_input_artifact_dir(path)
     ]
 
 

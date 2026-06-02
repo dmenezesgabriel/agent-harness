@@ -11,6 +11,11 @@ from pathlib import Path
 # Version-control and build directories that are never evaluation artifacts.
 IGNORED_VCS_BUILD_PARTS = frozenset({".git", "dist", "node_modules"})
 
+# Prefix marking a per-fixture artifact subdirectory. The invoker writes these and
+# the structural runner detects them; sharing the prefix keeps the two in lockstep
+# instead of relying on input fixtures happening to be named "input_*".
+INPUT_FIXTURE_DIR_PREFIX = "input_"
+
 
 def has_ignored_part(relative_path: Path, extra: frozenset[str] = frozenset()) -> bool:
     """True when any path part is an ignored VCS/build dir or a caller-supplied extra.
@@ -37,3 +42,30 @@ def fixture_input_files(evals_dir: Path, limit: int) -> list[Path]:
     """
     inputs = sorted((evals_dir / "fixtures" / "inputs").glob("*.md"))
     return inputs[:limit]
+
+
+def fixture_artifact_dir(base: Path, input_file: Path) -> Path:
+    """Per-fixture artifact subdir whose name always carries INPUT_FIXTURE_DIR_PREFIX.
+
+    Guarantees the prefix even when the fixture stem lacks it, so is_input_artifact_dir
+    can detect the subdir regardless of how the fixture file was named.
+
+    Usage:
+        fixture_artifact_dir(Path("out"), Path("inputs/basic.md"))  # out/input_basic
+    """
+    stem = input_file.stem
+    name = (
+        stem
+        if stem.startswith(INPUT_FIXTURE_DIR_PREFIX)
+        else f"{INPUT_FIXTURE_DIR_PREFIX}{stem}"
+    )
+    return base / name
+
+
+def is_input_artifact_dir(path: Path) -> bool:
+    """True for a per-fixture artifact subdir produced by fixture_artifact_dir.
+
+    Usage:
+        is_input_artifact_dir(Path("out/input_basic"))  # True
+    """
+    return path.is_dir() and path.name.startswith(INPUT_FIXTURE_DIR_PREFIX)

@@ -1,6 +1,11 @@
 from pathlib import Path
 
-from runner.eval_layout import fixture_input_files, has_ignored_part
+from runner.eval_layout import (
+    fixture_artifact_dir,
+    fixture_input_files,
+    has_ignored_part,
+    is_input_artifact_dir,
+)
 
 
 class TestHasIgnoredPart:
@@ -40,3 +45,26 @@ class TestFixtureInputFiles:
 
     def test_returns_empty_when_inputs_dir_absent(self, tmp_path: Path) -> None:
         assert fixture_input_files(tmp_path, limit=2) == []
+
+
+class TestFixtureArtifactDir:
+    def test_keeps_already_prefixed_stem(self, tmp_path: Path) -> None:
+        result = fixture_artifact_dir(tmp_path, Path("inputs/input_basic.md"))
+        assert result == tmp_path / "input_basic"
+
+    def test_adds_prefix_when_stem_lacks_it(self, tmp_path: Path) -> None:
+        result = fixture_artifact_dir(tmp_path, Path("inputs/basic.md"))
+        assert result == tmp_path / "input_basic"
+
+
+class TestIsInputArtifactDir:
+    def test_detects_prefixed_dir(self, tmp_path: Path) -> None:
+        prefixed = tmp_path / "input_basic"
+        prefixed.mkdir()
+        assert is_input_artifact_dir(prefixed) is True
+
+    def test_rejects_unprefixed_or_missing_dir(self, tmp_path: Path) -> None:
+        plain = tmp_path / "basic"
+        plain.mkdir()
+        assert is_input_artifact_dir(plain) is False
+        assert is_input_artifact_dir(tmp_path / "input_absent") is False

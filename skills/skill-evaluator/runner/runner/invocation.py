@@ -6,7 +6,7 @@ from pathlib import Path
 
 import structlog
 
-from runner.eval_layout import fixture_input_files
+from runner.eval_layout import fixture_artifact_dir, fixture_input_files
 from runner.ports import AgentPort, BaselineAgentPort
 
 _log = structlog.get_logger()
@@ -96,7 +96,7 @@ class SkillInvoker:
     ) -> Path:
         if len(input_files) == 1:
             return artifacts_dir
-        return artifacts_dir / input_file.stem
+        return fixture_artifact_dir(artifacts_dir, input_file)
 
     def _reset_generated_artifacts_dir(self, generated_dir: Path) -> None:
         if generated_dir.exists():
