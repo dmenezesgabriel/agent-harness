@@ -22,11 +22,16 @@ rubrics:
       Evaluate whether this task avoids bureaucratic padding and duplicated content.
       Good plan-it output uses each section for a distinct purpose: Context explains why,
       Use Cases describe who/when, Requirements define what must be true, Acceptance Criteria
-      define observable pass/fail outcomes, and Tests verify specific risks or requirements.
-      Score 1.0 if sections are distinct and concise.
-      Score 0.7 if there is minor overlap but no copy-paste duplication.
-      Score 0.4 if multiple sections repeat the same sentences or tests mirror every acceptance criterion mechanically.
-      Score 0.0 if the task is mostly duplicated boilerplate.
+      define observable pass/fail outcomes, and the Risk Assessment table and test subsections
+      verify specific risks or requirements.
+      Score 1.0 if the risk assessment table shows every category with a specific,
+      task-bound reason for inclusion or exclusion, and active test subsections are
+      distinct from requirements and acceptance criteria.
+      Score 0.7 if one or two reasons are generic or there is minor content overlap.
+      Score 0.4 if multiple reasons are tautological or copy-paste across categories,
+      or if active test entries mechanically mirror acceptance criteria.
+      Score 0.0 if the risk assessment section is missing, all reasons are identical,
+      or the task is mostly duplicated boilerplate.
       Respond with JSON: {"passed": <bool>, "score": <float>, "reasoning": <one sentence citing artifact evidence>}
 
   - id: generated_tests_are_risk_scoped
@@ -35,10 +40,14 @@ rubrics:
       extensions: [".md"]
       path_patterns: ["tasks/issues/*.md"]
     prompt: |
-      Evaluate whether the Required Tests section, or any equivalent testing section, chooses the smallest meaningful test set for the task.
-      Score 1.0 if tests are tied to real behavior, risks, requirements, or acceptance criteria, and irrelevant
-      categories are marked Not applicable with specific reasons.
-      Score 0.7 if test choices are mostly justified but one category is overbroad or underexplained.
-      Score 0.4 if broad tests such as E2E, performance, security, or observability are added by default.
-      Score 0.0 if tests are generic, missing, or impossible to run headlessly.
+      Evaluate whether the Required Tests section's risk assessment and test specifications
+      choose the smallest meaningful test set for the task.
+      Score 1.0 if selected tests are tied to specific risks, requirements, or acceptance
+      criteria, and the risk assessment shows a considered Yes/No for every category with
+      a task-specific reason.
+      Score 0.7 if test choices are mostly justified but one category is overbroad or
+      the exclusion reason is tautological.
+      Score 0.4 if broad tests such as E2E, performance, security, or observability are
+      selected without a risk justification, or multiple exclusion reasons are generic.
+      Score 0.0 if tests are generic, missing, or the risk assessment table is absent.
       Respond with JSON: {"passed": <bool>, "score": <float>, "reasoning": <one sentence citing artifact evidence>}

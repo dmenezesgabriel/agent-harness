@@ -21,8 +21,6 @@ _VAGUE_DEPENDENCY = re.compile(
     r"Depends on other tasks|Needs some setup)\.?$",
     re.IGNORECASE | re.MULTILINE,
 )
-_NOT_APPLICABLE = re.compile(r"Not applicable\s+—\s+([^.\n]+)", re.IGNORECASE)
-
 _REQUIRED_FRONTMATTER_FIELDS = {"id", "created", "updated", "status"}
 _REQUIRED_SECTIONS = [
     "## Priority",
@@ -38,7 +36,26 @@ _REQUIRED_SECTIONS = [
     "## Required Tests",
     "## Definition of Done",
 ]
-_GENERIC_NOT_APPLICABLE_REASONS = {"n/a", "none", "not needed", "not relevant"}
+_RISK_TABLE_HEADER = re.compile(r"^\| Category \| Required \| Reason \|$", re.MULTILINE)
+_RISK_TABLE_ROW = re.compile(
+    r"^\|\s*(.+?)\s*\|\s*(Yes|No)\s*\|\s*(.+?)\s*\|$", re.MULTILINE
+)
+_KNOWN_TEST_CATEGORIES = frozenset(
+    {
+        "Unit Tests",
+        "Integration Tests",
+        "Smoke Tests",
+        "End-to-End Tests",
+        "Regression Tests",
+        "Performance Tests",
+        "Security Tests",
+        "Usability Tests",
+        "Observability Tests",
+    }
+)
+_GENERIC_RISK_REASONS = frozenset(
+    {"n/a", "none", "not needed", "not relevant", "no risk"}
+)
 
 
 class PlanContext(Protocol):
@@ -161,12 +178,33 @@ def step_concrete_dependencies(context: PlanContext) -> None:
 def step_risk_scoped_tests(context: PlanContext) -> None:
     for filename, content in _issue_files(context).items():
         test_section = _section_body(content, "## Required Tests")
-        assert _TEST_ID.search(test_section), f"{filename} has no stable test IDs"
-        for reason in _NOT_APPLICABLE.findall(test_section):
+
+        assert _RISK_TABLE_HEADER.search(test_section), (
+            f"{filename} missing Risk Assessment table header in Required Tests section"
+        )
+
+        rows = _RISK_TABLE_ROW.findall(test_section)
+        found = {row[0].strip() for row in rows}
+        missing = _KNOWN_TEST_CATEGORIES - found
+        assert not missing, (
+            f"{filename} Risk Assessment missing categories: {sorted(missing)}"
+        )
+
+        for category_name, selected, reason in rows:
+            name = category_name.strip()
             normalized = reason.strip().lower().rstrip(".")
-            assert normalized not in _GENERIC_NOT_APPLICABLE_REASONS, (
-                f"{filename} has generic Not applicable reason: {reason!r}"
+            assert normalized not in _GENERIC_RISK_REASONS, (
+                f"{filename} has generic risk reason for {name!r}: {reason!r}"
             )
+            if selected == "Yes":
+                subsection = _section_body(content, f"### {name}")
+                assert _TEST_ID.search(subsection), (
+                    f"{filename} category {name!r} is marked Required but has no test IDs"
+                )
+
+        assert _TEST_ID.search(test_section), (
+            f"{filename} has no stable test IDs in Required Tests"
+        )
 
 
 @then("architecture planning output includes an ADR stub when required")
