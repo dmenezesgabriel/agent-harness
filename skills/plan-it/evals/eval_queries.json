@@ -1,0 +1,87 @@
+{
+  "description": "Trigger accuracy queries for the plan-it skill. Tests that plan-it fires for concrete planning, task breakdown, sequencing, and task-file requests, and stays silent for implementation, review, exploratory, or single-fix requests.",
+  "should_trigger": [
+    {
+      "query": "plan the work to add project invitations and create task files",
+      "note": "explicit planning request plus task files"
+    },
+    {
+      "query": "break this feature down into implementation tasks with acceptance criteria",
+      "note": "breakdown into implementation tasks"
+    },
+    {
+      "query": "create tasks for migrating our notifications to a provider-agnostic port",
+      "note": "task creation with possible ADR"
+    },
+    {
+      "query": "what's the plan for adding checkout, payment retries, and receipt emails?",
+      "note": "asks for implementation plan"
+    },
+    {
+      "query": "sequence the catalog, cart, and checkout work into self-contained stories",
+      "note": "sequencing request"
+    },
+    {
+      "query": "prepare work items for the dashboard analytics feature",
+      "note": "prepare work items"
+    },
+    {
+      "query": "turn this product spec into tasks/issues with requirements and tests",
+      "note": "task-file output request"
+    },
+    {
+      "query": "scope the implementation for role-based project permissions",
+      "note": "implementation scoping"
+    },
+    {
+      "query": "I need a sequenced plan before we start coding the billing feature",
+      "note": "sequenced plan before coding"
+    },
+    {
+      "query": "create an implementation backlog for user onboarding",
+      "note": "implementation backlog"
+    }
+  ],
+  "should_not_trigger": [
+    {
+      "query": "implement the task in tasks/issues/001-create-project.md",
+      "note": "implementation request belongs to implement-it"
+    },
+    {
+      "query": "review this pull request for auth bugs",
+      "note": "review request"
+    },
+    {
+      "query": "how does the project invitation flow work today?",
+      "note": "exploratory question"
+    },
+    {
+      "query": "fix the typo in the settings page heading",
+      "note": "single-line fix"
+    },
+    {
+      "query": "debug why the checkout test fails",
+      "note": "debugging, not planning"
+    },
+    {
+      "query": "what are the pros and cons of PostgreSQL vs MongoDB?",
+      "note": "open-ended architecture question"
+    },
+    {
+      "query": "summarize the API routes in this repository",
+      "note": "documentation/explanation request"
+    },
+    {
+      "query": "add a dark mode toggle and run the tests",
+      "note": "direct implementation request"
+    },
+    {
+      "query": "validate that the previous task was implemented correctly",
+      "note": "review/validation request"
+    },
+    {
+      "query": "make a quick prototype of the upload form without formal task structure",
+      "note": "prototype explicitly excluded"
+    }
+  ]
+}

@@ -1,0 +1,44 @@
+rubrics:
+  - id: generated_task_executability
+    artifact_file: _generated_artifacts_primary_
+    artifact_selector:
+      extensions: [".md"]
+      path_patterns: ["tasks/issues/*.md"]
+    prompt: |
+      Evaluate whether this generated plan task is executable by an autonomous coding agent.
+      Score 1.0 if it contains concrete context, explicit dependencies, functional requirements,
+      acceptance criteria, required tests, and a clear AFK/HITL assignability reason.
+      Score 0.7 if one of those elements is weak but the task is still implementable without guessing.
+      Score 0.4 if two or more elements are vague, generic, or require unstated product decisions.
+      Score 0.0 if the task is mostly a checklist, placeholder text, or cannot be implemented safely.
+      Respond with JSON: {"passed": <bool>, "score": <float>, "reasoning": <one sentence citing artifact evidence>}
+
+  - id: generated_no_bureaucratic_padding
+    artifact_file: _generated_artifacts_primary_
+    artifact_selector:
+      extensions: [".md"]
+      path_patterns: ["tasks/issues/*.md"]
+    prompt: |
+      Evaluate whether this task avoids bureaucratic padding and duplicated content.
+      Good plan-it output uses each section for a distinct purpose: Context explains why,
+      Use Cases describe who/when, Requirements define what must be true, Acceptance Criteria
+      define observable pass/fail outcomes, and Tests verify specific risks or requirements.
+      Score 1.0 if sections are distinct and concise.
+      Score 0.7 if there is minor overlap but no copy-paste duplication.
+      Score 0.4 if multiple sections repeat the same sentences or tests mirror every acceptance criterion mechanically.
+      Score 0.0 if the task is mostly duplicated boilerplate.
+      Respond with JSON: {"passed": <bool>, "score": <float>, "reasoning": <one sentence citing artifact evidence>}
+
+  - id: generated_tests_are_risk_scoped
+    artifact_file: _generated_artifacts_primary_
+    artifact_selector:
+      extensions: [".md"]
+      path_patterns: ["tasks/issues/*.md"]
+    prompt: |
+      Evaluate whether the Required Tests section, or any equivalent testing section, chooses the smallest meaningful test set for the task.
+      Score 1.0 if tests are tied to real behavior, risks, requirements, or acceptance criteria, and irrelevant
+      categories are marked Not applicable with specific reasons.
+      Score 0.7 if test choices are mostly justified but one category is overbroad or underexplained.
+      Score 0.4 if broad tests such as E2E, performance, security, or observability are added by default.
+      Score 0.0 if tests are generic, missing, or impossible to run headlessly.
+      Respond with JSON: {"passed": <bool>, "score": <float>, "reasoning": <one sentence citing artifact evidence>}

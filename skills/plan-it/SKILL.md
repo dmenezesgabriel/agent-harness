@@ -1,84 +1,134 @@
 ---
 name: plan-it
-description: Creates a sequenced implementation plan as self-contained task files with requirements, acceptance criteria, tests, and ADR stubs. Use when the user asks to plan, break down, scope, sequence, or prepare work — or says "plan this", "create tasks", "break this down", or "what's the plan".
+description: Creates a sequenced implementation plan as self-contained task files with requirements, acceptance criteria, tests, and ADR stubs. Use when the user asks to plan, break down, scope, sequence, create tasks, or prepare work — or says "plan this", "create tasks", "break this down", or "what's the plan". Do not use for implementing, coding, building, fixing, completing, refactoring, debugging, reviewing, validating completed work, explaining existing code, or prototype-only requests; implementation verbs must skip even when a task file is mentioned.
 compatibility: Designed for Claude Code. Requires bash for script execution and a git repository for project context.
 metadata:
   domain: software-planning
   version: "1.0"
 ---
 
-Create an implementation plan with _one or more tasks_.
+Create one or more self-contained implementation task files.
 
-Each task must be short, concrete, testable, and self-contained.
-Do not create artificial tiny tasks.
-Do not create bureaucratic sections with duplicated content.
+Method: enforce exact templates, guide with decision gates, measure before final response.
 
-## When NOT to use this skill
+When planning is requested, create files. A prose-only plan is a failed output. Use the file-writing tool to write each task file. Every task file path must start with `tasks/issues/`; every ADR file path must start with `docs/adrs/`. Root-level Markdown files are failed output.
 
-Do not use plan-it when:
+## Required workflow
 
-- The request is exploratory or vague — the problem must be defined before planning.
-- The user wants a quick prototype or spike without formal task structure.
-- The work is a single-line bug fix with no dependencies or architectural implications.
-- The user is asking a question or reviewing existing work, not requesting a plan.
-- An implementation is already underway and only code changes are needed.
+1. Read `CONTEXT.md` if present; use its vocabulary.
+2. Inspect before asking; delegate broad discovery when useful.
+3. Ask only sequencing blockers, one numbered question at a time, with one `(recommended)` option.
+4. Plan cohesive tracer-bullet tasks; no artificial splits or horizontal-only layers.
+5. Keep irreversible decisions open until a task depends on them.
+6. Write issue files in `tasks/issues/` with `assets/task-template.md` exactly.
+7. Write ADR stubs in `docs/adrs/` only when the ADR gate requires one.
+8. Update `CONTEXT.md` only for newly defined or clarified domain terms.
+9. Do not write `PLAN_SUMMARY.md` as a substitute for issue files.
 
-## Core workflow
+## Decision schemas
 
-1. If `CONTEXT.md` exists at the project root, read it to load the project's domain vocabulary. Use this vocabulary consistently in all task names, requirements, and acceptance criteria.
-2. Identify unresolved decisions, hidden assumptions, and missing constraints. If an assumption blocks sequencing, ask one question at a time with numbered alternatives (one marked `recommended`) until resolved — inspect the codebase before asking, delegating exploration to a sub-agent if needed. If scope changes mid-planning, stop and clarify before continuing. See [planning-rules.md — Planning clarification rule](references/planning-rules.md#planning-clarification-rule) for the full decision tree.
-3. Clarify only what cannot be discovered from the codebase. Inspect first; ask only what inspection cannot answer.
-4. Prefer tracer-bullet vertical slices over horizontal layer work. (See [planning-rules.md — Tracer-bullet planning](references/planning-rules.md#tracer-bullet-planning).)
-5. Keep irreversible architecture decisions open as long as practical. (See [planning-rules.md — Keep decisions open](references/planning-rules.md#keep-decisions-open).)
-6. Identify whether any task requires an ADR stub. If yes, read [adr-rules.md](references/adr-rules.md) before writing the stub.
-7. Create prioritized tasks with dependencies and enough context to execute. Read [planning-rules.md — Priority and Dependencies](references/planning-rules.md#priority) for priority and dependency guidance.
-8. Select test types. Read [test-selection.md](references/test-selection.md) before choosing unit, integration, smoke, E2E, regression, performance, security, usability, or observability tests.
-9. Evaluate diagram merit for each task. Include a Mermaid diagram in the task's Context section only when the trigger condition is met: the relationship or flow cannot be expressed in ≤3 bullet points, or ≥3 components interact. Read [diagram-rules.md](references/diagram-rules.md) for diagram type selection, placement, and formatting.
-10. Define requirements, acceptance criteria, and observability. If two requirements contradict each other, flag the conflict explicitly in the task under "Unresolved assumptions" — do not silently pick one interpretation. (See [planning-rules.md — Task sections](references/planning-rules.md#task-sections).)
-11. Classify each task as **AFK** (can be completed autonomously by an agent without human review) or **HITL** (requires human involvement at a named decision point — state the decision). Read [planning-rules.md — HITL/AFK classification](references/planning-rules.md#hitlafk-classification) for criteria.
-12. Write one Markdown issue file per task in `tasks/issues/`. Read [output-files.md](references/output-files.md) for naming conventions. Use [assets/task-template.md](assets/task-template.md) as the exact structure.
-13. Write ADR stubs in `docs/adrs/` only when architecture decisions are needed. Use [assets/adr-template.md](assets/adr-template.md) as the exact structure.
-14. If domain terms were defined or clarified during planning, add them to `CONTEXT.md` at the project root using the format in [assets/context-template.md](assets/context-template.md).
+Use these gates. Do not continue past a failed gate.
 
-## Output files
-
-Create one issue file per task in `tasks/issues/` and one ADR stub per decision in `docs/adrs/`.
-
-```bash
-mkdir -p tasks/issues docs/adrs
+```text
+planning-readiness:
+  reject: vague | prototype | single-line-fix | question | review | implementation-underway
+  inspect: any missing fact the repo can answer
+  ask: only blockers to sequencing or acceptance criteria
+  unavailable_repo_fact: record as assumption, dependency, or prerequisite discovery task; still create issue files
+  pass: create task files
 ```
 
-See [output-files.md](references/output-files.md) for numbering, naming, and ordering rules.
+```text
+plan-it-routing:
+  invoke: plan | break down | sequence | create tasks | scope implementation | prepare work
+  skip: implement | code | build | fix | complete | refactor | debug | review | validate implementation | explain existing code | quick prototype
+```
 
-## Before marking complete
+```text
+task-shape:
+  for each task:
+    required: cohesive | concrete | testable | self-contained | system-remains-functional
+    order: dependency before priority preference
+    dependencies: always include at least one `- ` bullet; use `- No task dependency; ...` only when truly independent
+    dependencies: implementation tasks that use prior work must name those prior task IDs or ADR IDs
+    assignability: AFK or HITL with specific reason
+    HITL: only for the human decision or discovery; do not include blocked implementation requirements in the same task
+    sections: no duplicated wording across sections
+```
+
+```text
+issue-file-contract:
+  path: tasks/issues/NNN-kebab-slug.md
+  prefix: exactly three digits, starting from the issue counter
+  frontmatter: id | created | updated | status=active
+  headings: use assets/task-template.md exactly
+  forbidden: root-level issue files | PLAN_SUMMARY.md as substitute | alternate sections | four-digit issue prefixes | Pending status
+  required_output: at least one task issue file; never create only metadata files such as `.gitignore`
+```
+
+If `assets/task-template.md` is unavailable, enforce this inline task schema exactly:
+
+```text
+task-template-headings:
+  frontmatter: id, created, updated, status
+  title: "# Task: <clear task name>"
+  sections:
+    ## Priority
+    ## Dependencies
+    ## Assignability
+    ## Context
+    ## Use Cases
+    ## Definition of Ready
+    ## Functional Requirements
+    ## Non-Functional Requirements
+    ## Observability Requirements
+    ## Acceptance Criteria
+    ## Required Tests
+    ## Definition of Done
+  id-rules:
+    IDs must be wrapped in backticks exactly as shown: `FR-001`, `NFR-001`, `OBS-001`, `AC-001`, `UT-001`
+    Functional Requirements: at least one backticked `FR-001` entry
+    Non-Functional Requirements: at least one backticked `NFR-001` entry or `NFR-001: Not applicable — <specific reason>`
+    Observability Requirements: at least one backticked `OBS-001` entry or `OBS-001: Not applicable — <specific reason>`
+    Acceptance Criteria: at least one backticked `AC-001` entry
+    Required Tests: stable backticked test IDs such as `UT-001`, `IT-001`, or `SMK-001`
+  assignability:
+    The Assignability section must contain exactly one explicit line shaped `**AFK** — <specific reason>` or `**HITL** — <specific human decision point>`.
+    If HITL is needed, create a separate decision/discovery task first, then make implementation tasks depend on it.
+    Do not mark implementation tasks HITL because repo facts are unknown; inspect the repo or create a prerequisite discovery task.
+  syntax:
+    Do not leave angle-bracket placeholders such as `<name>` in generated files.
+    If the target language is unknown, describe signatures in prose; do not use language-specific generic syntax with `<...>`.
+```
+
+```text
+decision-output:
+  ADR: create only for hard-to-reverse or architecture-level decisions; link from dependent tasks
+  diagram: include only when flow needs >3 bullets or 3+ components interact
+  tests: choose by real risk; otherwise mark Not applicable with a specific reason
+```
+
+## Lazy references
+
+Load only what the current gate needs:
+- [planning-rules.md](references/planning-rules.md): splitting, sequencing, priority, AFK/HITL, clarification.
+- [adr-rules.md](references/adr-rules.md): possible ADR.
+- [test-selection.md](references/test-selection.md): required tests or not-applicable reasons.
+- [diagram-rules.md](references/diagram-rules.md): possible Mermaid diagram.
+- [output-files.md](references/output-files.md): file numbering, naming, and ordering before writing.
+- [assets/task-template.md](assets/task-template.md), [assets/adr-template.md](assets/adr-template.md), [assets/context-template.md](assets/context-template.md): exact schemas.
+
+## Completion checks
 
 - [ ] Every issue file in `tasks/issues/` has no empty required sections
+- [ ] Every issue file uses `tasks/issues/NNN-kebab-slug.md` with a three-digit prefix
+- [ ] Every issue file uses exact headings and frontmatter from `assets/task-template.md`
 - [ ] Task numbering reflects dependency order (no task numbered before one it depends on)
 - [ ] ADR stubs exist for every task that depends on an architectural decision
 - [ ] Each task has an AFK or HITL classification with a named reason
+- [ ] Tests match risk; irrelevant categories say `Not applicable — <specific reason>`
 - [ ] `CONTEXT.md` updated if domain terms were defined or clarified
-
-## If output fails
-
-If files cannot be created:
-- Verify the directory exists: `ls -ld tasks/issues/` — if not, run `mkdir -p tasks/issues`
-- Report the error and propose an alternative output location if needed.
-
-## Anti-patterns to avoid
-
-**Scope and composition**: Do not artificially split atomic work, duplicate content across sections (Context explains *why*, Use Cases describe *who/when*, Requirements define *what must be true*), or bundle a change with its validation step. Each task must leave the system fully functional — no task may remove behavior without replacing it in the same task.
-
-**Inspect before asking; order by blocker**: Never ask the requester for information the codebase can answer. Inspect first. Dependency order takes precedence — a task that unblocks others must be numbered first.
-
-**Right-size tests and decisions**: Mark a test category applicable only when the task genuinely requires it. Create an ADR only for decisions that are hard to reverse, cross-cutting, or architecture-level — not routine implementation details.
 
 ## Final response
 
-After creating the files, summarize:
-
-- created issue files
-- created ADR files, if any
-- task order
-- ADR dependencies, if any
-- unresolved assumptions, if any
-- tests intentionally marked not applicable
+After creating files, summarize created issue files, created ADR files, task order, ADR dependencies, unresolved assumptions, and tests intentionally marked not applicable.
