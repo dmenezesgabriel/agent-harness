@@ -111,7 +111,7 @@ task-template-headings:
     Non-Functional Requirements: at least one backticked `NFR-001` entry or `NFR-001: Not applicable — <specific reason>`
     Observability Requirements: at least one backticked `OBS-001` entry or `OBS-001: Not applicable — <specific reason>`
     Acceptance Criteria: at least one backticked `AC-001` entry
-    Required Tests: stable backticked test IDs such as `UT-001`, `IT-001`, or `SMK-001`
+    Required Tests: risk assessment table covering every category (Unit, Integration, Smoke, E2E, Regression, Performance, Security, Usability, Observability); each has `risk_present` (Yes/No) and a task-specific reason; categories with `risk_present: Yes` get their own subsection with test entries
   assignability:
     The Assignability section must contain exactly one explicit line shaped `**AFK** — <specific reason>` or `**HITL** — <specific human decision point>`.
     If HITL is needed, create a separate decision/discovery task first, then make implementation tasks depend on it.

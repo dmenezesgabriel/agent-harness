@@ -135,117 +135,52 @@ Example:
 
 Choose the smallest meaningful test set for this task.
 Do not create tests only to satisfy a category.
-If a category is not relevant, write `Not applicable — <specific reason>`.
+Assess every category explicitly. If a category is not relevant,
+mark it as not required with a specific, task-bound reason.
+
+### Risk Assessment
+
+| Category | Required | Reason if not required |
+|----------|----------|-----------------------|
+| Unit | (Yes / No) | <specific reason> |
+| Integration | (Yes / No) | <specific reason> |
+| Smoke | (Yes / No) | <specific reason> |
+| End-to-End | (Yes / No) | <specific reason> |
+| Regression | (Yes / No) | <specific reason> |
+| Performance | (Yes / No) | <specific reason> |
+| Security | (Yes / No) | <specific reason> |
+| Usability | (Yes / No) | <specific reason> |
+| Observability | (Yes / No) | <specific reason> |
+
+The assessment table must cover every category above. Each excluded
+category must cite a task-specific reason (not a generic "n/a").
+
+### [Category selected as Required above]
+
+- `<ID>`: <description>. Covers `<FR/AC/Risk ID>`.
+
+Example for Unit Tests:
 
 ### Unit Tests
 
-- `UT-001`: <isolated rule, function, validator, mapper, permission, reducer, hook, or component test>. Covers `<FR/AC/Risk ID>`.
-- `UT-002`: Not applicable — <specific reason>.
-
-Example:
 - `UT-001`: Validate that `project.name` accepts 1–80 characters. Covers `FR-002`.
+
+Example for Integration Tests:
 
 ### Integration Tests
 
-Use Gherkin when applicable.
-
-- `IT-001`: **Scenario**: <boundary behavior being verified>  
-  **Given** <realistic system state>  
-  **When** <API/service/repository action happens>  
-  **Then** <persistent or integration result is verified>  
-  **And** <response, event, queue message, or side effect is verified>  
-  Covers `<FR/AC/Risk ID>`.
-
-Example:
 - `IT-001`: **Scenario**: Project is persisted through the API  
   **Given** a signed-in user with ID `user-123`  
-  **When** they call `POST /projects` with name “Acme Migration”  
+  **When** they call `POST /projects` with name "Acme Migration"  
   **Then** the database stores `name`, `description`, and `ownerId`  
   **And** the API returns `201`  
   Covers `FR-001`, `AC-001`.
 
-### Smoke Tests
-
-Use only for critical build, deploy, startup, or shallow availability checks.
-
-- `SMK-001`: **Scenario**: <critical path starts or loads>  
-  **Given** <minimal valid state>  
-  **When** <critical page, command, endpoint, or service starts>  
-  **Then** <it loads, responds, or completes without crash>  
-  Covers `<release confidence or critical path>`.
-
-Example:
-- `SMK-001`: **Scenario**: Dashboard loads after deployment  
-  **Given** a signed-in user exists  
-  **When** the user opens the dashboard  
-  **Then** the dashboard loads without a client-side crash  
-  Covers release confidence for `FR-001`.
-
-### End-to-End Tests
-
-Use only for complete critical user journeys.
-
-- `E2E-001`: **Scenario**: <complete user journey>  
-  **Given** <realistic user state>  
-  **When** <user completes the journey through the app UI>  
-  **Then** <final user-visible result is shown>  
-  Covers `<FR/AC/Risk ID>`.
-
-Example:
-- `E2E-001`: **Scenario**: User creates a project from the dashboard  
-  **Given** a signed-in user is on the dashboard  
-  **When** they create a project named “Acme Migration”  
-  **Then** “Acme Migration” appears in the project list  
-  Covers `FR-001`, `AC-001`.
-
-### Regression Tests
-
-Use only when preventing a known previous defect.
-
-- `REG-001`: **Scenario**: <previous defect does not return>  
-  **Given** <state that previously failed>  
-  **When** <previous failure action happens>  
-  **Then** <fixed behavior remains correct>  
-  Covers previous defect `<BUG-ID>`.
-
-Example:
-- `REG-001`: **Scenario**: Duplicate invitation still shows a clear error  
-  **Given** `bruno@company.com` already has a pending invitation  
-  **When** Ana invites `bruno@company.com` again  
-  **Then** the form shows “Member already invited”  
-  Covers previous defect `BUG-123`.
-
-### Performance Tests
-
-- `PT-001`: <measurable latency, throughput, memory, rendering, or concurrency test>. Covers `<NFR/Risk ID>`.
-- `PT-002`: Not applicable — <specific reason>.
-
-Example:
-- `PT-001`: Run normal-load project creation and verify `POST /projects` stays under 300 ms p95. Covers `NFR-001`.
+Example for Security Tests:
 
 ### Security Tests
 
-- `ST-001`: <authorization, authentication, input handling, data exposure, secrets, injection, abuse, or trust-boundary test>. Covers `<FR/AC/Risk ID>`.
-- `ST-002`: Not applicable — <specific reason>.
-
-Example:
-- `ST-001`: Attempt to update another user’s project and verify the API returns `403`. Covers `AC-004`.
-
-### Usability Tests
-
-- `UX-001`: <clarity, accessibility, validation placement, empty state, loading state, or error recovery test>. Covers `<AC/Risk ID>`.
-- `UX-002`: Not applicable — <specific reason>.
-
-Example:
-- `UX-001`: Submit an empty project form and verify errors appear next to `name` and `description`. Covers `AC-002`.
-
-### Observability Tests
-
-- `OT-001`: <log, metric, trace, analytics event, correlation ID, or sensitive-data exclusion test>. Covers `<OBS ID>`.
-- `OT-002`: Not applicable — <specific reason>.
-
-Example:
-- `OT-001`: Create a project and verify the log contains `projectId`, `ownerId`, request ID, and success result. Covers `OBS-001`.
+- `ST-001`: Attempt to update another user's project and verify the API returns `403`. Covers `AC-004`.
 
 ## Definition of Done
 
