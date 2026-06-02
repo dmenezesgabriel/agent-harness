@@ -83,6 +83,8 @@ _BACKGROUND_COLOR_VALUE = re.compile(
     # Chart.js: backgroundColor: "#..." or backgroundColor: [...]
     r"backgroundColor\s*:\s*"
     r'(?:["\'](?:#[0-9a-fA-F]{3,8}|rgba?\([^)]+\)|hsla?\([^)]+\)|[a-z]+)["\']|\[)'
+    # Explicit palette variable: const palette = ["#..."]; backgroundColor: palette[0]
+    r"|backgroundColor\s*:\s*palette\[\d+\]"
     # Plotly / Vega-Lite / general: color/borderColor/stroke/fill/plot_bgcolor/paper_bgcolor: "#..."
     r'|(?:border[Cc]olor|stroke|fill|color|plot_bgcolor|paper_bgcolor|[A-Za-z_]+[Cc]olor)\s*:\s*["\']#[0-9a-fA-F]{3,8}["\']'
     # Any JS object value that is a bare hex literal: someKey: "#aabbcc"
@@ -113,6 +115,7 @@ _VIZ_KEYWORDS = re.compile(
 
 # File extensions that can carry a visualization, in preference order
 _VIZ_EXTENSIONS = (".html", ".js", ".jsx", ".tsx", ".py", ".ipynb", ".json")
+_IGNORED_ARTIFACT_NAMES = frozenset({"package.json", "package-lock.json"})
 
 
 @given("the dataviz artifact set is loaded")
@@ -201,7 +204,9 @@ def step_has_chart_artifact(context: ChartContext) -> None:
     chart_files = [
         k
         for k, v in context.artifacts.items()
-        if any(k.endswith(ext) for ext in _VIZ_EXTENSIONS) and _VIZ_KEYWORDS.search(v)
+        if any(k.endswith(ext) for ext in _VIZ_EXTENSIONS)
+        and _is_candidate_chart_artifact(k)
+        and _VIZ_KEYWORDS.search(v)
     ]
     has_chart_in_output = bool(
         _VIZ_KEYWORDS.search(context.artifacts.get("output.txt", ""))
@@ -219,6 +224,8 @@ def step_load_generated_artifact(context: ChartContext) -> None:
     for key, content in context.artifacts.items():
         if not any(key.endswith(ext) for ext in _VIZ_EXTENSIONS):
             continue
+        if not _is_candidate_chart_artifact(key):
+            continue
         if not _VIZ_KEYWORDS.search(content):
             continue
         if len(content) > best_size:
@@ -235,6 +242,10 @@ def step_load_generated_artifact(context: ChartContext) -> None:
     raise AssertionError(
         f"No chart artifact found in live output; available: {sorted(context.artifacts)}"
     )
+
+
+def _is_candidate_chart_artifact(filename: str) -> bool:
+    return filename.rsplit("/", 1)[-1] not in _IGNORED_ARTIFACT_NAMES
 
 
 @then("the chart type is appropriate for its labels")

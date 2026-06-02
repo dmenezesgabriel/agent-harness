@@ -7,9 +7,7 @@ metadata:
   version: "1.3"
 ---
 
-Build effective, well-designed dashboards from data. Follow the phases in order: understand the story first, inspect the data, then build.
-
-Do not start generating charts immediately. Do not pick a chart type before inspecting the data.
+Build effective, well-designed dashboards from data. Enforce output contracts, guide chart decisions with gates, and measure the artifact before finishing.
 
 ## When NOT to use this skill
 
@@ -27,6 +25,32 @@ Do not start generating charts immediately. Do not pick a chart type before insp
 5. **Phase 4 — Build**: Apply F-pattern layout and design rules. Ask for theme before generating code.
 6. **Phase 5 — Review**: Run the review checklist with the user. Make targeted adjustments only.
 7. **Interactivity**: Suggest 1–2 global filters once the base dashboard is solid.
+
+## Decision gates
+
+Do not continue past a failed gate.
+
+```text
+dataviz-routing:
+  invoke: visualize | chart | graph | plot | dashboard | show trends | compare categories | tell a story with data
+  skip: code-only chart bug | exploratory data analysis without visualization | spreadsheet formula edit | static Figma/Illustrator infographic
+```
+
+```text
+build-readiness:
+  if chart-selection-only: walk decision tree and stop before building
+  if story missing: ask one story question
+  if data not inspected: inspect data before selecting charts
+  if chart plan not approved: present plan table before building
+  if theme missing: ask for theme preference before code generation
+```
+
+```text
+chart-output-contract:
+  required: visible takeaway title or subtitle | visible data source or time period note | explicit colors | correct chart type
+  forbidden: 3D | dual y-axes | red-green pair | >7 series colors | non-zero y minimum for magnitude charts
+  fail-if: generated artifact lacks title/source context or selected chart cannot be traced to the decision tree
+```
 
 ---
 
@@ -153,6 +177,8 @@ Ask: **"Does this chart plan make sense? Want to change anything before I build?
 - **Context**: Include data source and time period as a footnote.
 - **Labels**: Direct labeling over legends when possible. Round to meaningful precision.
 
+The generated artifact must include a visible title or subtitle that states the main takeaway and a visible data source or time-period note. Do not rely on comments, variable names, or axis labels as the only source context.
+
 ### Narrative structure
 
 - Section headers tell the story, not describe the chart ("Regional disparities" not "Bar chart of regions")
@@ -219,6 +245,8 @@ Limit to 1–2 global filters. No dropdown overload.
 - [ ] Data inspected before chart selection
 - [ ] Chart plan approved before build
 - [ ] Phase 5 review checklist run with user
+- [ ] Final artifact includes a visible takeaway title/subtitle and source or time-period note
+- [ ] Final artifact avoids 3D, dual y-axes, non-zero magnitude baselines, red-green pairings, and >7 colors
 
 ## Final response
 

@@ -18,6 +18,8 @@ Feature: dataviz generated skill output validation
     And the chart has an explicit background color
     And the chart uses at most 7 distinct colors
     And the chart does not use a red-green color pair
+    And the artifact includes a narrative takeaway
+    And the artifact includes a data source or time period note
 
   Scenario: Generated chart contains no anti-patterns
     Given the generated chart artifact

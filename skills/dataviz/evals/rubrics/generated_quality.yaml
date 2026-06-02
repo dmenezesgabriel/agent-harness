@@ -1,6 +1,11 @@
 rubrics:
   - id: generated_multiline_for_multiseries
     artifact_file: _generated_artifacts_primary_
+    artifact_selector:
+      extensions: [".html", ".js", ".jsx", ".tsx", ".py", ".ipynb", ".json"]
+      exclude_path_patterns: ["package.json", "package-lock.json", "*/package.json", "*/package-lock.json"]
+      content_patterns:
+        - "new\\s+Chart|Chart\\.js|plotly|go\\.Figure|px\\.\\w+\\(|alt\\.Chart|mark_line|mark_bar|matplotlib|plt\\.(plot|bar|scatter)|<svg|d3\\.select|LineChart|BarChart|AreaChart|PieChart|ScatterChart"
     pass_threshold: 0.8
     prompt: |
       Evaluate whether this visualization correctly represents multi-series time-series data.
@@ -15,6 +20,11 @@ rubrics:
 
   - id: generated_colorblind_safe_palette
     artifact_file: _generated_artifacts_primary_
+    artifact_selector:
+      extensions: [".html", ".js", ".jsx", ".tsx", ".py", ".ipynb", ".json"]
+      exclude_path_patterns: ["package.json", "package-lock.json", "*/package.json", "*/package-lock.json"]
+      content_patterns:
+        - "new\\s+Chart|Chart\\.js|plotly|go\\.Figure|px\\.\\w+\\(|alt\\.Chart|mark_line|mark_bar|matplotlib|plt\\.(plot|bar|scatter)|<svg|d3\\.select|LineChart|BarChart|AreaChart|PieChart|ScatterChart"
     pass_threshold: 0.8
     prompt: |
       Evaluate whether the color palette in this visualization is accessible for colorblind users.
@@ -35,6 +45,11 @@ rubrics:
 
   - id: generated_design_rules_applied
     artifact_file: _generated_artifacts_primary_
+    artifact_selector:
+      extensions: [".html", ".js", ".jsx", ".tsx", ".py", ".ipynb", ".json"]
+      exclude_path_patterns: ["package.json", "package-lock.json", "*/package.json", "*/package-lock.json"]
+      content_patterns:
+        - "new\\s+Chart|Chart\\.js|plotly|go\\.Figure|px\\.\\w+\\(|alt\\.Chart|mark_line|mark_bar|matplotlib|plt\\.(plot|bar|scatter)|<svg|d3\\.select|LineChart|BarChart|AreaChart|PieChart|ScatterChart"
     pass_threshold: 0.7
     prompt: |
       Evaluate whether the visualization applies the key design rules from good data visualization
