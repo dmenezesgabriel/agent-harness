@@ -76,7 +76,8 @@ class ClaudeCodeAdapter:
     )
 
     # Tools the skill is allowed to use when building artifacts
-    _INVOKE_TOOLS = "Write Read"
+    _INVOKE_TOOLS = "Write Read Bash"
+    _SKILL_RESOURCE_PARTS = frozenset({"SKILL.md", "assets", "references", "scripts"})
 
     def __init__(
         self, skill_root: Path, timeout: int = _DEFAULT_TIMEOUT_SECONDS
@@ -94,6 +95,7 @@ class ClaudeCodeAdapter:
         skill_md = self._load_skill_md(skill_name)
         with tempfile.TemporaryDirectory(prefix=f"eval-{skill_name}-") as tmp:
             workdir = Path(tmp)
+            self._stage_skill_resources(skill_name, workdir)
             self._run_in_dir(
                 prompt,
                 system=skill_md,
@@ -231,9 +233,20 @@ class ClaudeCodeAdapter:
         for path in workdir.rglob("*"):
             if not path.is_file():
                 continue
+            if path.relative_to(workdir).parts[0] in self._SKILL_RESOURCE_PARTS:
+                continue
             with suppress(UnicodeDecodeError):
                 files[str(path.relative_to(workdir))] = path.read_text(encoding="utf-8")
         return files
+
+    def _stage_skill_resources(self, skill_name: str, workdir: Path) -> None:
+        source = self._skill_root / skill_name
+        shutil.copytree(
+            source,
+            workdir,
+            dirs_exist_ok=True,
+            ignore=shutil.ignore_patterns("evals"),
+        )
 
     def _load_skill_md(self, skill_name: str) -> str:
         path = self._skill_root / skill_name / "SKILL.md"

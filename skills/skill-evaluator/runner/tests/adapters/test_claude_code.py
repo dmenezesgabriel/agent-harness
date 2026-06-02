@@ -160,7 +160,7 @@ class TestInvokeBaseline:
             system=ANY,
             model="haiku",
             workdir=ANY,
-            tools="Write Read",
+            tools="Write Read Bash",
             append_system=False,
         )
         assert artifacts.files == {}
@@ -224,3 +224,20 @@ class TestRunInDir:
         assert stdout == "ok"
         assert "--allowedTools" in captured_cmd
         assert captured_cwd == str(tmp_path)
+
+    def test_collect_dir_ignores_staged_skill_resources(self, tmp_path: Path) -> None:
+        # Arrange
+        (tmp_path / "scripts").mkdir(parents=True)
+        (tmp_path / "scripts" / "render_task.py").write_text("script", encoding="utf-8")
+        (tmp_path / "SKILL.md").write_text("skill", encoding="utf-8")
+        (tmp_path / "tasks" / "issues").mkdir(parents=True)
+        (tmp_path / "tasks" / "issues" / "001-task.md").write_text(
+            "task", encoding="utf-8"
+        )
+        adapter = _adapter_without_init(tmp_path)
+
+        # Act
+        files = adapter._collect_dir(tmp_path)
+
+        # Assert
+        assert files == {"tasks/issues/001-task.md": "task"}

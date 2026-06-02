@@ -29,7 +29,10 @@ _INVOKE_PROVIDER = "openai-codex"
 _INVOKE_MODEL = "gpt-5.4-mini"
 _JUDGE_PROVIDER = "openai-codex"
 _JUDGE_MODEL = "chatgpt-5.4"
-_IGNORED_ARTIFACT_PARTS = frozenset({".git", "dist", "node_modules"})
+_SKILL_RESOURCE_PARTS = frozenset({"SKILL.md", "assets", "references", "scripts"})
+_IGNORED_ARTIFACT_PARTS = (
+    frozenset({".git", "dist", "node_modules"}) | _SKILL_RESOURCE_PARTS
+)
 
 _JUDGE_SYSTEM = (
     "You are an expert evaluator of AI-generated software artifacts. "
@@ -54,7 +57,7 @@ _CLASSIFY_SYSTEM = (
     "Given the skill description and user message below, "
     "reply with exactly one word: INVOKE or SKIP. No explanation, no punctuation."
 )
-_INVOKE_TOOLS = {"read": True, "write": True}
+_INVOKE_TOOLS = {"bash": True, "read": True, "write": True}
 
 
 class _OpenCodeSession(Protocol):
@@ -137,6 +140,7 @@ class OpenCodeAdapter:
         skill_md = self._load_skill_md(skill_name)
         with tempfile.TemporaryDirectory(prefix=f"eval-{skill_name}-") as tmp:
             workdir = Path(tmp)
+            self._stage_skill_resources(skill_name, workdir)
             self._chat_in_workdir(
                 workdir,
                 prompt,
@@ -256,6 +260,15 @@ class OpenCodeAdapter:
         if not path.exists():
             raise FileNotFoundError(f"SKILL.md not found for {skill_name!r} at {path}")
         return path.read_text(encoding="utf-8")
+
+    def _stage_skill_resources(self, skill_name: str, workdir: Path) -> None:
+        source = self._skill_root / skill_name
+        shutil.copytree(
+            source,
+            workdir,
+            dirs_exist_ok=True,
+            ignore=shutil.ignore_patterns("evals"),
+        )
 
 
 class _OpenCodeServer:

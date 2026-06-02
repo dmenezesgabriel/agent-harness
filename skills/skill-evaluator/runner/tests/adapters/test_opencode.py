@@ -148,6 +148,11 @@ class TestInvokeSkill:
         assert fake_client.session.chat_calls[0]["system"] == "Use chart rules"
         assert fake_client.session.chat_calls[0]["provider_id"] == "openai-codex"
         assert fake_client.session.chat_calls[0]["model_id"] == "gpt-5.4-mini"
+        assert fake_client.session.chat_calls[0]["tools"] == {
+            "bash": True,
+            "read": True,
+            "write": True,
+        }
 
     def test_invoke_skill_ignores_dependency_artifacts(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -169,6 +174,10 @@ class TestInvokeSkill:
             ).write_text("library", encoding="utf-8")
             (FakeOpenCodeServer.active_workdir / "index.html").write_text(
                 "<svg></svg>", encoding="utf-8"
+            )
+            (FakeOpenCodeServer.active_workdir / "scripts").mkdir()
+            (FakeOpenCodeServer.active_workdir / "scripts" / "render.py").write_text(
+                "support", encoding="utf-8"
             )
             return FakeOpenCodeClient("ok")
 
