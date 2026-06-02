@@ -4,9 +4,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
-from runner.models import JudgeReport
-
-_PASS_THRESHOLD = 0.7
+from runner.models import PASS_THRESHOLD, JudgeReport
 
 
 class JudgePayload(BaseModel):
@@ -19,7 +17,7 @@ class JudgePayload(BaseModel):
             rubric_id=rubric_id,
             passed=self.passed
             if self.passed is not None
-            else self.score >= _PASS_THRESHOLD,
+            else self.score >= PASS_THRESHOLD,
             score=self.score,
             reasoning=self.reasoning,
         )

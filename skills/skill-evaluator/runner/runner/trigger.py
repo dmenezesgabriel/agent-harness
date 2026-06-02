@@ -16,12 +16,10 @@ from typing import Any
 import structlog
 import yaml
 
-from runner.models import TriggerReport, TriggerResult
+from runner.models import PASS_THRESHOLD, TriggerReport, TriggerResult
 from runner.ports import TriggerClassifierPort
 
 _log = structlog.get_logger()
-
-_TRIGGER_PASS_THRESHOLD = 0.7
 _FRONTMATTER_RE = re.compile(r"^---\n(.*?)\n---", re.DOTALL)
 
 
@@ -113,7 +111,7 @@ class TriggerEvaluator:
         pass_rate = (
             sum(1 for r in results if r.passed) / len(results) if results else 1.0
         )
-        passed = pass_rate >= _TRIGGER_PASS_THRESHOLD
+        passed = pass_rate >= PASS_THRESHOLD
         passed_count = sum(1 for r in results if r.passed)
         _log.info(
             "trigger_eval_done",

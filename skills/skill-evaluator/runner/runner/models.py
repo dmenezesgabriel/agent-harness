@@ -5,6 +5,11 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, computed_field
 
+# Single pass line shared by judge verdicts (per-rubric score) and trigger
+# routing (aggregate accuracy). One knob so "what counts as passing" can't drift
+# between the two evaluation surfaces.
+PASS_THRESHOLD = 0.7
+
 
 class Mode(StrEnum):
     INVOKE = "invoke"
