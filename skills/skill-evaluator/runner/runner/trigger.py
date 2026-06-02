@@ -7,7 +7,6 @@ and an overall pass/fail based on accuracy threshold.
 
 from __future__ import annotations
 
-import json
 import re
 import time
 from pathlib import Path
@@ -16,7 +15,13 @@ from typing import Any
 import structlog
 import yaml
 
-from runner.models import PASS_THRESHOLD, TriggerReport, TriggerResult
+from runner.models import (
+    PASS_THRESHOLD,
+    EvalQueriesFile,
+    EvalQuery,
+    TriggerReport,
+    TriggerResult,
+)
 from runner.ports import TriggerClassifierPort
 
 _log = structlog.get_logger()
@@ -60,53 +65,21 @@ class TriggerEvaluator:
             )
             return TriggerReport(results=[], pass_rate=1.0, passed=True)
 
-        raw: dict[str, list[str | dict[str, str]]] = json.loads(
+        queries = EvalQueriesFile.model_validate_json(
             queries_path.read_text(encoding="utf-8")
         )
         description = _extract_skill_description(evals_dir.parent / "SKILL.md")
 
-        results: list[TriggerResult] = []
-        for index, entry in enumerate(raw.get("should_trigger", []), start=1):
-            query = entry["query"] if isinstance(entry, dict) else entry
-            start = time.monotonic()
-            _log.info(
-                "trigger_classify_start",
-                category="should_trigger",
-                index=index,
-                query_chars=len(query),
-            )
-            actual = classifier.classify(description, query)
-            results.append(TriggerResult(query=query, expected=True, actual=actual))
-            _log.info(
-                "trigger_classified",
-                category="should_trigger",
-                index=index,
-                query=query[:60],
-                expected=True,
-                actual=actual,
-                elapsed_s=round(time.monotonic() - start, 1),
-            )
-
-        for index, entry in enumerate(raw.get("should_not_trigger", []), start=1):
-            query = entry["query"] if isinstance(entry, dict) else entry
-            start = time.monotonic()
-            _log.info(
-                "trigger_classify_start",
-                category="should_not_trigger",
-                index=index,
-                query_chars=len(query),
-            )
-            actual = classifier.classify(description, query)
-            results.append(TriggerResult(query=query, expected=False, actual=actual))
-            _log.info(
-                "trigger_classified",
-                category="should_not_trigger",
-                index=index,
-                query=query[:60],
-                expected=False,
-                actual=actual,
-                elapsed_s=round(time.monotonic() - start, 1),
-            )
+        results = _classify_category(
+            queries.should_trigger, "should_trigger", True, description, classifier
+        )
+        results += _classify_category(
+            queries.should_not_trigger,
+            "should_not_trigger",
+            False,
+            description,
+            classifier,
+        )
 
         pass_rate = (
             sum(1 for r in results if r.passed) / len(results) if results else 1.0
@@ -122,3 +95,40 @@ class TriggerEvaluator:
             passed=passed,
         )
         return TriggerReport(results=results, pass_rate=pass_rate, passed=passed)
+
+
+def _classify_category(
+    queries: list[EvalQuery],
+    category: str,
+    expected: bool,
+    description: str,
+    classifier: TriggerClassifierPort,
+) -> list[TriggerResult]:
+    """Classify one query category and return its per-query trigger results.
+
+    Usage:
+        _classify_category(file.should_trigger, "should_trigger", True, desc, clf)
+    """
+    results: list[TriggerResult] = []
+    for index, entry in enumerate(queries, start=1):
+        start = time.monotonic()
+        _log.info(
+            "trigger_classify_start",
+            category=category,
+            index=index,
+            query_chars=len(entry.query),
+        )
+        actual = classifier.classify(description, entry.query)
+        results.append(
+            TriggerResult(query=entry.query, expected=expected, actual=actual)
+        )
+        _log.info(
+            "trigger_classified",
+            category=category,
+            index=index,
+            query=entry.query[:60],
+            expected=expected,
+            actual=actual,
+            elapsed_s=round(time.monotonic() - start, 1),
+        )
+    return results

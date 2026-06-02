@@ -87,6 +87,28 @@ class RubricFile(BaseModel):
     rubrics: list[RubricDefinition] = Field(default_factory=list)
 
 
+class EvalQuery(BaseModel):
+    """One trigger-routing query with an optional authoring note.
+
+    Usage:
+        EvalQuery(query="plot my sales data", note="explicit chart request")
+    """
+
+    query: str
+    note: str | None = None
+
+
+class EvalQueriesFile(BaseModel):
+    """Parsed eval_queries.json: queries that should and should not route to a skill.
+
+    Usage:
+        EvalQueriesFile.model_validate_json(path.read_text())
+    """
+
+    should_trigger: list[EvalQuery] = Field(default_factory=list)
+    should_not_trigger: list[EvalQuery] = Field(default_factory=list)
+
+
 class TriggerResult(BaseModel):
     query: str
     expected: bool

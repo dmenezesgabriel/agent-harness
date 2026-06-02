@@ -15,8 +15,14 @@ _SHOULD_TRIGGER = ["make a chart", "plot this CSV"]
 _SHOULD_NOT_TRIGGER = ["fix my CSS", "run a SQL query"]
 
 _QUERIES_JSON = """{
-  "should_trigger": ["make a chart", "plot this CSV"],
-  "should_not_trigger": ["fix my CSS", "run a SQL query"]
+  "should_trigger": [
+    {"query": "make a chart"},
+    {"query": "plot this CSV", "note": "csv input"}
+  ],
+  "should_not_trigger": [
+    {"query": "fix my CSS"},
+    {"query": "run a SQL query"}
+  ]
 }"""
 
 _SKILL_MD = """---
