@@ -1,6 +1,9 @@
 from pathlib import Path
 from typing import cast
 
+import pytest
+
+from runner.exceptions import ProviderAbortError
 from runner.invocation import SkillInvoker
 from runner.judging import RubricJudgeRunner
 from runner.models import (
@@ -142,9 +145,9 @@ class TestAllStrategy:
         evals_dir = tmp_path / "dataviz" / "evals"
         evals_dir.mkdir(parents=True)
 
-        outcome = _make_strategy(tmp_path, invoker_failure=RuntimeError("timeout")).run(
-            "dataviz", evals_dir
-        )
+        outcome = _make_strategy(
+            tmp_path, invoker_failure=ProviderAbortError("timeout")
+        ).run("dataviz", evals_dir)
 
         assert outcome.structural_results[0].status == "failed"
         assert "timeout" in str(outcome.structural_results[0].failure)
@@ -153,3 +156,14 @@ class TestAllStrategy:
             "skipped because invocation failed" in outcome.judge_verdicts[0].reasoning
         )
         assert outcome.trigger_report == _PASSING_TRIGGER
+
+    def test_run_propagates_non_provider_invocation_error(self, tmp_path: Path) -> None:
+        # A non-provider error is a bug, not a recoverable abort: it must surface,
+        # not be masked as a structural FAIL row.
+        evals_dir = tmp_path / "dataviz" / "evals"
+        evals_dir.mkdir(parents=True)
+
+        with pytest.raises(RuntimeError, match="boom"):
+            _make_strategy(tmp_path, invoker_failure=RuntimeError("boom")).run(
+                "dataviz", evals_dir
+            )

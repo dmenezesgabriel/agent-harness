@@ -3,8 +3,7 @@ from __future__ import annotations
 import time
 from pathlib import Path
 
-from runner.exceptions import ProviderAbortError
-from runner.models import EvalOutcome, Mode, TriggerReport, TriggerResult
+from runner.models import EvalOutcome, Mode
 from runner.ports import SkillInputSizerPort, TriggerClassifierPort
 from runner.strategies._timing import _log_elapsed
 from runner.trigger import TriggerEvaluator
@@ -36,22 +35,9 @@ class TriggerStrategy:
         input_sizes = self._input_sizer.measure(evals_dir)
 
         start = time.monotonic()
-        try:
-            trigger_report = self._trigger_evaluator.evaluate(
-                skill_name, evals_dir, self._classifier
-            )
-        except ProviderAbortError as exc:
-            trigger_report = TriggerReport(
-                results=[TriggerResult(query=str(exc), expected=True, actual=False)],
-                pass_rate=0.0,
-                passed=False,
-            )
-            _log_elapsed("trigger_phase_aborted", skill_name, start, reason=str(exc))
-            return EvalOutcome(
-                mode=Mode.TRIGGER,
-                trigger_report=trigger_report,
-                input_sizes=input_sizes,
-            )
+        trigger_report = self._trigger_evaluator.evaluate(
+            skill_name, evals_dir, self._classifier
+        )
         _log_elapsed(
             "trigger_phase_done", skill_name, start, passed=trigger_report.passed
         )

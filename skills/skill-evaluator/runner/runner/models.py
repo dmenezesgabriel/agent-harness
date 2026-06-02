@@ -141,3 +141,32 @@ class EvalOutcome(BaseModel):
     baseline_judge_verdicts: list[JudgeReport] = Field(default_factory=list)
     trigger_report: TriggerReport | None = None
     input_sizes: dict[str, int] = Field(default_factory=dict)
+
+    @classmethod
+    def provider_abort(cls, mode: Mode, exc: Exception) -> EvalOutcome:
+        """Failure outcome for a provider abort, shaped to the mode's primary surface.
+
+        Lets every strategy propagate ProviderAbortError and have one caller turn it
+        into a uniform failing outcome, instead of each strategy duplicating the shape
+        (or, like compare mode, crashing).
+
+        Usage:
+            outcome = EvalOutcome.provider_abort(Mode.JUDGE, exc)
+        """
+        reason = str(exc)
+        if mode == Mode.JUDGE:
+            verdict = JudgeReport(
+                rubric_id="judge_provider", passed=False, score=0.0, reasoning=reason
+            )
+            return cls(mode=mode, judge_verdicts=[verdict])
+        if mode == Mode.TRIGGER:
+            result = TriggerResult(query=reason, expected=True, actual=False)
+            report = TriggerReport(results=[result], pass_rate=0.0, passed=False)
+            return cls(mode=mode, trigger_report=report)
+        scenario = ScenarioResult(
+            feature="skill-evaluator provider",
+            scenario="invocation phase completed",
+            status="failed",
+            failure=reason,
+        )
+        return cls(mode=mode, structural_results=[scenario])

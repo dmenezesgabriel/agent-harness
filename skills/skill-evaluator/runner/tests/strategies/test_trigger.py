@@ -1,6 +1,8 @@
 from pathlib import Path
 from typing import cast
 
+import pytest
+
 from runner.exceptions import ProviderAbortError
 from runner.models import TriggerReport, TriggerResult
 from runner.ports import SkillInputSizerPort, TriggerClassifierPort
@@ -67,7 +69,8 @@ class TestTriggerStrategy:
         assert outcome.structural_results == []
         assert outcome.judge_verdicts == []
 
-    def test_trigger_strategy_reports_provider_abort(self, tmp_path: Path) -> None:
+    def test_trigger_strategy_propagates_provider_abort(self, tmp_path: Path) -> None:
+        # The strategy no longer shapes the failure; SkillEvaluator catches it.
         evals_dir = tmp_path / "dataviz" / "evals"
         evals_dir.mkdir(parents=True)
 
@@ -77,8 +80,5 @@ class TestTriggerStrategy:
             cast(SkillInputSizerPort, FakeSizer()),
         )
 
-        outcome = strategy.run("dataviz", evals_dir)
-
-        assert outcome.trigger_report is not None
-        assert outcome.trigger_report.passed is False
-        assert "OpenCode timeout" in outcome.trigger_report.results[0].query
+        with pytest.raises(ProviderAbortError, match="OpenCode timeout"):
+            strategy.run("dataviz", evals_dir)

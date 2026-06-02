@@ -1,8 +1,11 @@
 from pathlib import Path
 from typing import cast
 
+import pytest
+
 from runner.discovery import SkillDiscovery
 from runner.evaluation import SkillEvaluationApp, SkillEvaluator, _is_successful
+from runner.exceptions import ProviderAbortError
 from runner.models import CliArgs, EvalOutcome, JudgeReport, Mode, ScenarioResult
 from runner.ports import EvalModeStrategy, ReportWriterPort
 
@@ -36,6 +39,18 @@ class FakeStrategy:
 
     def run(self, _skill_name: str, _evals_dir: Path) -> EvalOutcome:
         return self._outcome
+
+
+class AbortingStrategy:
+    def __init__(self, mode: Mode) -> None:
+        self._mode = mode
+
+    @property
+    def mode(self) -> Mode:
+        return self._mode
+
+    def run(self, _skill_name: str, _evals_dir: Path) -> EvalOutcome:
+        raise ProviderAbortError(f"OpenCode rate limit during {self._mode}")
 
 
 class FakeReportWriter:
@@ -146,6 +161,26 @@ class TestSkillEvaluator:
         )
         evaluator = SkillEvaluator(
             strategy=cast(EvalModeStrategy, FakeStrategy(outcome)),
+            report_writer=cast(ReportWriterPort, FakeReportWriter()),
+        )
+
+        # Act
+        is_success = evaluator.evaluate(evals_dir)
+
+        # Assert
+        assert is_success is False
+
+    @pytest.mark.parametrize(
+        "mode", [Mode.INVOKE, Mode.JUDGE, Mode.TRIGGER, Mode.COMPARE]
+    )
+    def test_evaluator_converts_provider_abort_into_failure(
+        self, tmp_path: Path, mode: Mode
+    ) -> None:
+        # Arrange — every mode, including compare, must fail cleanly not crash.
+        evals_dir = tmp_path / "dataviz" / "evals"
+        evals_dir.mkdir(parents=True)
+        evaluator = SkillEvaluator(
+            strategy=cast(EvalModeStrategy, AbortingStrategy(mode)),
             report_writer=cast(ReportWriterPort, FakeReportWriter()),
         )
 

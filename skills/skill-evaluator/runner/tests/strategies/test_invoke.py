@@ -1,6 +1,8 @@
 from pathlib import Path
 from typing import cast
 
+import pytest
+
 from runner.exceptions import ProviderAbortError
 from runner.invocation import SkillInvoker
 from runner.models import ScenarioResult
@@ -73,7 +75,8 @@ class TestInvokeStrategy:
         assert outcome.judge_verdicts == []
         assert outcome.trigger_report is None
 
-    def test_invoke_strategy_reports_provider_abort(self, tmp_path: Path) -> None:
+    def test_invoke_strategy_propagates_provider_abort(self, tmp_path: Path) -> None:
+        # The strategy no longer shapes the failure; SkillEvaluator catches it.
         evals_dir = tmp_path / "dataviz" / "evals"
         evals_dir.mkdir(parents=True)
 
@@ -84,7 +87,5 @@ class TestInvokeStrategy:
             cast(SkillInputSizerPort, FakeSizer()),
         )
 
-        outcome = strategy.run("dataviz", evals_dir)
-
-        assert outcome.structural_results[0].status == "failed"
-        assert "OpenCode rate limit" in str(outcome.structural_results[0].failure)
+        with pytest.raises(ProviderAbortError, match="OpenCode rate limit"):
+            strategy.run("dataviz", evals_dir)

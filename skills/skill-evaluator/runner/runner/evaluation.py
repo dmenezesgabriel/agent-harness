@@ -4,6 +4,7 @@ import sys
 from pathlib import Path
 
 from runner.discovery import SkillDiscovery
+from runner.exceptions import ProviderAbortError
 from runner.models import CliArgs, EvalOutcome
 from runner.ports import EvalModeStrategy, ReportWriterPort
 
@@ -52,7 +53,10 @@ class SkillEvaluator:
     def evaluate(self, evals_dir: Path) -> bool:
         skill_name = evals_dir.parent.name
         _print_skill_header(skill_name, self._strategy.mode)
-        outcome = self._strategy.run(skill_name, evals_dir)
+        try:
+            outcome = self._strategy.run(skill_name, evals_dir)
+        except ProviderAbortError as exc:
+            outcome = EvalOutcome.provider_abort(self._strategy.mode, exc)
         report_path = self._report_writer.write(
             skill_name,
             evals_dir,

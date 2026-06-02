@@ -3,6 +3,7 @@ from __future__ import annotations
 import time
 from pathlib import Path
 
+from runner.exceptions import ProviderAbortError
 from runner.invocation import SkillInvoker
 from runner.judging import RubricJudgeRunner
 from runner.models import (
@@ -68,7 +69,7 @@ class AllStrategy:
         invocation_failure: str | None = None
         try:
             artifacts_dir = self._invoker.invoke(skill_name, evals_dir, self._agent)
-        except Exception as exc:
+        except ProviderAbortError as exc:
             invocation_failure = str(exc)
             structural_results.append(_phase_failure("invocation", invocation_failure))
         _log_elapsed("invocation_done", skill_name, start)
@@ -79,7 +80,7 @@ class AllStrategy:
                 structural_results = self._structural_runner.run(
                     evals_dir, artifacts_dir
                 )
-            except Exception as exc:
+            except ProviderAbortError as exc:
                 structural_results = [_phase_failure("structural", str(exc))]
             _log_elapsed("structural_done", skill_name, start)
 
@@ -95,7 +96,7 @@ class AllStrategy:
                 judge_verdicts = self._judge_runner.run(
                     evals_dir, artifacts_dir, self._judge
                 )
-            except Exception as exc:
+            except ProviderAbortError as exc:
                 judge_verdicts = [_judge_failure(str(exc))]
         _log_elapsed(
             "judge_phase_done", skill_name, start, verdicts=len(judge_verdicts)
@@ -106,7 +107,7 @@ class AllStrategy:
             trigger_report = self._trigger_evaluator.evaluate(
                 skill_name, evals_dir, self._classifier
             )
-        except Exception as exc:
+        except ProviderAbortError as exc:
             trigger_report = _trigger_failure(str(exc))
         _log_elapsed(
             "trigger_phase_done", skill_name, start, passed=trigger_report.passed

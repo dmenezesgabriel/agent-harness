@@ -1,6 +1,8 @@
 from pathlib import Path
 from typing import cast
 
+import pytest
+
 from runner.exceptions import ProviderAbortError
 from runner.judging import RubricJudgeRunner
 from runner.models import JudgeReport
@@ -94,7 +96,8 @@ class TestJudgeStrategy:
         assert outcome.judge_verdicts == [verdict]
         assert outcome.structural_results == []
 
-    def test_judge_strategy_reports_provider_abort(self, tmp_path: Path) -> None:
+    def test_judge_strategy_propagates_provider_abort(self, tmp_path: Path) -> None:
+        # The strategy no longer shapes the failure; SkillEvaluator catches it.
         evals_dir = tmp_path / "dataviz" / "evals"
         (evals_dir / "fixtures" / "golden").mkdir(parents=True)
 
@@ -104,8 +107,5 @@ class TestJudgeStrategy:
             cast(SkillInputSizerPort, FakeSizer()),
         )
 
-        outcome = strategy.run("dataviz", evals_dir)
-
-        assert outcome.judge_verdicts[0].rubric_id == "judge_provider"
-        assert outcome.judge_verdicts[0].passed is False
-        assert "OpenCode timeout" in outcome.judge_verdicts[0].reasoning
+        with pytest.raises(ProviderAbortError, match="OpenCode timeout"):
+            strategy.run("dataviz", evals_dir)

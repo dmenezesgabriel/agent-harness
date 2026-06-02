@@ -3,9 +3,8 @@ from __future__ import annotations
 import time
 from pathlib import Path
 
-from runner.exceptions import ProviderAbortError
 from runner.judging import RubricJudgeRunner
-from runner.models import EvalOutcome, JudgeReport, Mode
+from runner.models import EvalOutcome, Mode
 from runner.ports import JudgePort, SkillInputSizerPort
 from runner.strategies._timing import _log_elapsed
 
@@ -44,23 +43,7 @@ class JudgeStrategy:
         )
 
         start = time.monotonic()
-        try:
-            verdicts = self._judge_runner.run(evals_dir, artifacts_dir, self._judge)
-        except ProviderAbortError as exc:
-            verdicts = [
-                JudgeReport(
-                    rubric_id="judge_provider",
-                    passed=False,
-                    score=0.0,
-                    reasoning=str(exc),
-                )
-            ]
-            _log_elapsed("judge_phase_aborted", skill_name, start, reason=str(exc))
-            return EvalOutcome(
-                mode=Mode.JUDGE,
-                judge_verdicts=verdicts,
-                input_sizes=input_sizes,
-            )
+        verdicts = self._judge_runner.run(evals_dir, artifacts_dir, self._judge)
         _log_elapsed("judge_phase_done", skill_name, start, verdicts=len(verdicts))
 
         return EvalOutcome(
