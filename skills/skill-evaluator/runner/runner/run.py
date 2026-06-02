@@ -15,7 +15,7 @@ Usage:
 import argparse
 import os
 from pathlib import Path
-from typing import Protocol, cast
+from typing import Protocol, cast, get_args
 
 from runner.adapters.behave import BehaveStructuralRunner
 from runner.adapters.claude_code import ClaudeCodeAdapter
@@ -30,6 +30,7 @@ from runner.models import (
     DEFAULT_OPENCODE_INVOKE_PROVIDER,
     DEFAULT_OPENCODE_JUDGE_MODEL,
     DEFAULT_OPENCODE_JUDGE_PROVIDER,
+    AdapterName,
     CliArgs,
     Mode,
 )
@@ -52,8 +53,8 @@ from runner.strategies import (
 from runner.trigger import TriggerEvaluator
 
 _SKILLS_ROOT = Path(__file__).parent.parent.parent.parent  # agent-harness/skills/
-_MODES = ("invoke", "judge", "all", "trigger", "compare")
-_ADAPTERS = ("claude", "opencode")
+_MODES = tuple(mode.value for mode in Mode)
+_ADAPTERS = get_args(AdapterName)
 
 
 class _EvaluationAdapter(AgentPort, JudgePort, Protocol):
