@@ -147,7 +147,7 @@ class TestInvokeSkill:
 
         assert artifacts.files == {"chart.js": "new Chart()"}
         assert fake_client.session.chat_calls[0]["system"] == "Use chart rules"
-        assert fake_client.session.chat_calls[0]["provider_id"] == "openai-codex"
+        assert fake_client.session.chat_calls[0]["provider_id"] == "openai"
         assert fake_client.session.chat_calls[0]["model_id"] == "gpt-5.4-mini"
         assert fake_client.session.chat_calls[0]["tools"] == {
             "bash": True,
@@ -206,7 +206,7 @@ class TestInvokeBaseline:
 
         assert artifacts.files == {"chart.js": "new Chart()"}
         assert fake_client.session.chat_calls[0]["system"] == contract.BASELINE_SYSTEM
-        assert fake_client.session.chat_calls[0]["provider_id"] == "openai-codex"
+        assert fake_client.session.chat_calls[0]["provider_id"] == "openai"
         assert fake_client.session.chat_calls[0]["model_id"] == "gpt-5.4-mini"
 
 
@@ -249,8 +249,8 @@ class TestClassify:
 
         call = fake_client.session.chat_calls[0]
         assert call["system"] == contract.CLASSIFY_SYSTEM
-        assert call["provider_id"] == "openai-codex"
-        assert call["model_id"] == "chatgpt-5.4"
+        assert call["provider_id"] == "openai"
+        assert call["model_id"] == "gpt-5.4"
 
     def test_classify_wraps_provider_timeout(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

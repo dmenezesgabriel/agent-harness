@@ -23,10 +23,10 @@ AdapterName = Literal["claude", "opencode"]
 
 # Single source for OpenCode provider/model defaults, shared by CliArgs, the CLI
 # argument parser, and OpenCodeAdapter so the three layers cannot diverge.
-DEFAULT_OPENCODE_INVOKE_PROVIDER = "openai-codex"
+DEFAULT_OPENCODE_INVOKE_PROVIDER = "openai"
 DEFAULT_OPENCODE_INVOKE_MODEL = "gpt-5.4-mini"
-DEFAULT_OPENCODE_JUDGE_PROVIDER = "openai-codex"
-DEFAULT_OPENCODE_JUDGE_MODEL = "chatgpt-5.4"
+DEFAULT_OPENCODE_JUDGE_PROVIDER = "openai"
+DEFAULT_OPENCODE_JUDGE_MODEL = "gpt-5.4"
 
 # Rubric.artifact_file sentinel meaning "select the primary generated artifact via
 # artifact_selector" rather than naming a fixed golden fixture file. Also appears
