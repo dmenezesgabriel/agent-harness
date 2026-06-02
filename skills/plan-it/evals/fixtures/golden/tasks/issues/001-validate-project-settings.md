@@ -60,6 +60,20 @@ Project owners update project name and description from the settings form. The f
 
 ## Required Tests
 
+### Risk Assessment
+
+| Category | Required | Reason |
+|----------|----------|--------|
+| Unit Tests | Yes | Isolation risk for name/description length rules |
+| Integration Tests | Yes | Existing save behavior must be preserved through the real action |
+| Smoke Tests | No | No deploy availability change — form validation only |
+| End-to-End Tests | No | Covered by focused unit and integration tests, no new critical journey |
+| Regression Tests | No | No known previous defect for this validation behavior |
+| Performance Tests | No | O(n) on short strings — no measurable latency risk |
+| Security Tests | No | No auth, authorization, or data-exposure boundary touched |
+| Usability Tests | Yes | Error placement and inline feedback affects UX |
+| Observability Tests | Yes | Sensitive-data logging rule must be verified |
+
 ### Unit Tests
 
 - `UT-001`: Validate project name and description length rules. Covers `FR-001`, `FR-002`, and `FR-003`.
@@ -71,26 +85,6 @@ Project owners update project name and description from the settings form. The f
   **When** the save action runs  
   **Then** the project settings are persisted.  
   Covers `AC-003`.
-
-### Smoke Tests
-
-- `SMK-001`: Not applicable — this task changes form validation only and does not affect app startup or deployment availability.
-
-### End-to-End Tests
-
-- `E2E-001`: Not applicable — the validation behavior is covered by focused unit and integration tests without a new critical journey.
-
-### Regression Tests
-
-- `REG-001`: Not applicable — there is no known previous defect for this validation behavior.
-
-### Performance Tests
-
-- `PT-001`: Not applicable — field validation handles two short strings and has no measurable performance risk.
-
-### Security Tests
-
-- `ST-001`: Not applicable — this task does not change authentication, authorization, input trust boundaries, or data exposure.
 
 ### Usability Tests
 
