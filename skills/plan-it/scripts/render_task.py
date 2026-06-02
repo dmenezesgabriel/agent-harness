@@ -49,11 +49,17 @@ class RequirementGroup:
     prefix: str
 
 
-@dataclass(frozen=True)
-class TestCategory:
-    field: str
-    heading: str
-    prefix: str
+RISK_CATEGORY_DEFINITIONS: tuple[tuple[str, str], ...] = (
+    ("Unit Tests", "UT"),
+    ("Integration Tests", "IT"),
+    ("Smoke Tests", "SMK"),
+    ("End-to-End Tests", "E2E"),
+    ("Regression Tests", "REG"),
+    ("Performance Tests", "PT"),
+    ("Security Tests", "ST"),
+    ("Usability Tests", "UX"),
+    ("Observability Tests", "OT"),
+)
 
 
 @dataclass(frozen=True)
@@ -109,26 +115,84 @@ class AssignabilityRule:
         raise ScriptError(f"invalid assignability {value!r}; expected AFK/HITL reason")
 
 
-class RequiredTestsRule:
-    def __init__(self, categories: Sequence[TestCategory]) -> None:
-        self._categories = categories
+class RiskAssessmentRule:
+    """Validate required_tests as a risk-assessment list.
+
+    Each entry must have heading, prefix, risk_present (bool), reason (text),
+    and entries (required only when risk_present is true).
+    The validator enforces that every known category definition is present.
+    """
+
+    _KNOWN: dict[str, str] = dict(RISK_CATEGORY_DEFINITIONS)
 
     def check(self, task: JsonObject) -> None:
-        raw_tests = task.get("required_tests")
-        if not isinstance(raw_tests, dict):
-            raise ScriptError(f"invalid required_tests {raw_tests!r}; expected object")
-        task["required_tests"] = [
-            self._normalize_category(raw_tests, category)
-            for category in self._categories
-        ]
+        raw = task.get("required_tests")
+        if not isinstance(raw, list):
+            raise ScriptError(f"invalid required_tests {raw!r}; expected list")
+        seen: set[str] = set()
+        for index, entry in enumerate(raw):
+            self._validate_entry(index, entry)
+            seen.add(str(entry.get("heading")))
+        missing = set(self._KNOWN) - seen
+        if missing:
+            raise ScriptError(
+                f"required_tests missing categories: {sorted(missing)}"
+            )
 
-    def _normalize_category(
-        self, raw_tests: JsonObject, category: TestCategory
-    ) -> JsonObject:
-        entries = validate_test_entries(
-            category.field, raw_tests.get(category.field), category.prefix
-        )
-        return {"heading": category.heading, "entries": entries}
+    def _validate_entry(self, index: int, entry: object) -> None:
+        if not isinstance(entry, dict):
+            raise ScriptError(
+                f"required_tests[{index}] {entry!r}; expected object"
+            )
+        heading = entry.get("heading")
+        if not isinstance(heading, str) or not heading.strip():
+            raise ScriptError(
+                f"required_tests[{index}].heading {heading!r}; "
+                "expected non-empty string"
+            )
+        if heading not in self._KNOWN:
+            raise ScriptError(
+                f"required_tests[{index}].heading {heading!r}; "
+                f"expected one of {sorted(self._KNOWN)}"
+            )
+        expected_prefix = self._KNOWN[heading]
+        prefix = entry.get("prefix")
+        if prefix != expected_prefix:
+            raise ScriptError(
+                f"required_tests[{index}].prefix {prefix!r}; "
+                f"expected {expected_prefix!r}"
+            )
+        risk_present = entry.get("risk_present")
+        if not isinstance(risk_present, bool):
+            raise ScriptError(
+                f"required_tests[{index}].risk_present {risk_present!r}; "
+                "expected bool"
+            )
+        reason = entry.get("reason")
+        if not isinstance(reason, str) or not reason.strip():
+            raise ScriptError(
+                f"required_tests[{index}].reason {reason!r}; "
+                "expected non-empty string"
+            )
+        reject_placeholder(f"required_tests[{index}].reason", reason)
+        if risk_present:
+            entries = entry.get("entries")
+            if not isinstance(entries, list) or not entries:
+                raise ScriptError(
+                    f"required_tests[{index}].entries {entries!r}; "
+                    "expected non-empty list when risk_present is true"
+                )
+            for eidx, tentry in enumerate(entries):
+                validate_test_entry(
+                    f"required_tests[{index}]", eidx, tentry, prefix
+                )
+        else:
+            entries = entry.get("entries")
+            if entries is not None and (not isinstance(entries, list) or entries):
+                raise ScriptError(
+                    f"required_tests[{index}].entries {entries!r}; "
+                    "expected absent or empty list when risk_present is false"
+                )
 
 
 class ScriptError(RuntimeError):
@@ -229,7 +293,7 @@ def default_validator() -> TaskValidator:
         *[TextListRule(field) for field in text_list_fields()],
         *[ItemListRule(group.field, group.prefix) for group in requirement_groups()],
         ItemListRule("acceptance_criteria", "AC"),
-        RequiredTestsRule(test_categories()),
+        RiskAssessmentRule(),
     ]
     return TaskValidator(rules)
 
@@ -249,20 +313,6 @@ def requirement_groups() -> tuple[RequirementGroup, ...]:
         RequirementGroup("functional_requirements", "FR"),
         RequirementGroup("non_functional_requirements", "NFR"),
         RequirementGroup("observability_requirements", "OBS"),
-    )
-
-
-def test_categories() -> tuple[TestCategory, ...]:
-    return (
-        TestCategory("unit_tests", "Unit Tests", "UT"),
-        TestCategory("integration_tests", "Integration Tests", "IT"),
-        TestCategory("smoke_tests", "Smoke Tests", "SMK"),
-        TestCategory("end_to_end_tests", "End-to-End Tests", "E2E"),
-        TestCategory("regression_tests", "Regression Tests", "REG"),
-        TestCategory("performance_tests", "Performance Tests", "PT"),
-        TestCategory("security_tests", "Security Tests", "ST"),
-        TestCategory("usability_tests", "Usability Tests", "UX"),
-        TestCategory("observability_tests", "Observability Tests", "OT"),
     )
 
 
@@ -297,17 +347,6 @@ def validate_item(label: str, index: int, item: object, prefix: str) -> None:
             f"invalid {label}[{index}].id {item.get('id')!r}; expected {expected_id}"
         )
     validate_text(f"{label}[{index}].text", item.get("text"))
-
-
-def validate_test_entries(label: str, value: object, prefix: str) -> list[JsonObject]:
-    if not isinstance(value, list) or not value:
-        raise ScriptError(
-            f"invalid required_tests.{label} {value!r}; expected non-empty list"
-        )
-    return [
-        validate_test_entry(label, index, item, prefix)
-        for index, item in enumerate(value)
-    ]
 
 
 def validate_test_entry(

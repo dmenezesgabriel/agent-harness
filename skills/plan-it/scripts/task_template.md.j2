@@ -58,12 +58,21 @@ status: active
 {% endfor %}
 ## Required Tests
 
+### Risk Assessment
+
+| Category | Required | Reason |
+|----------|----------|--------|
 {% for category in task.required_tests -%}
+| {{ category.heading }} | {% if category.risk_present %}Yes{% else %}No{% endif %} | {{ category.reason }} |
+{% endfor %}
+{% for category in task.required_tests -%}
+{% if category.risk_present -%}
 ### {{ category.heading }}
 
 {% for test in category.entries -%}
 - `{{ test.id }}`: {{ test.text }}{% if test.covers %} Covers {{ test.covers }}.{% endif %}
 {% endfor %}
+{% endif -%}
 {% endfor -%}
 ## Definition of Done
 
