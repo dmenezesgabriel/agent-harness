@@ -28,6 +28,11 @@ DEFAULT_OPENCODE_INVOKE_MODEL = "gpt-5.4-mini"
 DEFAULT_OPENCODE_JUDGE_PROVIDER = "openai-codex"
 DEFAULT_OPENCODE_JUDGE_MODEL = "chatgpt-5.4"
 
+# Rubric.artifact_file sentinel meaning "select the primary generated artifact via
+# artifact_selector" rather than naming a fixed golden fixture file. Also appears
+# verbatim in skills' rubric YAML data, so the literal value must not change.
+GENERATED_ARTIFACTS_PRIMARY = "_generated_artifacts_primary_"
+
 
 class CliArgs(BaseModel):
     skill: str | None = None

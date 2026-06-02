@@ -9,7 +9,13 @@ from pathlib import Path
 import structlog
 import yaml
 
-from runner.models import ArtifactSelector, JudgeReport, RubricDefinition, RubricFile
+from runner.models import (
+    GENERATED_ARTIFACTS_PRIMARY,
+    ArtifactSelector,
+    JudgeReport,
+    RubricDefinition,
+    RubricFile,
+)
 from runner.ports import CompareJudgePort, JudgePort
 
 _log = structlog.get_logger()
@@ -42,12 +48,12 @@ class RubricJudgeRunner:
             for rubric in rubric_file_model.rubrics:
                 if (
                     generated_only
-                    and rubric.artifact_file != "_generated_artifacts_primary_"
+                    and rubric.artifact_file != GENERATED_ARTIFACTS_PRIMARY
                 ):
                     continue
                 artifact_file = _resolve_artifact_file(evals_dir, artifacts_dir, rubric)
                 if artifact_file is None:
-                    if rubric.artifact_file == "_generated_artifacts_primary_":
+                    if rubric.artifact_file == GENERATED_ARTIFACTS_PRIMARY:
                         verdicts.append(_missing_generated_artifact_verdict(rubric.id))
                     else:
                         print(
@@ -106,7 +112,7 @@ class RubricJudgeRunner:
                 yaml.safe_load(rubric_file.read_text(encoding="utf-8"))
             )
             for rubric in rubric_file_model.rubrics:
-                if rubric.artifact_file == "_generated_artifacts_primary_":
+                if rubric.artifact_file == GENERATED_ARTIFACTS_PRIMARY:
                     skill_artifact = _select_generated_artifact(skill_dir, rubric)
                     baseline_artifact = _select_generated_artifact(baseline_dir, rubric)
                     if skill_artifact is None or baseline_artifact is None:
@@ -200,7 +206,7 @@ class RubricJudgeRunner:
 def _resolve_artifact_file(
     evals_dir: Path, artifacts_dir: Path, rubric: RubricDefinition
 ) -> Path | None:
-    if rubric.artifact_file == "_generated_artifacts_primary_":
+    if rubric.artifact_file == GENERATED_ARTIFACTS_PRIMARY:
         return _select_generated_artifact(artifacts_dir, rubric)
     return evals_dir / "fixtures" / "golden" / rubric.artifact_file
 
