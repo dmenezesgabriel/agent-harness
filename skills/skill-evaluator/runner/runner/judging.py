@@ -9,7 +9,7 @@ from pathlib import Path
 import structlog
 import yaml
 
-from runner.eval_layout import has_ignored_part
+from runner.eval_layout import has_ignored_part, is_input_artifact_dir
 from runner.models import (
     GENERATED_ARTIFACTS_PRIMARY,
     ArtifactSelector,
@@ -46,14 +46,17 @@ class RubricJudgeRunner:
                 yaml.safe_load(rubric_file.read_text(encoding="utf-8"))
             )
             for rubric in rubric_file_model.rubrics:
+                if rubric.artifact_file == GENERATED_ARTIFACTS_PRIMARY:
+                    verdicts.extend(
+                        _judge_generated_rubric(artifacts_dir, rubric, judge)
+                    )
+                    continue
+
                 artifact_file = _resolve_artifact_file(evals_dir, artifacts_dir, rubric)
                 if artifact_file is None:
-                    if rubric.artifact_file == GENERATED_ARTIFACTS_PRIMARY:
-                        verdicts.append(_missing_generated_artifact_verdict(rubric.id))
-                    else:
-                        print(
-                            f"  Rubric {rubric.id!r}: no matching generated artifact found - skipping"
-                        )
+                    print(
+                        f"  Rubric {rubric.id!r}: no matching generated artifact found - skipping"
+                    )
                     continue
                 if not artifact_file.exists():
                     print(
@@ -108,38 +111,11 @@ class RubricJudgeRunner:
             )
             for rubric in rubric_file_model.rubrics:
                 if rubric.artifact_file == GENERATED_ARTIFACTS_PRIMARY:
-                    skill_artifact = _select_generated_artifact(skill_dir, rubric)
-                    baseline_artifact = _select_generated_artifact(baseline_dir, rubric)
-                    if skill_artifact is None or baseline_artifact is None:
-                        skill_verdicts.append(
-                            _missing_generated_artifact_verdict(rubric.id)
-                        )
-                        baseline_verdicts.append(
-                            _missing_generated_artifact_verdict(rubric.id)
-                        )
-                        continue
-                    skill_content = skill_artifact.read_text(encoding="utf-8")
-                    baseline_content = baseline_artifact.read_text(encoding="utf-8")
-                    _log.info(
-                        "compare_judge_start",
-                        rubric_id=rubric.id,
-                        skill_chars=len(skill_content),
-                        baseline_chars=len(baseline_content),
+                    skill_generated, baseline_generated = _compare_generated_rubric(
+                        skill_dir, baseline_dir, rubric, judge
                     )
-                    t0 = time.monotonic()
-                    sv, bv = judge.compare_judge(
-                        skill_content,
-                        baseline_content,
-                        rubric.prompt,
-                        rubric_id=rubric.id,
-                    )
-                    _log.info(
-                        "compare_judge_done",
-                        rubric_id=rubric.id,
-                        elapsed_s=round(time.monotonic() - t0, 1),
-                    )
-                    skill_verdicts.append(sv)
-                    baseline_verdicts.append(bv)
+                    skill_verdicts.extend(skill_generated)
+                    baseline_verdicts.extend(baseline_generated)
                 else:
                     artifact_file = _resolve_artifact_file(evals_dir, skill_dir, rubric)
                     if artifact_file is None or not artifact_file.exists():
@@ -213,6 +189,132 @@ def _missing_generated_artifact_verdict(rubric_id: str) -> JudgeReport:
         score=0.0,
         reasoning="No generated artifact matched the rubric artifact_selector.",
     )
+
+
+def _judge_generated_rubric(
+    artifacts_dir: Path, rubric: RubricDefinition, judge: JudgePort
+) -> list[JudgeReport]:
+    verdicts: list[JudgeReport] = []
+    for fixture_name, artifact_dir in _generated_artifact_scopes(artifacts_dir):
+        rubric_id = _scoped_rubric_id(fixture_name, rubric.id)
+        artifact_file = _select_generated_artifact(artifact_dir, rubric)
+        if artifact_file is None:
+            verdicts.append(_missing_generated_artifact_verdict(rubric_id))
+            continue
+        content = _generated_artifact_content(artifact_file, rubric)
+        verdicts.append(_judge_content(content, rubric, rubric_id, judge))
+    return verdicts
+
+
+def _compare_generated_rubric(
+    skill_dir: Path,
+    baseline_dir: Path,
+    rubric: RubricDefinition,
+    judge: CompareJudgePort,
+) -> tuple[list[JudgeReport], list[JudgeReport]]:
+    skill_verdicts: list[JudgeReport] = []
+    baseline_verdicts: list[JudgeReport] = []
+    for fixture_name, skill_scope, baseline_scope in _compare_generated_scopes(
+        skill_dir, baseline_dir
+    ):
+        rubric_id = _scoped_rubric_id(fixture_name, rubric.id)
+        skill_artifact = _select_generated_artifact(skill_scope, rubric)
+        baseline_artifact = _select_generated_artifact(baseline_scope, rubric)
+        if skill_artifact is None or baseline_artifact is None:
+            skill_verdicts.append(_missing_generated_artifact_verdict(rubric_id))
+            baseline_verdicts.append(_missing_generated_artifact_verdict(rubric_id))
+            continue
+        sv, bv = _compare_artifact_content(
+            skill_artifact, baseline_artifact, rubric, rubric_id, judge
+        )
+        skill_verdicts.append(sv)
+        baseline_verdicts.append(bv)
+    return skill_verdicts, baseline_verdicts
+
+
+def _generated_artifact_content(artifact_file: Path, rubric: RubricDefinition) -> str:
+    content = artifact_file.read_text(encoding="utf-8")
+    if rubric.artifact_section:
+        return _extract_section(content, rubric.artifact_section)
+    return content
+
+
+def _judge_content(
+    content: str, rubric: RubricDefinition, rubric_id: str, judge: JudgePort
+) -> JudgeReport:
+    _log.info("judge_start", rubric_id=rubric_id, artifact_chars=len(content))
+    t0 = time.monotonic()
+    verdict = judge.judge(content, rubric.prompt, rubric_id=rubric_id)
+    _log.info(
+        "judge_done", rubric_id=rubric_id, elapsed_s=round(time.monotonic() - t0, 1)
+    )
+    return verdict
+
+
+def _compare_artifact_content(
+    skill_artifact: Path,
+    baseline_artifact: Path,
+    rubric: RubricDefinition,
+    rubric_id: str,
+    judge: CompareJudgePort,
+) -> tuple[JudgeReport, JudgeReport]:
+    skill_content = skill_artifact.read_text(encoding="utf-8")
+    baseline_content = baseline_artifact.read_text(encoding="utf-8")
+    _log.info(
+        "compare_judge_start",
+        rubric_id=rubric_id,
+        skill_chars=len(skill_content),
+        baseline_chars=len(baseline_content),
+    )
+    t0 = time.monotonic()
+    verdicts = judge.compare_judge(
+        skill_content, baseline_content, rubric.prompt, rubric_id=rubric_id
+    )
+    _log.info(
+        "compare_judge_done",
+        rubric_id=rubric_id,
+        elapsed_s=round(time.monotonic() - t0, 1),
+    )
+    return verdicts
+
+
+def _generated_artifact_scopes(artifacts_dir: Path) -> list[tuple[str | None, Path]]:
+    fixture_dirs = _fixture_artifact_dirs(artifacts_dir)
+    if not fixture_dirs:
+        return [(None, artifacts_dir)]
+    return [(artifact_dir.name, artifact_dir) for artifact_dir in fixture_dirs]
+
+
+def _compare_generated_scopes(
+    skill_dir: Path, baseline_dir: Path
+) -> list[tuple[str | None, Path, Path]]:
+    skill_scopes = _generated_artifact_scopes(skill_dir)
+    if skill_scopes == [(None, skill_dir)]:
+        return [(None, skill_dir, baseline_dir)]
+    baseline_dirs = {path.name: path for path in _fixture_artifact_dirs(baseline_dir)}
+    return [
+        (
+            fixture_name,
+            skill_scope,
+            baseline_dirs.get(fixture_name, baseline_dir / fixture_name),
+        )
+        for fixture_name, skill_scope in skill_scopes
+        if fixture_name is not None
+    ]
+
+
+def _fixture_artifact_dirs(artifacts_dir: Path) -> list[Path]:
+    if not artifacts_dir.exists():
+        return []
+    return [
+        path for path in sorted(artifacts_dir.iterdir()) if is_input_artifact_dir(path)
+    ]
+
+
+def _scoped_rubric_id(fixture_name: str | None, rubric_id: str) -> str:
+    if fixture_name is None:
+        return rubric_id
+    return f"{fixture_name}: {rubric_id}"
 
 
 def _select_generated_artifact(

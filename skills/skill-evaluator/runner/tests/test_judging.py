@@ -123,6 +123,46 @@ class TestRubricJudgeRunner:
             )
         ]
 
+    def test_run_judges_generated_rubric_per_fixture_dir(self, tmp_path: Path) -> None:
+        # Arrange
+        evals_dir = tmp_path / "dataviz" / "evals"
+        rubrics_dir = evals_dir / "rubrics"
+        artifacts_dir = evals_dir / "fixtures" / "_generated_artifacts"
+        rubrics_dir.mkdir(parents=True)
+        for fixture_name in ["input_architecture", "input_security"]:
+            issue_dir = artifacts_dir / fixture_name / "tasks" / "issues"
+            issue_dir.mkdir(parents=True)
+            (issue_dir / "001.md").write_text(
+                f"# {fixture_name}\n## Acceptance Criteria\nchecked",
+                encoding="utf-8",
+            )
+        (rubrics_dir / "generated.yaml").write_text(
+            "rubrics:\n"
+            "  - id: task_plan\n"
+            "    artifact_file: _generated_artifacts_primary_\n"
+            "    artifact_selector:\n"
+            "      extensions: ['.md']\n"
+            "      path_patterns: ['tasks/issues/*.md']\n"
+            "      content_patterns: ['Acceptance Criteria']\n"
+            "    prompt: pass\n",
+            encoding="utf-8",
+        )
+
+        # Act
+        verdicts = RubricJudgeRunner().run(evals_dir, artifacts_dir, FakeRubricJudge())
+
+        # Assert
+        assert [verdict.rubric_id for verdict in verdicts] == [
+            "input_architecture: task_plan",
+            "input_security: task_plan",
+        ]
+        assert verdicts[0].reasoning == (
+            "judged # input_architecture\n## Acceptance Criteria\nchecked"
+        )
+        assert verdicts[1].reasoning == (
+            "judged # input_security\n## Acceptance Criteria\nchecked"
+        )
+
 
 class TestSelectArtifact:
     def test_select_artifact_matches_explicit_extension_and_content(
@@ -331,6 +371,52 @@ class TestCompareRun:
         assert [v.rubric_id for v in baseline_v] == ["gen"]
         assert skill_v[0].score == 1.0
         assert baseline_v[0].score == 0.3
+
+    def test_compare_run_compares_generated_rubric_per_fixture_dir(
+        self, tmp_path: Path
+    ) -> None:
+        # Arrange
+        evals_dir = tmp_path / "evals"
+        rubrics_dir = evals_dir / "rubrics"
+        skill_dir = tmp_path / "skill"
+        baseline_dir = tmp_path / "baseline"
+        rubrics_dir.mkdir(parents=True)
+        for fixture_name in ["input_architecture", "input_security"]:
+            skill_issue_dir = skill_dir / fixture_name / "tasks" / "issues"
+            baseline_issue_dir = baseline_dir / fixture_name / "tasks" / "issues"
+            skill_issue_dir.mkdir(parents=True)
+            baseline_issue_dir.mkdir(parents=True)
+            (skill_issue_dir / "001.md").write_text(
+                f"skill {fixture_name}", encoding="utf-8"
+            )
+            (baseline_issue_dir / "001.md").write_text(
+                f"base {fixture_name}", encoding="utf-8"
+            )
+        (rubrics_dir / "gen.yaml").write_text(
+            "rubrics:\n"
+            "  - id: gen\n"
+            "    artifact_file: _generated_artifacts_primary_\n"
+            "    artifact_selector:\n"
+            "      extensions: ['.md']\n"
+            "      path_patterns: ['tasks/issues/*.md']\n"
+            "    prompt: check\n",
+            encoding="utf-8",
+        )
+
+        # Act
+        skill_v, baseline_v = RubricJudgeRunner().compare_run(
+            evals_dir, skill_dir, baseline_dir, FakeCompareJudge()
+        )
+
+        # Assert
+        assert [v.rubric_id for v in skill_v] == [
+            "input_architecture: gen",
+            "input_security: gen",
+        ]
+        assert [v.rubric_id for v in baseline_v] == [
+            "input_architecture: gen",
+            "input_security: gen",
+        ]
 
     def test_compare_run_non_generated_rubric_judges_skill_only(
         self, tmp_path: Path
