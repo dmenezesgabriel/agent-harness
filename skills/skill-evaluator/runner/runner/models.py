@@ -21,6 +21,7 @@ class CliArgs(BaseModel):
     skill: str | None = None
     mode: Mode = Mode.INVOKE
     adapter: AdapterName = "claude"
+    input_fixture_limit: int = Field(default=2, ge=1)
     opencode_invoke_provider: str = "openai-codex"
     opencode_invoke_model: str = "gpt-5.4-mini"
     opencode_judge_provider: str = "openai-codex"

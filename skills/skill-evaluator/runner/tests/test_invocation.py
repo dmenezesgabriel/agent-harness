@@ -39,6 +39,29 @@ class TestSkillInvoker:
             encoding="utf-8"
         ) == "new Chart(); series"
 
+    def test_invoke_runs_multiple_inputs_up_to_limit(self, tmp_path: Path) -> None:
+        # Arrange
+        evals_dir = tmp_path / "dataviz" / "evals"
+        inputs_dir = evals_dir / "fixtures" / "inputs"
+        inputs_dir.mkdir(parents=True)
+        (inputs_dir / "input_a.md").write_text("a", encoding="utf-8")
+        (inputs_dir / "input_b.md").write_text("b", encoding="utf-8")
+        (inputs_dir / "input_c.md").write_text("c", encoding="utf-8")
+
+        # Act
+        generated_dir = SkillInvoker(input_fixture_limit=2).invoke(
+            "dataviz", evals_dir, FakeInvocationAgent()
+        )
+
+        # Assert
+        assert (generated_dir / "input_a" / "dataviz.js").read_text(
+            encoding="utf-8"
+        ) == "new Chart(); a"
+        assert (generated_dir / "input_b" / "dataviz.js").read_text(
+            encoding="utf-8"
+        ) == "new Chart(); b"
+        assert not (generated_dir / "input_c").exists()
+
     def test_invoke_resets_stale_generated_artifacts(self, tmp_path: Path) -> None:
         # Arrange
         evals_dir = tmp_path / "dataviz" / "evals"
@@ -92,6 +115,29 @@ class TestSkillInvokerBaseline:
         assert (baseline_dir / "baseline.txt").read_text(
             encoding="utf-8"
         ) == "baseline: series"
+
+    def test_baseline_runs_multiple_inputs_up_to_limit(self, tmp_path: Path) -> None:
+        # Arrange
+        evals_dir = tmp_path / "dataviz" / "evals"
+        inputs_dir = evals_dir / "fixtures" / "inputs"
+        inputs_dir.mkdir(parents=True)
+        (inputs_dir / "input_a.md").write_text("a", encoding="utf-8")
+        (inputs_dir / "input_b.md").write_text("b", encoding="utf-8")
+        (inputs_dir / "input_c.md").write_text("c", encoding="utf-8")
+
+        # Act
+        baseline_dir = SkillInvoker(input_fixture_limit=2).invoke_baseline(
+            evals_dir, FakeBaselineAgent()
+        )
+
+        # Assert
+        assert (baseline_dir / "input_a" / "baseline.txt").read_text(
+            encoding="utf-8"
+        ) == "baseline: a"
+        assert (baseline_dir / "input_b" / "baseline.txt").read_text(
+            encoding="utf-8"
+        ) == "baseline: b"
+        assert not (baseline_dir / "input_c").exists()
 
     def test_resets_stale_baseline_artifacts(self, tmp_path: Path) -> None:
         # Arrange

@@ -16,11 +16,15 @@ class SkillInputSizer:
         sizes = SkillInputSizer().measure(Path('skills/dataviz/evals'))
     """
 
+    def __init__(self, input_fixture_limit: int = 2) -> None:
+        self._input_fixture_limit = input_fixture_limit
+
     def measure(self, evals_dir: Path) -> dict[str, int]:
         sizes: dict[str, int] = {}
         skill_file = evals_dir.parent / "SKILL.md"
         _measure_file(skill_file, "SKILL.md", sizes)
-        for input_file in sorted((evals_dir / "fixtures" / "inputs").glob("*.md")):
+        input_files = sorted((evals_dir / "fixtures" / "inputs").glob("*.md"))
+        for input_file in input_files[: self._input_fixture_limit]:
             _measure_file(input_file, f"fixtures/inputs/{input_file.name}", sizes)
         return sizes
 

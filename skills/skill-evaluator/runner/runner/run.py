@@ -2,13 +2,14 @@
 """Skill evaluator CLI entrypoint.
 
 Discovers skills/*/evals/, builds the requested evaluation mode strategy,
-and runs the evaluator. Modes: invoke (skill + structural), judge (LLM rubric),
-trigger (routing accuracy), all (invoke + structural + judge + trigger).
+    and runs the evaluator. Modes: invoke (skill + structural), judge (LLM rubric),
+    trigger (routing accuracy), all (invoke + structural + judge + trigger).
 
 Usage:
-    uv run python -m runner.run [--skill <name>] [--mode invoke|judge|all|trigger]
+    uv run python -m runner.run [--skill <name>] [--mode invoke|judge|all|trigger|compare]
     uv run python -m runner.run --skill plan-it
     uv run python -m runner.run --skill dataviz --mode trigger
+    uv run python -m runner.run --skill dataviz --mode compare --input-fixture-limit 2
 """
 
 import argparse
@@ -68,11 +69,11 @@ def _build_app(args: CliArgs) -> SkillEvaluationApp:
 
 
 def _build_strategy(args: CliArgs, adapter: _EvaluationAdapter) -> EvalModeStrategy:
-    sizer = SkillInputSizer()
+    sizer = SkillInputSizer(args.input_fixture_limit)
     match args.mode:
         case Mode.INVOKE:
             return InvokeStrategy(
-                SkillInvoker(),
+                SkillInvoker(args.input_fixture_limit),
                 BehaveStructuralRunner(),
                 cast(AgentPort, adapter),
                 sizer,
@@ -85,7 +86,7 @@ def _build_strategy(args: CliArgs, adapter: _EvaluationAdapter) -> EvalModeStrat
             )
         case Mode.ALL:
             return AllStrategy(
-                SkillInvoker(),
+                SkillInvoker(args.input_fixture_limit),
                 BehaveStructuralRunner(),
                 cast(AgentPort, adapter),
                 RubricJudgeRunner(),
@@ -104,7 +105,7 @@ def _build_strategy(args: CliArgs, adapter: _EvaluationAdapter) -> EvalModeStrat
                     f"compare mode requires a compare-judge-capable adapter; got {type(adapter).__name__!r}"
                 )
             return CompareStrategy(
-                SkillInvoker(),
+                SkillInvoker(args.input_fixture_limit),
                 BehaveStructuralRunner(),
                 cast(AgentPort, adapter),
                 adapter,
@@ -147,6 +148,12 @@ def _parse_args() -> CliArgs:
         choices=_ADAPTERS,
         default="claude",
         help="Agent adapter to use (default: claude)",
+    )
+    parser.add_argument(
+        "--input-fixture-limit",
+        type=int,
+        default=int(os.getenv("EVAL_INPUT_FIXTURE_LIMIT", "2")),
+        help="Maximum input fixtures to invoke per skill (default: 2)",
     )
     _add_opencode_args(parser)
     return CliArgs.model_validate(vars(parser.parse_args()))

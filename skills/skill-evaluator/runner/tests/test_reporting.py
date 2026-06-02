@@ -31,6 +31,29 @@ class TestSkillInputSizer:
             "fixtures/inputs/input_timeseries.md": len("chart prompt"),
         }
 
+    def test_skill_input_sizer_counts_only_inputs_within_limit(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        # Arrange
+        evals_dir = tmp_path / "dataviz" / "evals"
+        inputs_dir = evals_dir / "fixtures" / "inputs"
+        inputs_dir.mkdir(parents=True)
+        (tmp_path / "dataviz" / "SKILL.md").write_text("skill", encoding="utf-8")
+        (inputs_dir / "input_a.md").write_text("a", encoding="utf-8")
+        (inputs_dir / "input_b.md").write_text("bb", encoding="utf-8")
+        (inputs_dir / "input_c.md").write_text("ccc", encoding="utf-8")
+
+        # Act
+        sizes = SkillInputSizer(input_fixture_limit=2).measure(evals_dir)
+
+        # Assert
+        assert sizes == {
+            "SKILL.md": len("skill"),
+            "fixtures/inputs/input_a.md": len("a"),
+            "fixtures/inputs/input_b.md": len("bb"),
+        }
+
 
 class TestMarkdownReportWriter:
     def test_write_uses_unique_timestamped_name_and_includes_input_sizes(

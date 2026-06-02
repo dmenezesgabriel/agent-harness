@@ -1,0 +1,31 @@
+{
+  "description": "Trigger accuracy queries for the skill-evaluator skill. Tests that it fires for concrete skill evaluation, trigger validation, baseline comparison, and input-size measurement requests, and stays silent for editing, planning, review, or generic debugging work.",
+  "should_trigger": [
+    {
+      "query": "evaluate the dataviz skill and report structural failures plus input size",
+      "note": "explicit evaluate request with a named skill"
+    },
+    {
+      "query": "run evals for plan-it and tell me whether the skill adds value over baseline",
+      "note": "eval request plus baseline comparison intent"
+    },
+    {
+      "query": "check whether implement-it triggers correctly for should-trigger and should-not-trigger prompts",
+      "note": "activation/routing quality request"
+    }
+  ],
+  "should_not_trigger": [
+    {
+      "query": "improve the dataviz skill instructions to make them shorter",
+      "note": "editing a skill belongs to implementation/planning, not evaluation"
+    },
+    {
+      "query": "review the skill-evaluator runner code for bugs",
+      "note": "code review belongs to review-it"
+    },
+    {
+      "query": "debug why the checkout test is failing",
+      "note": "generic debugging request, not a skill evaluation"
+    }
+  ]
+}

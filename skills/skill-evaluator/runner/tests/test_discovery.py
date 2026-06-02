@@ -32,3 +32,15 @@ class TestSkillDiscovery:
             tmp_path / "dataviz" / "evals",
             tmp_path / "plan-it" / "evals",
         ]
+
+    def test_discover_returns_evaluator_when_explicitly_requested(
+        self, tmp_path: Path
+    ) -> None:
+        # Arrange
+        (tmp_path / "skill-evaluator" / "evals").mkdir(parents=True)
+
+        # Act
+        eval_dirs = SkillDiscovery(tmp_path).discover("skill-evaluator")
+
+        # Assert
+        assert eval_dirs == [tmp_path / "skill-evaluator" / "evals"]

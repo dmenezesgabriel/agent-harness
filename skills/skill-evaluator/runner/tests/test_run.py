@@ -20,6 +20,22 @@ class TestParseArgs:
         # Assert
         assert args == CliArgs(skill="dataviz", mode=Mode.INVOKE)
 
+    def test_parse_args_accepts_input_fixture_limit(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        # Arrange
+        monkeypatch.setattr(
+            "sys.argv",
+            ["skill-eval", "--skill", "dataviz", "--input-fixture-limit", "3"],
+        )
+
+        # Act
+        args = _parse_args()
+
+        # Assert
+        assert args.input_fixture_limit == 3
+
 
 class TestBuildApp:
     def test_build_app_returns_composed_application(

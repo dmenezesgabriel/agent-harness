@@ -25,7 +25,7 @@ The judge prompt must instruct the model to respond with JSON only:
 
 ### Skill input size
 
-The runner reports character counts for `SKILL.md` and `fixtures/input_*.md` as a proxy for input tokens. Use these counts with pass rates and judge scores to compare whether shorter instructions or prompts maintain output quality.
+The runner reports character counts for `SKILL.md` and invoked `fixtures/inputs/*.md` files as a proxy for input tokens. Use these counts with pass rates and judge scores to compare whether shorter instructions or prompts maintain output quality.
 
 ---
 
@@ -39,8 +39,10 @@ The runner reports character counts for `SKILL.md` and `fixtures/input_*.md` as 
 
 ### Input fixtures (`fixtures/input_*.md`)
 
-Plain text prompts used in `invoke` mode. The runner passes the first `input_*.md` found
-to the adapter. Name them descriptively: `input_crud_feature.md`, `input_timeseries.md`.
+Plain text prompts used in `invoke` and `compare` modes. The runner invokes the first
+two sorted `*.md` inputs by default; change this with `--input-fixture-limit` when a
+cheaper smoke check or broader coverage is warranted. Name files descriptively:
+`input_crud_feature.md`, `input_timeseries.md`.
 
 ### Generated artifacts (`fixtures/_generated_artifacts/`)
 

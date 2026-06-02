@@ -28,6 +28,6 @@ class SkillDiscovery:
     def _should_include(self, evals_dir: Path, skill_filter: str | None) -> bool:
         if not evals_dir.is_dir():
             return False
-        if evals_dir.parent.name == "skill-evaluator":
+        if evals_dir.parent.name == "skill-evaluator" and skill_filter is None:
             return False
         return skill_filter is None or evals_dir.parent.name == skill_filter
