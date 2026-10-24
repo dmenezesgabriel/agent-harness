@@ -1,6 +1,6 @@
 ---
 name: engineering-mode
-description: Entry point for non-trivial software work such as a new feature, bug fix, refactor, design, or code review. Routes the task to the matching principles and checks before code is written or judged. Use at the start of any task that changes or reviews code beyond a trivial edit, even if the user does not mention architecture or principles.
+description: Use when designing, sketching, changing, or reviewing a module, class, API, or interface, and at the start of any feature, bug fix, or refactor. Routes the task to the matching principles and checks before code is written or judged, even if the user does not mention architecture or principles.
 ---
 
 # Engineering mode
