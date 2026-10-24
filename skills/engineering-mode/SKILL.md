@@ -1,6 +1,6 @@
 ---
 name: engineering-mode
-description: Use when designing, sketching, changing, or reviewing a module, class, API, or interface, and at the start of any feature, bug fix, or refactor. Routes the task to the matching principles and checks before code is written or judged, even if the user does not mention architecture or principles.
+description: Use when designing, sketching, changing, or reviewing a module, class, API, or interface, when asked for design advice or whether a structure is worth keeping or restructuring, and at the start of any feature, bug fix, or refactor. Routes the task to the matching principles and checks before code is written or judged, even if the question is conceptual or the user does not mention architecture or principles.
 ---
 
 # Engineering mode

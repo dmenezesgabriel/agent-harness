@@ -1,6 +1,6 @@
 ---
 name: principle-modules-should-be-deep
-description: Design modules, classes, and functions with a simple interface hiding substantial functionality. Use when designing or reviewing a new module boundary, public API, or abstraction, or when code feels shallow, pass-through, or hard to use without reading its implementation.
+description: Use when designing or reviewing a module, class, API, or abstraction, or when asked whether a layer, wrapper, or interface is worth keeping, even for a short snippet or a conceptual question, and even if the user does not mention depth, abstraction, or interfaces. Favors a simple interface hiding substantial functionality over shallow or pass-through code.
 ---
 
 # Modules should be deep

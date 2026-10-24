@@ -1,6 +1,6 @@
 ---
 name: principle-avoid-complexity
-description: Use when one change needs edits in many files or places, when a change is hard to make safely without hidden knowledge, or when names, units, or constants are unclear. Keeps a system obvious by cutting dependencies and obscurity, with zero tolerance for each small increment of complexity.
+description: Use when a change would touch many files or places, when code is hard to change safely, when asked how to restructure it, or when names, units, or constants are unclear. Apply even if the user never mentions complexity, coupling, or design, including for conceptual questions. Keeps a system obvious by cutting dependencies and obscurity, with zero tolerance for each small increment of complexity.
 ---
 
 # Avoid complexity

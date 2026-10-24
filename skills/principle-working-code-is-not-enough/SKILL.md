@@ -1,6 +1,6 @@
 ---
 name: principle-working-code-is-not-enough
-description: Use when choosing between the fastest fix and the cleanest design, when tempted to ship a patch or workaround that passes tests but leaves a messy design, or before adding a kludge to finish faster. Prefers strategic design improvement over tactical shortcuts.
+description: Use when asked whether to ship a quick fix or spend time on the design, when a patch or workaround passes tests but leaves a messy design, or before adding a kludge to finish faster, even if the question is conceptual. Prefers strategic design improvement over tactical shortcuts.
 ---
 
 # Working code is not enough
