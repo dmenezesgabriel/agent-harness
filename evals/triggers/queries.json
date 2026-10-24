@@ -1,0 +1,22 @@
+[
+  {"id": "design-retry", "split": "train", "expect": ["principle-modules-should-be-deep"], "query": "I'm designing a module that sends HTTP requests with retries. Sketch its public interface in a few lines."},
+  {"id": "review-ts-wrapper", "split": "train", "expect": ["principle-modules-should-be-deep"], "query": "Review this class: class UserService { constructor(private repo: UserRepo){} getUser(id: string){ return this.repo.getUser(id) } }. Worth keeping?"},
+  {"id": "find-forwarders", "split": "train", "expect": ["find-pass-through-functions"], "query": "Which functions under src/ do nothing except forward to another call, so I could delete them?"},
+  {"id": "payment-edits", "split": "train", "expect": ["principle-avoid-complexity"], "query": "Every time we add a payment method I have to edit the cart, the invoice, the email template and the report code. How should I restructure this?"},
+  {"id": "ship-or-fix", "split": "train", "expect": ["principle-working-code-is-not-enough"], "query": "My fix passes the tests but it works around a messy design in our order module. Ship it as is, or spend time fixing the design?"},
+  {"id": "rename-var", "split": "train", "expect": [], "query": "Rename the variable x to count in: x = 0; x += 1; print(x)"},
+  {"id": "git-rebase", "split": "train", "expect": [], "query": "What does `git rebase -i HEAD~3` do?"},
+  {"id": "iso-regex", "split": "train", "expect": [], "query": "Write a regex that matches ISO dates like 2024-05-17."},
+  {"id": "json-to-yaml", "split": "train", "expect": [], "query": "Convert this JSON to YAML: {\"a\": 1, \"b\": [2, 3]}"},
+  {"id": "python-import", "split": "train", "expect": [], "query": "Explain how Python's import system finds a module."},
+  {"id": "cache-interface", "split": "validation", "expect": ["principle-modules-should-be-deep"], "query": "Our Cache class has 14 public methods and callers must call warm(), then lock(), then get(). Is this interface okay?"},
+  {"id": "review-service-file", "split": "validation", "expect": ["find-pass-through-functions"], "query": "Review src/user_service.py. Is the UserService layer worth keeping?"},
+  {"id": "billing-breaks", "split": "validation", "expect": ["principle-avoid-complexity"], "query": "Every time I touch the billing module something unrelated breaks, and I never know beforehand what to check. What should I change about how it's structured?"},
+  {"id": "magic-constants", "split": "validation", "expect": ["principle-avoid-complexity"], "query": "Constants like 86400 and 0.15 appear all over the pricing code with no explanation. Is it worth cleaning up?"},
+  {"id": "special-case-branch", "split": "validation", "expect": ["principle-working-code-is-not-enough"], "query": "I'll just add another special-case if-branch in process_order to get the release out today. The function already has seven of them. Fine?"},
+  {"id": "fix-typo", "split": "validation", "expect": [], "query": "Fix the typo in this sentence: 'Teh build faild.'"},
+  {"id": "top-customers-sql", "split": "validation", "expect": [], "query": "Write a SQL query for the top 5 customers by total order value."},
+  {"id": "process-vs-thread", "split": "validation", "expect": [], "query": "What is the difference between a process and a thread?"},
+  {"id": "add-type-hints", "split": "validation", "expect": [], "query": "Add type hints to: def add(a, b): return a + b"},
+  {"id": "es-module-meaning", "split": "validation", "expect": [], "query": "What does the word 'module' mean in JavaScript ES modules?"}
+]

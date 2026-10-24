@@ -18,6 +18,18 @@ Skill rules that fail validation or review:
 python3 -I -m unittest discover -s skills/<name>/scripts
 ```
 
+## Measure triggering
+
+Spec method (`skill-creation/optimizing-descriptions.mdx`): queries in `evals/triggers/queries.json`, 3 runs each, pass at rate > 0.5 (should-trigger) or < 0.5 (should-not). ~60 real `claude` calls for `all`, so run it deliberately.
+
+```bash
+python3 -I -m unittest discover -s evals/triggers          # runner tests, no claude calls
+python3 -I evals/triggers/run_triggers.py --split train    # tune descriptions against train only
+python3 -I evals/triggers/run_triggers.py --split validation   # check generalization; never tune on it
+```
+
+JSON line per query on stdout, summary on stderr. Exit 0 all passed, 1 some failed, 2 bad input.
+
 ## Validate skills
 
 One command, from the repo root:
