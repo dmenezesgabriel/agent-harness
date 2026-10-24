@@ -9,7 +9,9 @@ Load the skill for your situation before you design, change, or review code:
 
 | Situation | Load |
 |---|---|
-| Defining a module, class, or public interface | `principle-modules-should-be-deep` |
-| Reviewing a wrapper, adapter, or service layer in Python | `find-pass-through-functions`, then judge each finding with `principle-modules-should-be-deep` |
+| Defining or reviewing a module, class, layer, or public interface | `principle-modules-should-be-deep` |
+| A Python wrapper, adapter, or service layer | `find-pass-through-functions`, then judge each finding with `principle-modules-should-be-deep` |
+| One change needs edits in many places, or hidden knowledge to make safely | `principle-avoid-complexity` |
+| Choosing between a quick patch and fixing the design | `principle-working-code-is-not-enough` |
 
 In your reply, name each principle that shaped a decision and the choice it changed. Cite only principles you loaded.
