@@ -1,6 +1,0 @@
-{
-  "skills": [
-    "../skills/*",
-    "!../skills/_on_revision/*"
-  ]
-}

@@ -1,9 +1,0 @@
-{
-	"servers": {
-		"Agent Skills": {
-			"url": "https://agentskills.io/mcp",
-			"type": "http"
-		}
-	},
-	"inputs": []
-}
