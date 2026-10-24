@@ -1,6 +1,6 @@
 ---
 name: principle-working-code-is-not-enough
-description: Prefer a strategic mindset over tactical shortcuts, so the design improves with every change. Use when tempted to patch around a design problem, add a kludge to finish faster, or when choosing between the fastest fix and the cleanest design.
+description: Use when choosing between the fastest fix and the cleanest design, when tempted to ship a patch or workaround that passes tests but leaves a messy design, or before adding a kludge to finish faster. Prefers strategic design improvement over tactical shortcuts.
 ---
 
 # Working code is not enough
