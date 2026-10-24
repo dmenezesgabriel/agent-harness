@@ -55,6 +55,10 @@ class CommandLine(unittest.TestCase):
             Path(tmp, "m.py").write_text(source)
             return main([tmp])
 
+    def run_main_on(self, target: Path) -> int:
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            return main([str(target)])
+
     def test_exit_1_when_found(self) -> None:
         self.assertEqual(self.run_main("def f(a):\n    return g(a)"), 1)
 
@@ -66,6 +70,19 @@ class CommandLine(unittest.TestCase):
 
     def test_exit_2_on_missing_path(self) -> None:
         self.assertEqual(main(["/nonexistent/path"]), 2)
+
+    def test_finds_inside_hidden_parent_directory(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp, ".hidden", "proj")
+            target.mkdir(parents=True)
+            (target / "m.py").write_text("def f(a):\n    return g(a)")
+            self.assertEqual(self.run_main_on(target), 1)
+
+    def test_skips_hidden_subdirectory_of_target(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            Path(tmp, ".venv").mkdir()
+            Path(tmp, ".venv", "x.py").write_text("def f(a):\n    return g(a)")
+            self.assertEqual(self.run_main_on(Path(tmp)), 0)
 
     def test_prints_one_json_object_per_finding(self) -> None:
         out = io.StringIO()

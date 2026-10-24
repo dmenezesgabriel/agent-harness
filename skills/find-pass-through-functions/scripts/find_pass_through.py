@@ -95,7 +95,7 @@ def _python_files(target: Path) -> list[Path]:
         return [target]
     if not target.is_dir():
         raise FileNotFoundError(f"{str(target)!r} is not a file or directory; expected a .py file or a directory")
-    return sorted(p for p in target.rglob("*.py") if not any(part.startswith(".") for part in p.parts))
+    return sorted(p for p in target.rglob("*.py") if not any(part.startswith(".") for part in p.relative_to(target).parts))
 
 
 def _parse_args(argv: list[str]) -> argparse.Namespace:
