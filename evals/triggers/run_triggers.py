@@ -108,10 +108,11 @@ def _attempt(query: Query, runner: AgentRunner) -> list[str] | None:
             return None
 
 
-def evaluate(query: Query, runs: int, runner: AgentRunner) -> dict[str, object]:
+def evaluate(query: Query, runs: int, runner: AgentRunner, invoke: str | None = None) -> dict[str, object]:
+    """Run `query` `runs` times; with `invoke`, the user-invoked skill is not counted as a trigger."""
     with ThreadPoolExecutor(max_workers=runs) as pool:
         attempts = list(pool.map(lambda _: _attempt(query, runner), range(runs)))
-    ok = [a for a in attempts if a is not None]
+    ok = [[name for name in a if name != invoke] for a in attempts if a is not None]
     rate = trigger_rate(ok, query.expect)
     loaded = Counter(name for r in ok for name in r)
     return {"id": query.id, "split": query.split, "expect": list(query.expect), "runs_ok": len(ok),
@@ -129,6 +130,7 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--runs", type=int, default=3, help="runs per query (default 3)")
     parser.add_argument("--model", default="sonnet")
     parser.add_argument("--queries", type=Path, default=HERE / "queries.json")
+    parser.add_argument("--invoke", metavar="SKILL", help="prefix each query with /SKILL, as a user invoking it")
     return parser.parse_args(argv)
 
 
@@ -139,8 +141,10 @@ def main(argv: list[str], make_runner: Callable[[str], AgentRunner] = make_claud
     except (OSError, ValueError) as error:
         print(f"error: {error}", file=sys.stderr)
         return 2
+    if args.invoke:
+        queries = [Query(q.id, f"/{args.invoke} {q.text}", q.split, q.expect) for q in queries]
     runner = make_runner(args.model)
-    results = [evaluate(q, args.runs, runner) for q in queries]
+    results = [evaluate(q, args.runs, runner, args.invoke) for q in queries]
     for result in results:
         print(json.dumps(result), flush=True)
     summary = Counter((r["split"], r["passed"]) for r in results)

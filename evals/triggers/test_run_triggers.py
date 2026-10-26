@@ -102,6 +102,11 @@ class Main(unittest.TestCase):
         self.run_main(agent)
         self.assertEqual(len(set(agent.projects)), len(agent.projects))
 
+    def test_invoke_prefixes_query_and_ignores_the_invoked_skill(self) -> None:
+        agent = FakeAgent({"/mode design it": ["mode", "principle-x"], "/mode rename it": ["mode"]})
+        code, results = self.run_main(agent, "--invoke", "mode")
+        self.assertEqual((code, [r["loaded"] for r in results]), (0, [{"principle-x": 3}, {}]))
+
     def test_exit_2_on_missing_queries_file(self) -> None:
         with contextlib.redirect_stderr(io.StringIO()):
             self.assertEqual(main(["--queries", "/nonexistent/q.json"]), 2)
