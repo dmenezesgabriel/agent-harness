@@ -9,6 +9,13 @@
   {"id": "iso-regex", "split": "train", "expect": [], "query": "Write a regex that matches ISO dates like 2024-05-17."},
   {"id": "json-to-yaml", "split": "train", "expect": [], "query": "Convert this JSON to YAML: {\"a\": 1, \"b\": [2, 3]}"},
   {"id": "python-import", "split": "train", "expect": [], "query": "Explain how Python's import system finds a module."},
+  {"id": "god-class-teams", "split": "train", "expect": ["principle-single-responsibility"], "query": "Our OrderManager calculates prices, charges the card, sends the receipt email, and writes audit logs. Finance asks for pricing changes, compliance for audit changes, marketing for email changes, and their edits keep colliding. How should this be organized?"},
+  {"id": "variant-if-chain", "split": "train", "expect": ["principle-open-closed"], "query": "Adding a new shipping provider means extending a 200-line if/elif chain in checkout.py, and we add providers every quarter. What structure would let us add them without editing that file?"},
+  {"id": "penguin-fly", "split": "train", "expect": ["principle-liskov-substitution"], "query": "We have class Penguin(Bird) where fly() raises an exception, so client code checks isinstance(bird, Penguin) before calling fly(). Is this inheritance fine?"},
+  {"id": "fat-worker-interface", "split": "train", "expect": ["principle-interface-segregation"], "query": "interface Worker { work(); eat(); sleep(); attend_meeting(); report(); } — RobotWorker throws on eat() and sleep(), and tests mock all five methods to exercise one. What's wrong with this design?"},
+  {"id": "logic-imports-stripe", "split": "train", "expect": ["principle-dependency-inversion"], "query": "Our discount logic imports stripe and builds a client to fetch coupons, so every unit test hits the network or needs heavy mocking. How should the discount code get what it needs instead?"},
+  {"id": "npm-dependency-upgrade", "split": "train", "expect": [], "query": "npm audit flags a vulnerable transitive dependency. How do I find which top-level package pulls it in?"},
+  {"id": "lsp-autocomplete", "split": "train", "expect": [], "query": "What does LSP stand for, and how does it let editors provide autocomplete?"},
   {"id": "cache-interface", "split": "validation", "expect": ["principle-modules-should-be-deep"], "query": "Our Cache class has 14 public methods and callers must call warm(), then lock(), then get(). Is this interface okay?"},
   {"id": "review-service-file", "split": "validation", "expect": ["find-pass-through-functions"], "query": "Review src/user_service.py. Is the UserService layer worth keeping?"},
   {"id": "billing-breaks", "split": "validation", "expect": ["principle-avoid-complexity"], "query": "Every time I touch the billing module something unrelated breaks, and I never know beforehand what to check. What should I change about how it's structured?"},
@@ -18,5 +25,12 @@
   {"id": "top-customers-sql", "split": "validation", "expect": [], "query": "Write a SQL query for the top 5 customers by total order value."},
   {"id": "process-vs-thread", "split": "validation", "expect": [], "query": "What is the difference between a process and a thread?"},
   {"id": "add-type-hints", "split": "validation", "expect": [], "query": "Add type hints to: def add(a, b): return a + b"},
-  {"id": "es-module-meaning", "split": "validation", "expect": [], "query": "What does the word 'module' mean in JavaScript ES modules?"}
+  {"id": "es-module-meaning", "split": "validation", "expect": [], "query": "What does the word 'module' mean in JavaScript ES modules?"},
+  {"id": "many-hat-class", "split": "validation", "expect": ["principle-single-responsibility"], "query": "Review this class: class Employee { calculate_pay(); report_hours(); save_to_db(); }. Payroll, HR, and the DBAs each request changes to it. Anything wrong?"},
+  {"id": "plugin-report-formats", "split": "validation", "expect": ["principle-open-closed"], "query": "We want partner teams to add export formats (PDF, CSV, XML) by dropping in new files, never by editing report_engine.py. How do I design that?"},
+  {"id": "square-rectangle", "split": "validation", "expect": ["principle-liskov-substitution"], "query": "I made Square extend Rectangle since a square is-a rectangle. Tests that set the width and expect height to stay put now fail. Was the inheritance wrong?"},
+  {"id": "notimplemented-half", "split": "validation", "expect": ["principle-interface-segregation"], "query": "Our Repository interface has 14 methods; two of five backends raise NotImplementedError on eight of them. A reviewer flagged it. Is it a real problem?"},
+  {"id": "port-owner", "split": "validation", "expect": ["principle-dependency-inversion"], "query": "I put the StorageGateway interface inside the s3_adapter package since S3 implements it, and the core logic imports it from there. A reviewer says the dependency still points the wrong way. What does he mean?"},
+  {"id": "ssd-vs-hdd", "split": "validation", "expect": [], "query": "Why are solid-state drives faster than spinning disks for random reads?"},
+  {"id": "network-interface", "split": "validation", "expect": [], "query": "What's the difference between a network interface and an IP address?"}
 ]

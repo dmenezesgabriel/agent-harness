@@ -5,13 +5,40 @@ description: Use when designing, sketching, changing, or reviewing a module, cla
 
 # Engineering mode
 
-Load the skill for your situation before you design, change, or review code:
+## 1. Classify
 
-| Situation | Load |
+Pick the task type first. It decides everything after.
+
+| Task | Do |
 |---|---|
-| Defining or reviewing a module, class, layer, or public interface | `principle-modules-should-be-deep` |
-| A Python wrapper, adapter, or service layer | `find-pass-through-functions`, then judge each finding with `principle-modules-should-be-deep` |
-| One change needs edits in many places, or hidden knowledge to make safely | `principle-avoid-complexity` |
-| Choosing between a quick patch and fixing the design | `principle-working-code-is-not-enough` |
+| **Question**: explain, compare, how or why something works | Answer from evidence. Load no principle unless the question is about a design. |
+| **Change**: feature, bug fix, refactor, design, review | Run the phases below. |
 
-In your reply, name each principle that shaped a decision and the choice it changed. Cite only principles you loaded.
+## 2. Phases
+
+Open a checklist with these steps. A step you skip stays listed as `skip: <reason>`.
+
+1. **Work**: smallest change that solves the problem; run it or test it.
+2. **Right**: apply each principle whose situation fits; run each check that fits.
+3. **Prove**: show the evidence (test or command output), not a claim.
+
+## 3. Principles
+
+Apply when the situation fits. Load the named skill before you cite it.
+
+- **Modules should be deep** (`principle-modules-should-be-deep`). Defining or reviewing a module, class, layer, or interface. Simple interface, substantial hidden functionality.
+- **Avoid complexity** (`principle-avoid-complexity`). One change needs edits in many places, or hidden knowledge to make safely. One decision in one place; obvious names and units.
+- **Working code is not enough** (`principle-working-code-is-not-enough`). Choosing between a quick patch and fixing the design. Fix the design problem you find.
+- **Single responsibility** (`principle-single-responsibility`). A module serves more than one actor or is edited for unrelated reasons. One reason to change per module.
+- **Open–closed** (`principle-open-closed`). A new variant means editing working code — a growing switch or dispatch. Extend by adding code.
+- **Liskov substitution** (`principle-liskov-substitution`). A subtype refuses or weakens its base contract; callers switch on concrete types. Subtypes must substitute.
+- **Interface segregation** (`principle-interface-segregation`). Implementers stub out unused methods, or one client's change hits every client. Split interfaces per role.
+- **Dependency inversion** (`principle-dependency-inversion`). Policy imports or builds infrastructure; the core cannot be tested alone. Depend on abstractions the policy owns.
+
+## 4. Checks
+
+- **Pass-through functions** (`find-pass-through-functions`). A Python wrapper, adapter, or service layer. Judge each finding with modules-should-be-deep.
+
+## Reply
+
+Name each principle that shaped a decision and the choice it changed. Cite only principles you loaded.
