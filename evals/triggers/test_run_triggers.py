@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from run_triggers import AgentRunError, load_queries, main, passed, skills_invoked, trigger_rate
+from run_triggers import AgentRunError, load_queries, main, passed, skills_invoked, skills_invoked_atif, trigger_rate
 
 
 def stream(*skills: str) -> str:
@@ -14,8 +14,16 @@ def stream(*skills: str) -> str:
     return "\n".join(json.dumps(line) for line in lines + [{"type": "result"}])
 
 
+def atif(*skills: str) -> str:
+    """Minimal devin ATIF export: one agent step per skill tool call."""
+    steps = [{"source": "agent", "tool_calls": [{"function_name": "skill", "arguments": {"skill": s}}]} for s in skills]
+    return json.dumps({"schema_version": "ATIF-v1.7", "steps": steps})
+
+
 class FakeAgent:
-    """Stands in for claude: loads the skills mapped to the query text; records the projects it saw."""
+    """Stands in for the agent CLI: loads the skills mapped to the query text; records the projects it saw."""
+
+    fmt = staticmethod(stream)
 
     def __init__(self, skills_by_text: dict[str, list[str]], fail_on: str | None = None) -> None:
         self.skills_by_text = skills_by_text
@@ -27,7 +35,11 @@ class FakeAgent:
         assert (project / ".claude" / "skills" / "engineering-mode" / "SKILL.md").exists()
         if text == self.fail_on:
             raise AgentRunError("boom")
-        return stream(*self.skills_by_text.get(text, []))
+        return self.fmt(*self.skills_by_text.get(text, []))
+
+
+class AtifAgent(FakeAgent):
+    fmt = staticmethod(atif)
 
 
 class SkillsInvoked(unittest.TestCase):
@@ -37,6 +49,22 @@ class SkillsInvoked(unittest.TestCase):
     def test_ignores_other_tools_and_garbage_lines(self) -> None:
         other = json.dumps({"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "Bash", "input": {}}]}})
         self.assertEqual(skills_invoked(f"not json\n{other}\n{stream('a')}"), ["a"])
+
+
+class SkillsInvokedAtif(unittest.TestCase):
+    def test_collects_skill_calls_in_order(self) -> None:
+        self.assertEqual(skills_invoked_atif(atif("a", "b")), ["a", "b"])
+
+    def test_ignores_other_tools_and_non_invoke_calls(self) -> None:
+        doc = json.dumps({"steps": [
+            {"source": "agent", "tool_calls": [{"function_name": "exec", "arguments": {"skill": "x"}}]},
+            {"source": "agent", "tool_calls": [{"function_name": "skill", "arguments": {"mode": "search", "keywords": ["x"]}}]},
+            {"source": "agent", "tool_calls": [{"function_name": "skill", "arguments": "{\"skill\": \"c\"}"}]},
+        ]})
+        self.assertEqual(skills_invoked_atif(doc), ["c"])
+
+    def test_garbage_and_non_dict_return_empty(self) -> None:
+        self.assertEqual((skills_invoked_atif("not json"), skills_invoked_atif("[]")), ([], []))
 
 
 class Rates(unittest.TestCase):
@@ -63,9 +91,12 @@ class LoadQueries(unittest.TestCase):
 
     def test_shipped_queries_are_balanced_per_split(self) -> None:
         queries = load_queries(Path(__file__).parent / "queries.json")
-        for split in ("train", "validation"):
-            part = [q for q in queries if q.split == split]
-            self.assertEqual((len(part), sum(bool(q.expect) for q in part)), (10, 5))
+        shapes = [
+            (len(part), sum(bool(q.expect) for q in part))
+            for split in ("train", "validation")
+            for part in [[q for q in queries if q.split == split]]
+        ]
+        self.assertEqual(shapes[0], shapes[1])
 
 
 class Main(unittest.TestCase):
@@ -106,6 +137,32 @@ class Main(unittest.TestCase):
         agent = FakeAgent({"/mode design it": ["mode", "principle-x"], "/mode rename it": ["mode"]})
         code, results = self.run_main(agent, "--invoke", "mode")
         self.assertEqual((code, [r["loaded"] for r in results]), (0, [{"principle-x": 3}, {}]))
+
+    def test_devin_harness_parses_atif_transcripts(self) -> None:
+        code, results = self.run_main(AtifAgent({"design it": ["principle-x"]}), "--harness", "devin")
+        self.assertEqual((code, [r["loaded"] for r in results]), (0, [{"principle-x": 3}, {}]))
+
+    def test_keep_and_score_transcripts(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            keep, path = Path(tmp, "keep"), Path(tmp, "q.json")
+            path.write_text(json.dumps([
+                {"id": "pos", "query": "design it", "split": "train", "expect": ["principle-x"]},
+                {"id": "miss", "query": "lost it", "split": "train", "expect": ["principle-x"]},
+            ]))
+            agent = FakeAgent({"design it": ["principle-x"]}, fail_on="lost it")
+            with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+                code = main(["--queries", str(path), "--runs", "2", "--keep-transcripts", str(keep)], lambda _m: agent)
+            self.assertEqual(code, 1)
+            records = [json.loads(l) for l in (keep / "runs.jsonl").read_text().splitlines()]
+            self.assertEqual((sum("loaded" in r for r in records), sum("error" in r for r in records)), (2, 2))
+            self.assertEqual([p.suffix for p in (keep / "pos").iterdir()], [".jsonl"] * 2)
+            self.assertTrue(all(p.name.endswith(".err.txt") for p in (keep / "miss").iterdir()))
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+                code = main(["--queries", str(path), "--score-transcripts", str(keep)])
+            scored = [json.loads(l) for l in out.getvalue().splitlines()]
+            self.assertEqual((code, [r["passed"] for r in scored]), (1, [True, False]))
+            self.assertEqual((scored[0]["runs_ok"], scored[0]["ci95"], scored[1]["ci95"]), (2, [0.34, 1.0], [0.0, 0.0]))
 
     def test_exit_2_on_missing_queries_file(self) -> None:
         with contextlib.redirect_stderr(io.StringIO()):

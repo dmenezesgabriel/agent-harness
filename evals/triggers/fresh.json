@@ -1,0 +1,8 @@
+[
+  {"id": "what-is-interface", "split": "fresh", "expect": [], "query": "What is an interface in Go, and how is it different from one in Java?"},
+  {"id": "history-of-modules", "split": "fresh", "expect": [], "query": "When did Python add the module system, and who designed it?"},
+  {"id": "define-coupling", "split": "fresh", "expect": [], "query": "Define the term 'coupling' in one sentence."},
+  {"id": "report-module-api", "split": "fresh", "expect": ["principle-modules-should-be-deep"], "query": "I need a module that generates monthly PDF reports from our sales data. Propose its public API."},
+  {"id": "config-key-everywhere", "split": "fresh", "expect": ["principle-avoid-complexity"], "query": "The config key 'retry_limit' is read and parsed in nine different files. Adding a new limit means touching all of them. What should change?"},
+  {"id": "hotfix-hardcode", "split": "fresh", "expect": ["principle-working-code-is-not-enough"], "query": "Quickest way to stop the crash is to hardcode the tenant id in the export job. The real fix is to pass the tenant through properly. Which should I do before tomorrow's release?"}
+]

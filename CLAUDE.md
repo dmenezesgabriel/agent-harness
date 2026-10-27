@@ -26,6 +26,8 @@ Spec method (`skill-creation/optimizing-descriptions.mdx`): queries in `evals/tr
 python3 -I -m unittest discover -s evals/triggers          # runner tests, no claude calls
 python3 -I evals/triggers/run_triggers.py --split train    # tune descriptions against train only
 python3 -I evals/triggers/run_triggers.py --split validation   # check generalization; never tune on it
+python3 -I evals/triggers/run_triggers.py --queries evals/triggers/fresh.json --invoke engineering-mode   # final check on never-tuned queries
+python3 -I evals/triggers/run_triggers.py --harness devin --model swe-2-medium --workers 1 --delay 10 --keep-transcripts evals/transcripts/devin   # run under devin, serial + paced; re-score with --score-transcripts <dir>
 ```
 
 JSON line per query on stdout, summary on stderr. Exit 0 all passed, 1 some failed, 2 bad input.
