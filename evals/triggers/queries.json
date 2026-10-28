@@ -16,6 +16,12 @@
   {"id": "logic-imports-stripe", "split": "train", "expect": ["principle-dependency-inversion"], "query": "Our discount logic imports stripe and builds a client to fetch coupons, so every unit test hits the network or needs heavy mocking. How should the discount code get what it needs instead?"},
   {"id": "npm-dependency-upgrade", "split": "train", "expect": [], "query": "npm audit flags a vulnerable transitive dependency. How do I find which top-level package pulls it in?"},
   {"id": "lsp-autocomplete", "split": "train", "expect": [], "query": "What does LSP stand for, and how does it let editors provide autocomplete?"},
+  {"id": "getter-logic-elsewhere", "split": "train", "expect": ["principle-tell-dont-ask"], "query": "All over our codebase I see `if user.age >= 18 && user.verified && user.country in ALLOWED` repeated in five services before showing the upgrade prompt. How should this be organized?"},
+  {"id": "train-wreck-chain", "split": "train", "expect": ["principle-law-of-demeter"], "query": "Our invoice code does `order.get_customer().get_address().get_city()` in six places, and when Customer renamed address to location every caller broke. Better shape?"},
+  {"id": "stringly-typed", "split": "train", "expect": ["principle-domain-types-over-primitives"], "query": "email, user_id, and amount travel as plain strings and ints through our handlers; we re-validate the email regex and re-divide cents in four places, and last week someone swapped quantity with price_cents. Worth fixing?"},
+  {"id": "arrow-code", "split": "train", "expect": ["principle-flat-methods"], "query": "My process_request method is a pyramid — if auth, then if role, then if feature flag, then if valid, each wrapping the next, with else branches everywhere. How do I flatten it?"},
+  {"id": "python-else-syntax", "split": "train", "expect": [], "query": "What does the `else` clause on a Python `for` loop do?"},
+  {"id": "primitive-types-go", "split": "train", "expect": [], "query": "What are Go's built-in primitive types?"},
   {"id": "cache-interface", "split": "validation", "expect": ["principle-modules-should-be-deep"], "query": "Our Cache class has 14 public methods and callers must call warm(), then lock(), then get(). Is this interface okay?"},
   {"id": "review-service-file", "split": "validation", "expect": ["find-pass-through-functions"], "query": "Review src/user_service.py. Is the UserService layer worth keeping?"},
   {"id": "billing-breaks", "split": "validation", "expect": ["principle-avoid-complexity"], "query": "Every time I touch the billing module something unrelated breaks, and I never know beforehand what to check. What should I change about how it's structured?"},
@@ -32,5 +38,11 @@
   {"id": "notimplemented-half", "split": "validation", "expect": ["principle-interface-segregation"], "query": "Our Repository interface has 14 methods; two of five backends raise NotImplementedError on eight of them. A reviewer flagged it. Is it a real problem?"},
   {"id": "port-owner", "split": "validation", "expect": ["principle-dependency-inversion"], "query": "I put the StorageGateway interface inside the s3_adapter package since S3 implements it, and the core logic imports it from there. A reviewer says the dependency still points the wrong way. What does he mean?"},
   {"id": "ssd-vs-hdd", "split": "validation", "expect": [], "query": "Why are solid-state drives faster than spinning disks for random reads?"},
-  {"id": "network-interface", "split": "validation", "expect": [], "query": "What's the difference between a network interface and an IP address?"}
+  {"id": "network-interface", "split": "validation", "expect": [], "query": "What's the difference between a network interface and an IP address?"},
+  {"id": "anemic-order", "split": "validation", "expect": ["principle-tell-dont-ask"], "query": "Our Order class is just fields and getters. Eligibility, pricing, and cancellation rules live in OrderService, PricingService, and RefundService. Is that a problem?"},
+  {"id": "billing-city-reach", "split": "validation", "expect": ["principle-law-of-demeter"], "query": "The report generator reaches `report.customer.company.billing.address.city` to stamp each line. A teammate flagged it as a train wreck. What should change?"},
+  {"id": "int-param-swap", "split": "validation", "expect": ["principle-domain-types-over-primitives"], "query": "add_line_item(quantity, weight_grams, price_cents) takes three ints, callers keep swapping quantity and price, and we've shipped the bug twice. What are my options?"},
+  {"id": "elif-monster", "split": "validation", "expect": ["principle-flat-methods"], "query": "handle_event has an if/elif chain nine arms long for event types, and I need to add a tenth. How should I restructure it?"},
+  {"id": "javabean-getters", "split": "validation", "expect": [], "query": "What's the JavaBeans naming convention for accessor methods?"},
+  {"id": "js-optional-chaining", "split": "validation", "expect": [], "query": "What does `user?.address?.city` do in JavaScript?"}
 ]

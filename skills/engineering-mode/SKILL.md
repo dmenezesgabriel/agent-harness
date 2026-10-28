@@ -34,6 +34,10 @@ Apply when the situation fits. Load the named skill before you cite it.
 - **Liskov substitution** (`principle-liskov-substitution`). A subtype refuses or weakens its base contract; callers switch on concrete types. Subtypes must substitute.
 - **Interface segregation** (`principle-interface-segregation`). Implementers stub out unused methods, or one client's change hits every client. Split interfaces per role.
 - **Dependency inversion** (`principle-dependency-inversion`). Policy imports or builds infrastructure; the core cannot be tested alone. Depend on abstractions the policy owns.
+- **Tell, don't ask** (`principle-tell-dont-ask`). Callers compute from another value's fields; behavior drifted away from its data. Move the operation next to the data.
+- **Law of Demeter** (`principle-law-of-demeter`). Callers chain through values to reach a result — train wrecks, deep key paths. Ask the neighbor for the outcome.
+- **Domain types over primitives** (`principle-domain-types-over-primitives`). Meaning travels in bare primitives; swaps and re-validation at call sites. Parse once into named types.
+- **Flat methods** (`principle-flat-methods`). Control flow nests into arrows and if/elif chains. No else: guard clauses, early returns, dispatch.
 
 ## 4. Checks
 
