@@ -42,6 +42,9 @@ Apply when the situation fits. Load the named skill before you cite it.
 ## 4. Checks
 
 - **Pass-through functions** (`find-pass-through-functions`). A Python wrapper, adapter, or service layer. Judge each finding with modules-should-be-deep.
+- **Nested branches** (`find-nested-branches`). Python functions with else/elif or control flow nested past one level. Judge each finding with `principle-flat-methods`.
+- **Train wrecks** (`find-train-wrecks`). Python chains reaching through three or more links. Judge each finding with `principle-law-of-demeter`.
+- **Feature envy** (`find-feature-envy`). Python functions reading several attributes of one foreign value. Judge each finding with `principle-tell-dont-ask`.
 
 ## Reply
 

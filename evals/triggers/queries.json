@@ -22,6 +22,10 @@
   {"id": "arrow-code", "split": "train", "expect": ["principle-flat-methods"], "query": "My process_request method is a pyramid — if auth, then if role, then if feature flag, then if valid, each wrapping the next, with else branches everywhere. How do I flatten it?"},
   {"id": "python-else-syntax", "split": "train", "expect": [], "query": "What does the `else` clause on a Python `for` loop do?"},
   {"id": "primitive-types-go", "split": "train", "expect": [], "query": "What are Go's built-in primitive types?"},
+  {"id": "list-else-chains", "split": "train", "expect": ["find-nested-branches"], "query": "Which functions under src/ use else or elif branches I could flatten?"},
+  {"id": "deep-chains", "split": "train", "expect": ["find-train-wrecks"], "query": "List the expressions under src/ that reach through three or more objects in a row, like a.b.c.d."},
+  {"id": "css-nesting", "split": "train", "expect": [], "query": "Does modern CSS support nested selectors natively?"},
+  {"id": "jq-nested-field", "split": "train", "expect": [], "query": "How do I access a nested field in jq, like .a.b.c?"},
   {"id": "cache-interface", "split": "validation", "expect": ["principle-modules-should-be-deep"], "query": "Our Cache class has 14 public methods and callers must call warm(), then lock(), then get(). Is this interface okay?"},
   {"id": "review-service-file", "split": "validation", "expect": ["find-pass-through-functions"], "query": "Review src/user_service.py. Is the UserService layer worth keeping?"},
   {"id": "billing-breaks", "split": "validation", "expect": ["principle-avoid-complexity"], "query": "Every time I touch the billing module something unrelated breaks, and I never know beforehand what to check. What should I change about how it's structured?"},
@@ -44,5 +48,9 @@
   {"id": "int-param-swap", "split": "validation", "expect": ["principle-domain-types-over-primitives"], "query": "add_line_item(quantity, weight_grams, price_cents) takes three ints, callers keep swapping quantity and price, and we've shipped the bug twice. What are my options?"},
   {"id": "elif-monster", "split": "validation", "expect": ["principle-flat-methods"], "query": "handle_event has an if/elif chain nine arms long for event types, and I need to add a tenth. How should I restructure it?"},
   {"id": "javabean-getters", "split": "validation", "expect": [], "query": "What's the JavaBeans naming convention for accessor methods?"},
-  {"id": "js-optional-chaining", "split": "validation", "expect": [], "query": "What does `user?.address?.city` do in JavaScript?"}
+  {"id": "js-optional-chaining", "split": "validation", "expect": [], "query": "What does `user?.address?.city` do in JavaScript?"},
+  {"id": "envy-scan", "split": "validation", "expect": ["find-feature-envy"], "query": "Which functions under src/ keep pulling fields out of one foreign object instead of asking it for the result?"},
+  {"id": "review-builder-flatten", "split": "validation", "expect": ["find-nested-branches"], "query": "Which functions in src/report_builder.py should I flatten with early returns?"},
+  {"id": "bash-if-else", "split": "validation", "expect": [], "query": "How do I write an if/else statement in bash?"},
+  {"id": "dot-notation-meaning", "split": "validation", "expect": [], "query": "What does 'dot notation' mean in JavaScript?"}
 ]
