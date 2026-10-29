@@ -48,7 +48,7 @@ Output is one JSON object per query: `rate`, `ci95` (95% Wilson interval), `erro
 
 ### Flags and splits
 
-- `--split train|validation|all` — `queries.json` is balanced 10/10 per split. Tune descriptions on `train` only; `validation` is a held-out generalization check, never tune on it.
+- `--split train|validation|all` — `queries.json` holds equal counts of should-trigger and should-not queries per split (enforced by a runner test). Tune descriptions on `train` only; `validation` is a held-out generalization check, never tune on it.
 - `--queries FILE` — alternate query set, e.g. `evals/triggers/fresh.json`.
 - `--invoke SKILL` — prefixes every query with `/SKILL`; that skill's own load is not counted (measures post-invocation routing).
 - `--model MODEL` — default `sonnet`; devin e.g. `swe-2-medium`.
@@ -59,3 +59,9 @@ Output is one JSON object per query: `rate`, `ci95` (95% Wilson interval), `erro
 
 - The agent runs in your real environment: global skills, user config, hooks, and MCP servers are visible. Any skill load counts on should-not queries — inspect the `loaded` map when one fails.
 - Non-interactive runs can't show approval prompts; the skills only need read/exec access to the temp project, which default permissions cover.
+
+### Measured baseline
+
+Devin `swe-2-medium`, n=8 per query (`evals/transcripts/devin-swe2-medium-*`, re-score with `--score-transcripts`): every shipped query passes — should-trigger at rate 1.0, should-not at 0. `engineering-mode` co-fires with the expected leaf on most should-trigger runs rather than racing it; user-invoked mode routes to the expected leaf (`train-wreck-chain` → law-of-demeter, `arrow-code` → flat-methods, 3/3 each). Weakest measured trigger: `em-add-json-flag` at 11/16 (0.69, CI [0.44, 0.86]) — a bare feature request with no design cues.
+
+The same descriptions trigger far less under `claude -p` sonnet-5-5 (several 0/3 on queries that pass 8/8 under devin): a harness injection-posture difference, not a per-description defect. Treat claude rates as a separate tuning problem before changing descriptions on its evidence.
