@@ -13,7 +13,7 @@ python3 -I scripts/find_feature_envy.py <path> [...]   # Python
 uv run scripts/find_feature_envy.py <path> [...]       # + TS/JS/Java/Kotlin (installs deps)
 ```
 
-Output is one JSON object per finding on stdout (`path`, `line`, `name`, `target`, `attrs`); errors go to stderr. Exit 0 none, 1 found, 2 bad input. `--help` lists the same. Supported suffixes: `.py`, `.ts`, `.tsx`, `.js`, `.jsx`, `.java`, `.kt`, `.kts`.
+Output is one JSON object per finding on stdout (`path`, `line`, `name`, `target`, `attrs`); errors go to stderr. Exit 0 none, 1 found, 2 bad input. Files that fail to parse are skipped with a warning on stderr; exit 2 when no file could be parsed. `--help` lists the same. Supported suffixes: `.py`, `.ts`, `.tsx`, `.js`, `.jsx`, `.java`, `.kt`, `.kts`.
 
 A finding is a smell, not a verdict. For each one, decide with `principle-tell-dont-ask`: move the computation next to `target`'s data, or keep it when the rule belongs to the caller.
 

@@ -1,3 +1,5 @@
+import contextlib
+import io
 import tempfile
 import unittest
 from pathlib import Path
@@ -89,6 +91,15 @@ class Main(unittest.TestCase):
             bad = Path(tmp, "bad.ts")
             bad.write_text("const x = ;;; class {")
             self.assertEqual(main([str(bad)]), 2)
+
+    def test_broken_file_skipped_in_directory_scan(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            Path(tmp, "good.ts").write_text("const x = a.b.c.d;")
+            Path(tmp, "broken.ts").write_text("const x = ;;; class {")
+            stderr = io.StringIO()
+            with contextlib.redirect_stderr(stderr):
+                self.assertEqual(main([tmp]), 1)
+            self.assertIn("warning:", stderr.getvalue())
 
 
 if __name__ == "__main__":

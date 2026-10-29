@@ -158,6 +158,9 @@ def find_wrecks_tree(source: bytes, path: str, grammar: str) -> list[Finding]:
 
 def _source_files(target: Path) -> list[Path]:
     if target.is_file():
+        if target.suffix != ".py" and target.suffix not in _LANGUAGES:
+            raise FileNotFoundError(
+                f"{str(target)!r} has unsupported suffix {target.suffix!r}; expected .py/.ts/.tsx/.js/.jsx/.java/.kt/.kts")
         return [target]
     if not target.is_dir():
         raise FileNotFoundError(
@@ -171,7 +174,7 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         prog="find_train_wrecks.py",
         description="Print one JSON object per train-wreck chain: path, line, expression, hops.",
-        epilog="Exit codes: 0 none found, 1 found, 2 bad input (missing path, syntax error, bad flags).",
+        epilog="Exit codes: 0 none found, 1 found, 2 bad input (missing path, unsupported file, no file parsed, bad flags).",
     )
     parser.add_argument("paths", nargs="+", metavar="PATH",
                         help="source file, or directory searched recursively (.py, .ts, .tsx, .js, .jsx, .java, .kt, .kts)")
@@ -188,9 +191,21 @@ def main(argv: list[str]) -> int:
     args = _parse_args(argv)
     try:
         files = [f for arg in args.paths for f in _source_files(Path(arg))]
-        findings = [f for file in files for f in _find_in_file(file)]
-    except (FileNotFoundError, SyntaxError, UnicodeDecodeError, MissingTreeSitter) as error:
+    except FileNotFoundError as error:
         print(f"error: {error}", file=sys.stderr)
+        return 2
+    findings = []
+    parsed = 0
+    for file in files:
+        try:
+            findings += _find_in_file(file)
+            parsed += 1
+        except MissingTreeSitter as error:
+            print(f"error: {error}", file=sys.stderr)
+            return 2
+        except (SyntaxError, UnicodeDecodeError) as error:
+            print(f"warning: {error}; skipped", file=sys.stderr)
+    if files and not parsed:
         return 2
     for finding in findings:
         print(json.dumps(asdict(finding)))
