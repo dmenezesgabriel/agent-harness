@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
+# /// script
+# dependencies = ["tree-sitter-language-pack"]
+# ///
 """Report expressions that reach through three or more links — Law of Demeter train wrecks.
 
-Source is parsed with ast, never executed. Run with --help for usage and exit codes.
+Python is parsed with ast; TypeScript/JavaScript, Java, and Kotlin with tree-sitter
+(run those via uv, deps declared above). Source is parsed, never executed.
 """
 from __future__ import annotations
 
@@ -11,9 +15,33 @@ import json
 import sys
 from dataclasses import asdict, dataclass
 from pathlib import Path
+from typing import Any
 
 _MIN_HOPS = 3
 _RECEIVERS = ("self", "cls")
+# suffix -> tree-sitter grammar
+_LANGUAGES = {
+    ".ts": "typescript", ".mts": "typescript", ".cts": "typescript",
+    ".tsx": "tsx", ".js": "tsx", ".jsx": "tsx", ".mjs": "tsx", ".cjs": "tsx",
+    ".java": "java",
+    ".kt": "kotlin", ".kts": "kotlin",
+}
+# tree-sitter grammar -> language family used by _LINKS/_FREE_BASES
+_FAMILY = {"typescript": "ts", "tsx": "ts", "java": "java", "kotlin": "kotlin"}
+# language family -> {node type: (receiver field name or child index, hops added)}
+_LINKS: dict[str, dict[str, tuple[str | int, int]]] = {
+    "ts": {"member_expression": ("object", 1), "subscript_expression": ("object", 1),
+           "call_expression": ("function", 0)},
+    "java": {"field_access": ("object", 1), "method_invocation": ("object", 1),
+             "array_access": ("array", 1)},
+    "kotlin": {"navigation_expression": (0, 1), "indexing_expression": (0, 1),
+               "call_expression": (0, 0)},
+}
+_FREE_BASES = {"ts": {"this"}, "java": {"this"}, "kotlin": {"this_expression"}}
+
+
+class MissingTreeSitter(RuntimeError):
+    """tree-sitter-language-pack is not importable in this interpreter."""
 
 
 @dataclass(frozen=True)
@@ -40,7 +68,7 @@ def _chain_length(node: ast.AST) -> int:
 
 
 def find_wrecks(source: str, path: str) -> list[Finding]:
-    """Maximal access chains in `source` with at least three reaches.
+    """Maximal access chains in Python `source` with at least three reaches.
 
     >>> find_wrecks("x = a.b.c.d", "m.py")[0].hops
     3
@@ -60,12 +88,83 @@ def find_wrecks(source: str, path: str) -> list[Finding]:
     return findings
 
 
-def _python_files(target: Path) -> list[Path]:
+def _receiver(node: Any, spec: tuple[str | int, int]) -> Any:
+    field = spec[0]
+    return node.children[field] if isinstance(field, int) and len(node.children) > field else (
+        node.child_by_field_name(field) if isinstance(field, str) else None)
+
+
+def _tree_hops(node: Any, links: dict[str, tuple[str | int, int]]) -> tuple[int, Any]:
+    """(hops, base node) for the chain rooted at `node`; stops at the first non-link."""
+    hops = 0
+    while node is not None and node.type in links:
+        receiver = _receiver(node, links[node.type])
+        if receiver is None:
+            break
+        hops += links[node.type][1]
+        node = receiver
+    return hops, node
+
+
+def _tree_parents(root: Any) -> dict[int, Any]:
+    """Map stable tree-sitter node ids to parents; Python `id()` is unstable across accesses."""
+    parents: dict[int, Any] = {}
+    stack = [root]
+    while stack:
+        node = stack.pop()
+        for child in node.children:
+            parents[child.id] = node
+            stack.append(child)
+    return parents
+
+
+def find_wrecks_tree(source: bytes, path: str, grammar: str) -> list[Finding]:
+    """Maximal access chains in TypeScript/JavaScript/Java/Kotlin `source` with at least three reaches.
+
+    >>> find_wrecks_tree(b"const x = a.b.c.d;", "m.ts", "typescript")[0].hops
+    3
+    """
+    try:
+        from tree_sitter_language_pack import get_parser
+    except ImportError as error:
+        raise MissingTreeSitter(
+            "tree-sitter-language-pack is not installed; run via `uv run scripts/find_train_wrecks.py` "
+            "(PEP 723 dependencies are declared in this script)"
+        ) from error
+    tree = get_parser(grammar).parse(source)
+    if tree.root_node.has_error:
+        raise SyntaxError(f"{path!r}: could not parse as {grammar}; expected valid source")
+    family = _FAMILY[grammar]
+    links = _LINKS[family]
+    parents = _tree_parents(tree.root_node)
+    findings = []
+    stack = [tree.root_node]
+    while stack:
+        node = stack.pop()
+        stack.extend(node.children)
+        spec = links.get(node.type)
+        if spec is None or _receiver(node, spec) is None:
+            continue
+        parent = parents.get(node.id)
+        continued = (parent is not None and parent.type in links
+                     and _receiver(parent, links[parent.type]) == node)
+        hops, base = _tree_hops(node, links)
+        if base is not None and base.type in _FREE_BASES[family]:
+            hops -= 1
+        if not continued and hops >= _MIN_HOPS:
+            findings.append(Finding(path, node.start_point[0] + 1, node.text.decode(), hops))
+    return findings
+
+
+def _source_files(target: Path) -> list[Path]:
     if target.is_file():
         return [target]
     if not target.is_dir():
-        raise FileNotFoundError(f"{str(target)!r} is not a file or directory; expected a .py file or a directory")
-    return sorted(p for p in target.rglob("*.py") if not any(part.startswith(".") for part in p.relative_to(target).parts))
+        raise FileNotFoundError(
+            f"{str(target)!r} is not a file or directory; expected .py/.ts/.tsx/.js/.jsx/.java/.kt/.kts or a directory")
+    return sorted(p for p in target.rglob("*")
+                  if (p.suffix == ".py" or p.suffix in _LANGUAGES)
+                  and not any(part.startswith(".") for part in p.relative_to(target).parts))
 
 
 def _parse_args(argv: list[str]) -> argparse.Namespace:
@@ -74,16 +173,23 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
         description="Print one JSON object per train-wreck chain: path, line, expression, hops.",
         epilog="Exit codes: 0 none found, 1 found, 2 bad input (missing path, syntax error, bad flags).",
     )
-    parser.add_argument("paths", nargs="+", metavar="PATH", help=".py file, or directory searched recursively")
+    parser.add_argument("paths", nargs="+", metavar="PATH",
+                        help="source file, or directory searched recursively (.py, .ts, .tsx, .js, .jsx, .java, .kt, .kts)")
     return parser.parse_args(argv)
+
+
+def _find_in_file(file: Path) -> list[Finding]:
+    if file.suffix == ".py":
+        return find_wrecks(file.read_text(), str(file))
+    return find_wrecks_tree(file.read_bytes(), str(file), _LANGUAGES[file.suffix])
 
 
 def main(argv: list[str]) -> int:
     args = _parse_args(argv)
     try:
-        files = [f for arg in args.paths for f in _python_files(Path(arg))]
-        findings = [f for file in files for f in find_wrecks(file.read_text(), str(file))]
-    except (FileNotFoundError, SyntaxError, UnicodeDecodeError) as error:
+        files = [f for arg in args.paths for f in _source_files(Path(arg))]
+        findings = [f for file in files for f in _find_in_file(file)]
+    except (FileNotFoundError, SyntaxError, UnicodeDecodeError, MissingTreeSitter) as error:
         print(f"error: {error}", file=sys.stderr)
         return 2
     for finding in findings:
