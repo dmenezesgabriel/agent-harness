@@ -22,6 +22,7 @@ A finding is a smell, not a verdict. For each one, decide with `principle-tell-d
 - Method calls on the parameter (`u.get_a()`) count as attribute reads, matching the Python detector.
 - Serializers, mappers, and constructors legitimately touch many fields of one value; that is their job, not envy.
 - Dict/subscript access is not counted (it is a traversal, not an attribute read).
+- Scans skip hidden directories and generated trees (`node_modules`, `dist`, `build`, `target`, `out`, `vendor`, `coverage`, `__pycache__`); pass a file or that directory explicitly to scan it anyway.
 - Counting findings is not a cohesion score; do not optimize the count.
 
 Tests: `python3 -I -m unittest discover -s scripts` (Python only; language tests skip) and `uv run --with tree-sitter-language-pack python -I -m unittest discover -s scripts` (all languages).

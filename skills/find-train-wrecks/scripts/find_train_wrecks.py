@@ -28,6 +28,7 @@ _LANGUAGES = {
 }
 # tree-sitter grammar -> language family used by _LINKS/_FREE_BASES
 _FAMILY = {"typescript": "ts", "tsx": "ts", "java": "java", "kotlin": "kotlin"}
+_SKIP_DIRS = {"node_modules", "dist", "build", "target", "out", "vendor", "coverage", "__pycache__"}
 # language family -> {node type: (receiver field name or child index, hops added)}
 _LINKS: dict[str, dict[str, tuple[str | int, int]]] = {
     "ts": {"member_expression": ("object", 1), "subscript_expression": ("object", 1),
@@ -167,7 +168,7 @@ def _source_files(target: Path) -> list[Path]:
             f"{str(target)!r} is not a file or directory; expected .py/.ts/.tsx/.js/.jsx/.java/.kt/.kts or a directory")
     return sorted(p for p in target.rglob("*")
                   if (p.suffix == ".py" or p.suffix in _LANGUAGES)
-                  and not any(part.startswith(".") for part in p.relative_to(target).parts))
+                  and not any(part.startswith(".") or part in _SKIP_DIRS for part in p.relative_to(target).parts))
 
 
 def _parse_args(argv: list[str]) -> argparse.Namespace:

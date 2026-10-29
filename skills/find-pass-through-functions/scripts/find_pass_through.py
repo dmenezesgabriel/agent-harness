@@ -27,6 +27,7 @@ _LANGUAGES = {
     ".kt": "kotlin", ".kts": "kotlin",
 }
 _FAMILY = {"typescript": "ts", "tsx": "ts", "java": "java", "kotlin": "kotlin"}
+_SKIP_DIRS = {"node_modules", "dist", "build", "target", "out", "vendor", "coverage", "__pycache__"}
 _FUNCTIONS = {
     "ts": {"function_declaration", "function_expression", "generator_function_declaration",
            "generator_function", "method_definition", "arrow_function"},
@@ -330,7 +331,7 @@ def _source_files(target: Path) -> list[Path]:
             f"{str(target)!r} is not a file or directory; expected .py/.ts/.tsx/.js/.jsx/.java/.kt/.kts or a directory")
     return sorted(p for p in target.rglob("*")
                   if (p.suffix == ".py" or p.suffix in _LANGUAGES)
-                  and not any(part.startswith(".") for part in p.relative_to(target).parts))
+                  and not any(part.startswith(".") or part in _SKIP_DIRS for part in p.relative_to(target).parts))
 
 
 def _parse_args(argv: list[str]) -> argparse.Namespace:

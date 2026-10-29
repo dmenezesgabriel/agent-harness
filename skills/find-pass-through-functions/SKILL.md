@@ -20,6 +20,7 @@ A finding is a smell, not a verdict. For each one, decide with `principle-module
 **Gotchas:**
 - Not reported on purpose: decorated/annotated functions, `super()` calls, zero-argument functions, and any body that transforms, reorders, or adds an argument.
 - No finding does not mean the module is deep. It only means no exact forwarding was found.
+- Scans skip hidden directories and generated trees (`node_modules`, `dist`, `build`, `target`, `out`, `vendor`, `coverage`, `__pycache__`); pass a file or that directory explicitly to scan it anyway.
 - Counting findings is not a depth score; do not optimize the count.
 
 Tests: `python3 -I -m unittest discover -s scripts` (Python only; language tests skip) and `uv run --with tree-sitter-language-pack python -I -m unittest discover -s scripts` (all languages).

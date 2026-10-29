@@ -21,6 +21,7 @@ A finding is a smell, not a verdict. For each one, decide with `principle-flat-m
 - `depth` counts nested decision nodes (if/for/while/match, switch, `when`); `try`, `with`, and comprehensions are not counted.
 - Guard-clause cascades (`if: return`, `if: return`) do not nest and are not flagged — unless a branch inside them does.
 - Kotlin `if` in value position (`val x = if (a) 1 else 2`) is a ternary, not a branch, and is not flagged.
+- Scans skip hidden directories and generated trees (`node_modules`, `dist`, `build`, `target`, `out`, `vendor`, `coverage`, `__pycache__`); pass a file or that directory explicitly to scan it anyway.
 - Counting findings is not a flatness score; do not optimize the count.
 
 Tests: `python3 -I -m unittest discover -s scripts` (Python only; language tests skip) and `uv run --with tree-sitter-language-pack python -I -m unittest discover -s scripts` (all languages).

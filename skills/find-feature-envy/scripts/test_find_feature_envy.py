@@ -68,5 +68,26 @@ class Main(unittest.TestCase):
             with contextlib.redirect_stderr(io.StringIO()):
                 self.assertEqual(main([str(path)]), 2)
 
+
+    def test_generated_dirs_skipped(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            Path(tmp, "src").mkdir()
+            Path(tmp, "src", "good.py").write_text("def f(u):\n    return u.a + u.b + u.c")
+            Path(tmp, "node_modules").mkdir()
+            Path(tmp, "node_modules", "dep.py").write_text("def f(u):\n    return u.a + u.b + u.c")
+            stdout = io.StringIO()
+            with contextlib.redirect_stdout(stdout):
+                self.assertEqual(main([tmp]), 1)
+            self.assertEqual(len(stdout.getvalue().splitlines()), 1)
+
+    def test_explicit_generated_dir_scanned(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            Path(tmp, "build").mkdir()
+            Path(tmp, "build", "good.py").write_text("def f(u):\n    return u.a + u.b + u.c")
+            stdout = io.StringIO()
+            with contextlib.redirect_stdout(stdout):
+                self.assertEqual(main([str(Path(tmp, "build"))]), 1)
+            self.assertEqual(len(stdout.getvalue().splitlines()), 1)
+
 if __name__ == "__main__":
     unittest.main()

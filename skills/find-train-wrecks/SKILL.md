@@ -21,6 +21,7 @@ A finding is a smell, not a verdict. For each one, decide with `principle-law-of
 - Static analysis cannot tell a traversal from a fluent API — `query.where(...).order_by(...)` flags just like `a.b.c.d`. Fluent findings are false positives; judge each one.
 - The first hop on `self`/`cls`/`this` is free — it is the code's own member, not a stranger.
 - Only the maximal chain is reported, so a finding's prefixes are not listed separately.
+- Scans skip hidden directories and generated trees (`node_modules`, `dist`, `build`, `target`, `out`, `vendor`, `coverage`, `__pycache__`); pass a file or that directory explicitly to scan it anyway.
 - Counting findings is not a coupling score; do not optimize the count.
 
 Tests: `python3 -I -m unittest discover -s scripts` (Python only; language tests skip) and `uv run --with tree-sitter-language-pack python -I -m unittest discover -s scripts` (all languages).
