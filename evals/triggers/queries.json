@@ -26,6 +26,9 @@
   {"id": "deep-chains", "split": "train", "expect": ["find-train-wrecks"], "query": "List the expressions under src/ that reach through three or more objects in a row, like a.b.c.d."},
   {"id": "css-nesting", "split": "train", "expect": [], "query": "Does modern CSS support nested selectors natively?"},
   {"id": "jq-nested-field", "split": "train", "expect": [], "query": "How do I access a nested field in jq, like .a.b.c?"},
+  {"id": "backend-name-in-api", "split": "train", "expect": ["principle-hide-information"], "query": "Every method in our Storage client takes a backend parameter — 's3' or 'gcs' — because callers choose where files land. We might add a third provider and drop one. Should the backend be part of the API surface?"},
+  {"id": "em-add-json-flag", "split": "train", "expect": ["engineering-mode"], "query": "Add a --json output option to our `inventory list` command and cover it with tests."},
+  {"id": "em-refactor-notifications", "split": "train", "expect": ["engineering-mode"], "query": "I want to refactor our notifications module before we add two more channels. Where do I start?"},
   {"id": "cache-interface", "split": "validation", "expect": ["principle-modules-should-be-deep"], "query": "Our Cache class has 14 public methods and callers must call warm(), then lock(), then get(). Is this interface okay?"},
   {"id": "review-service-file", "split": "validation", "expect": ["find-pass-through-functions"], "query": "Review src/user_service.py. Is the UserService layer worth keeping?"},
   {"id": "billing-breaks", "split": "validation", "expect": ["principle-avoid-complexity"], "query": "Every time I touch the billing module something unrelated breaks, and I never know beforehand what to check. What should I change about how it's structured?"},
@@ -52,5 +55,8 @@
   {"id": "envy-scan", "split": "validation", "expect": ["find-feature-envy"], "query": "Which functions under src/ keep pulling fields out of one foreign object instead of asking it for the result?"},
   {"id": "review-builder-flatten", "split": "validation", "expect": ["find-nested-branches"], "query": "Which functions in src/report_builder.py should I flatten with early returns?"},
   {"id": "bash-if-else", "split": "validation", "expect": [], "query": "How do I write an if/else statement in bash?"},
+  {"id": "init-before-use", "split": "validation", "expect": ["principle-hide-information"], "query": "Every caller of our Settings class must call reload() before reading get() or they get stale values — two services shipped stale config last month. A teammate says this is bad design. Is it?"},
+  {"id": "em-fix-cart-crash", "split": "validation", "expect": ["engineering-mode"], "query": "Fix the crash in checkout: submitting an empty cart throws KeyError on 'items'. Add a regression test."},
+  {"id": "em-review-billing", "split": "validation", "expect": ["engineering-mode"], "query": "Review the structure of our billing service before I merge this quarter's changes — does it hold up?"},
   {"id": "dot-notation-meaning", "split": "validation", "expect": [], "query": "What does 'dot notation' mean in JavaScript?"}
 ]

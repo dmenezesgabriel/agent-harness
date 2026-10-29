@@ -4,5 +4,6 @@
   {"id": "define-coupling", "split": "fresh", "expect": [], "query": "Define the term 'coupling' in one sentence."},
   {"id": "report-module-api", "split": "fresh", "expect": ["principle-modules-should-be-deep"], "query": "I need a module that generates monthly PDF reports from our sales data. Propose its public API."},
   {"id": "config-key-everywhere", "split": "fresh", "expect": ["principle-avoid-complexity"], "query": "The config key 'retry_limit' is read and parsed in nine different files. Adding a new limit means touching all of them. What should change?"},
-  {"id": "hotfix-hardcode", "split": "fresh", "expect": ["principle-working-code-is-not-enough"], "query": "Quickest way to stop the crash is to hardcode the tenant id in the export job. The real fix is to pass the tenant through properly. Which should I do before tomorrow's release?"}
+  {"id": "hotfix-hardcode", "split": "fresh", "expect": ["principle-working-code-is-not-enough"], "query": "Quickest way to stop the crash is to hardcode the tenant id in the export job. The real fix is to pass the tenant through properly. Which should I do before tomorrow's release?"},
+  {"id": "hash-scheme-in-record", "split": "fresh", "expect": ["principle-hide-information"], "query": "Our UserRecord exposes a password_scheme field ('argon2' or 'bcrypt') that callers inspect to decide how to verify. Migrating everyone to argon2 means edits in three services. What went wrong?"}
 ]
