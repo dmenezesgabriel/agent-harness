@@ -15,8 +15,11 @@ Skill rules that fail validation or review:
 ## Test skill scripts
 
 ```bash
-python3 -I -m unittest discover -s skills/<name>/scripts
+python3 -I -m unittest discover -s skills/<name>/scripts   # Python paths; language tests skip
+uv run --with tree-sitter-language-pack python -I -m unittest discover -s skills/<name>/scripts   # all languages
 ```
+
+The `find-*` scripts parse Python with the stdlib and TypeScript/JavaScript, Java, and Kotlin with tree-sitter (PEP 723 dependency declared in each script). Non-Python runs need `uv`.
 
 ## Measure triggering
 
