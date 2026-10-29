@@ -66,4 +66,4 @@ Devin `swe-2-medium`, n=8 per query (`evals/transcripts/devin-swe2-medium-*`, re
 
 The same descriptions trigger far less under `claude -p` sonnet-5-5 (several 0/3 on queries that pass 8/8 under devin): a harness injection-posture difference, not a per-description defect. Treat claude rates as a separate tuning problem before changing descriptions on its evidence.
 
-After the `find-*` skills gained TypeScript/JavaScript/Java/Kotlin support (`evals/transcripts/devin-find-langs`): 6/6 should-trigger queries pass (weakest `review-service-file` 5/8, 0.62) and 7/7 language-question negatives pass at 0/5 — naming the new languages did not cause false triggers.
+After the `find-*` skills gained TypeScript/JavaScript/Java/Kotlin support (`evals/transcripts/devin-find-langs`): 6/6 should-trigger queries pass (weakest `review-service-file` 11/16, 0.69, CI [0.44, 0.86]) and 7/7 language-question negatives pass at 0/5 — naming the new languages did not cause false triggers.
