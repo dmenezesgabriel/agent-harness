@@ -27,6 +27,7 @@ Open a checklist with these steps. A step you skip stays listed as `skip: <reaso
 Apply when the situation fits. Load the named skill before you cite it.
 
 - **Modules should be deep** (`principle-modules-should-be-deep`). Defining or reviewing a module, class, layer, or interface. Simple interface, substantial hidden functionality.
+- **Hide information** (`principle-hide-information`). Callers must know an implementation decision — format, ordering, backend — to use a module, or one design change would edit many modules. The interface reveals outcomes, never decisions.
 - **Avoid complexity** (`principle-avoid-complexity`). One change needs edits in many places, or hidden knowledge to make safely. One decision in one place; obvious names and units.
 - **Working code is not enough** (`principle-working-code-is-not-enough`). Choosing between a quick patch and fixing the design. Fix the design problem you find.
 - **Single responsibility** (`principle-single-responsibility`). A module serves more than one actor or is edited for unrelated reasons. One reason to change per module.
