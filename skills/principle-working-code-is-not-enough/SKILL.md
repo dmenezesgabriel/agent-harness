@@ -11,7 +11,7 @@ description: Use when asked whether to ship a quick fix or spend time on the des
 
 **Strategic mindset:** most code is written by extending a system, so your main job is to make future extensions easy. Invest a little extra now.
 
-**Why:** complexity is incremental, so tolerate none (see `principle-avoid-complexity`). The best design emerges in small continual investments, not a big up-front design.
+**Why:** complexity is incremental, so tolerate none (see [principle-avoid-complexity](../principle-avoid-complexity/SKILL.md)). The best design emerges in small continual investments, not a big up-front design.
 
 **Test:**
 - Did I compare at least two designs and keep the cleanest?

@@ -20,6 +20,6 @@ Tell a value what you want done; do not ask for its state and decide for it. Cod
 - Accessors that answer a real domain question are fine; the smell is asking questions and then doing the value's job.
 - Envy is about the value's own rules: mapping, filtering, and grouping in a pipeline are the pipeline's work, not the element's.
 - Anemic does not mean "no methods exist" — a value whose methods are all accessors is still a data bag.
-- In dataflow and functional code, ask whether the rule belongs to the value or to the pipeline stage; do not bury pipeline decisions inside the data type (see `principle-avoid-complexity`).
+- In dataflow and functional code, ask whether the rule belongs to the value or to the pipeline stage; do not bury pipeline decisions inside the data type (see [principle-avoid-complexity](../principle-avoid-complexity/SKILL.md)).
 
 Source: Jeff Bay, Object Calisthenics (no getters/setters); Martin Fowler, "Tell Don't Ask" and feature envy; *refused bequest* of logic to data-less services.

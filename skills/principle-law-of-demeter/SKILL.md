@@ -9,7 +9,7 @@ Talk only to your immediate friends: code may use the values it holds, its param
 
 **Rule:** one dot of reach per line is the exercise form; the doctrine is — do not traverse other values' internals. Ask your direct collaborator for the outcome.
 
-**Why:** each extra hop couples the caller to every link's structure. Rename `address` and every traversal in every caller breaks — the caller learned three structures to fetch one value (hidden dependencies; see `principle-avoid-complexity`).
+**Why:** each extra hop couples the caller to every link's structure. Rename `address` and every traversal in every caller breaks — the caller learned three structures to fetch one value (hidden dependencies; see [principle-avoid-complexity](../principle-avoid-complexity/SKILL.md)).
 
 **Test:**
 - Count the hops: `a.b.c.d`, `foo().bar().baz()`, `x["a"]["b"]["c"]`. More than one reach is a violation.
@@ -19,6 +19,6 @@ Talk only to your immediate friends: code may use the values it holds, its param
 **Gotchas:**
 - Fluent APIs and builders chain on the same value — `query.where(...).order_by(...)` returns the same friend, not strangers.
 - Compositions where each step returns the caller's own type (pipelines, map/filter, monadic binds) are not train wrecks — the type never changes hands.
-- The fix is not sprinkling `get_city()` on every link — that moves the chain, not the knowledge. Put the *outcome* on the nearest collaborator (see `principle-tell-dont-ask`).
+- The fix is not sprinkling `get_city()` on every link — that moves the chain, not the knowledge. Put the *outcome* on the nearest collaborator (see [principle-tell-dont-ask](../principle-tell-dont-ask/SKILL.md)).
 
 Source: Law of Demeter, Northeastern University 1987; Jeff Bay, Object Calisthenics (one dot per line).

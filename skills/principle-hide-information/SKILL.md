@@ -9,7 +9,7 @@ A module encapsulates a few design decisions — knowledge embedded in its imple
 
 **Rule:** the interface must not reveal a decision callers would have to know or repeat to use the module — data structures, algorithms, formats, ordering, backends.
 
-**Why:** a decision that escapes the interface is relearned by every caller. When the decision changes, every place holding it edits — information leakage, the mechanism behind "one change, many edits" (see `principle-avoid-complexity`). Leaks also inflate the interface, making the module shallower (see `principle-modules-should-be-deep`).
+**Why:** a decision that escapes the interface is relearned by every caller. When the decision changes, every place holding it edits — information leakage, the mechanism behind "one change, many edits" (see [principle-avoid-complexity](../principle-avoid-complexity/SKILL.md)). Leaks also inflate the interface, making the module shallower (see [principle-modules-should-be-deep](../principle-modules-should-be-deep/SKILL.md)).
 
 **Test:**
 - Pick a decision: storage engine, wire format, hash algorithm, retry policy. If it changed, which modules edit? More than one — the decision is leaking.

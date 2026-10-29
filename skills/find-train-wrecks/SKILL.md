@@ -15,7 +15,7 @@ uv run scripts/find_train_wrecks.py <path> [...]       # + TS/JS/Java/Kotlin (in
 
 Output is one JSON object per finding on stdout (`path`, `line`, `expression`, `hops`); errors go to stderr. Exit 0 none, 1 found, 2 bad input. Files that fail to parse are skipped with a warning on stderr; exit 2 when no file could be parsed. `--help` lists the same. Supported suffixes: `.py`, `.ts`, `.tsx`, `.js`, `.jsx`, `.java`, `.kt`, `.kts`.
 
-A finding is a smell, not a verdict. For each one, decide with `principle-law-of-demeter`: move the outcome onto the nearest collaborator, or leave it when the chain is a fluent interface.
+A finding is a smell, not a verdict. For each one, decide with [principle-law-of-demeter](../principle-law-of-demeter/SKILL.md): move the outcome onto the nearest collaborator, or leave it when the chain is a fluent interface.
 
 **Gotchas:**
 - Static analysis cannot tell a traversal from a fluent API — `query.where(...).order_by(...)` flags just like `a.b.c.d`. Fluent findings are false positives; judge each one.

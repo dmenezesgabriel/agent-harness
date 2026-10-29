@@ -15,7 +15,7 @@ uv run scripts/find_pass_through.py <path> [...]       # + TS/JS/Java/Kotlin (in
 
 Output is one JSON object per finding on stdout (`path`, `line`, `name`, `callee`); errors go to stderr. Exit 0 none, 1 found, 2 bad input. Files that fail to parse are skipped with a warning on stderr; exit 2 when no file could be parsed. `--help` lists the same. Supported suffixes: `.py`, `.ts`, `.tsx`, `.js`, `.jsx`, `.java`, `.kt`, `.kts`.
 
-A finding is a smell, not a verdict. For each one, decide with `principle-modules-should-be-deep`: remove the layer, or keep it only if it adds policy, adaptation, or a distinct abstraction.
+A finding is a smell, not a verdict. For each one, decide with [principle-modules-should-be-deep](../principle-modules-should-be-deep/SKILL.md): remove the layer, or keep it only if it adds policy, adaptation, or a distinct abstraction.
 
 **Gotchas:**
 - Not reported on purpose: decorated/annotated functions, `super()` calls, zero-argument functions, and any body that transforms, reorders, or adds an argument.

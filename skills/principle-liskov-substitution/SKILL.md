@@ -20,6 +20,6 @@ If S is a subtype of T, code written against T must keep working — same contra
 **Gotchas:**
 - Square extends Rectangle is the classic trap: setWidth on a square silently changes height, breaking the base contract even though a square "is a" rectangle mathematically.
 - Fix by narrowing the abstraction, splitting the hierarchy, or using composition — not by teaching callers about the exception.
-- An empty or throwing override is almost never fine; shrink the base interface instead (see `principle-interface-segregation`).
+- An empty or throwing override is almost never fine; shrink the base interface instead (see [principle-interface-segregation](../principle-interface-segregation/SKILL.md)).
 
 Source: Barbara Liskov and Jeannette Wing, 1994; Robert C. Martin, *Agile Software Development*.

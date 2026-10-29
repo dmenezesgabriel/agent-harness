@@ -19,6 +19,6 @@ Clients should not be forced to depend on methods they do not use. Split fat int
 **Gotchas:**
 - A header interface lists everything one class can do; a role interface names what one client needs. Prefer role interfaces, named for the client's use (ReadsConfig, RoutesRequests).
 - Two thin interfaces on one implementation are normal and cheap; one fat interface is the expensive default.
-- Segregate by real client roles, not arbitrarily — each split should map to an actual client need (see `principle-avoid-complexity`).
+- Segregate by real client roles, not arbitrarily — each split should map to an actual client need (see [principle-avoid-complexity](../principle-avoid-complexity/SKILL.md)).
 
 Source: Robert C. Martin, *Agile Software Development*; *Clean Architecture*.

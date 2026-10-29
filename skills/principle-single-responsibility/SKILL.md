@@ -19,6 +19,6 @@ A responsibility is a reason to change, and a reason to change is an actor: the 
 **Gotchas:**
 - A god object is many responsibilities under one name — the extreme violation.
 - The test is the actor count, not the line count. One function doing three steps for one actor can be cohesive.
-- Splitting where there is only one actor creates needless layers (see `principle-avoid-complexity`).
+- Splitting where there is only one actor creates needless layers (see [principle-avoid-complexity](../principle-avoid-complexity/SKILL.md)).
 
 Source: Robert C. Martin, *Clean Architecture*; *Agile Software Development: Principles, Patterns, and Practices*.

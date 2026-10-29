@@ -18,7 +18,7 @@ High-level policy must not depend on low-level detail. The dependency arrow poin
 
 **Gotchas:**
 - Dependency injection is one way to wire it, not the principle. You can inject concretions and invert nothing; what matters is which direction the source-code dependency points.
-- The interface belongs to the client (the policy), not to the implementer (see `principle-interface-segregation`).
-- Invert at boundaries that matter; a stable detail used by everything can stay concrete (see `principle-avoid-complexity`).
+- The interface belongs to the client (the policy), not to the implementer (see [principle-interface-segregation](../principle-interface-segregation/SKILL.md)).
+- Invert at boundaries that matter; a stable detail used by everything can stay concrete (see [principle-avoid-complexity](../principle-avoid-complexity/SKILL.md)).
 
 Source: Robert C. Martin, *Agile Software Development*; *Clean Architecture*. Ports and adapters: Alistair Cockburn.

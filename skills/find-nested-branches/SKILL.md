@@ -15,7 +15,7 @@ uv run scripts/find_nested_branches.py <path> [...]       # + TS/JS/Java/Kotlin 
 
 Output is one JSON object per finding on stdout (`path`, `line`, `name`, `elses`, `elifs`, `depth`); errors go to stderr. Exit 0 none, 1 found, 2 bad input. Files that fail to parse are skipped with a warning on stderr; exit 2 when no file could be parsed. `--help` lists the same. Supported suffixes: `.py`, `.ts`, `.tsx`, `.js`, `.jsx`, `.java`, `.kt`, `.kts`.
 
-A finding is a smell, not a verdict. For each one, decide with `principle-flat-methods`: guard clauses and early returns first, extraction or a dispatch table for genuine branching.
+A finding is a smell, not a verdict. For each one, decide with [principle-flat-methods](../principle-flat-methods/SKILL.md): guard clauses and early returns first, extraction or a dispatch table for genuine branching.
 
 **Gotchas:**
 - `depth` counts nested decision nodes (if/for/while/match, switch, `when`); `try`, `with`, and comprehensions are not counted.

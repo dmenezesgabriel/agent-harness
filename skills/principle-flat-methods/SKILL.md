@@ -20,6 +20,6 @@ A method should read as a straight line, not an arrow. The exercise rule: **neve
 - The guard-clause idiom — `if bad: return` repeated at the top, or `if err != nil: return err` — is the pattern itself, not a violation: it reads flat.
 - Inverting a condition to delete `else` is the mechanic, not the goal. If the result is still a decision tree, extract the branches or replace the chain with a lookup table.
 - Sometimes a boolean expression beats a small `if` (`return ok and x`); pick whichever form reads flatter.
-- A single `if/else` expressing one symmetric fork is the boundary case — the exercise still says remove it; judgment says a ternary-level choice may read simpler (see `principle-avoid-complexity`).
+- A single `if/else` expressing one symmetric fork is the boundary case — the exercise still says remove it; judgment says a ternary-level choice may read simpler (see [principle-avoid-complexity](../principle-avoid-complexity/SKILL.md)).
 
 Source: Jeff Bay, Object Calisthenics (don't use ELSE, one level of indentation); guard clause / bouncer pattern; "never nesters".
