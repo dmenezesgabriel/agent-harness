@@ -47,6 +47,12 @@ scripts/validate-skills.sh skills/<name>   # one skill
 Exit 0 = every skill valid; 1 = a skill failed (reason printed); 2 = validator not installed.
 Run it after every skill change, before committing.
 
+An opt-in pre-commit hook runs the same check and blocks the commit on failure (it warns and skips when the validator is not installed):
+
+```bash
+git config core.hooksPath .githooks
+```
+
 ### Validator setup (once per clone; `research_repos/` is gitignored)
 
 `skills-ref` is the spec's reference validator (demo-grade, 536 lines, deps: click, strictyaml). Pinned to agentskills commit `69ef37e`.

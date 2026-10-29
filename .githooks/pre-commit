@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# Opt-in: enable with `git config core.hooksPath .githooks`.
+# Skips with a warning when the reference validator is not installed (see CLAUDE.md).
+set -euo pipefail
+
+root="$(git rev-parse --show-toplevel)"
+
+if [[ ! -x "$root/research_repos/skills-ref/.venv/bin/skills-ref" ]]; then
+  echo "pre-commit: skills-ref not installed; skipping skill validation (see CLAUDE.md 'Validator setup')" >&2
+  exit 0
+fi
+
+"$root/scripts/validate-skills.sh"
