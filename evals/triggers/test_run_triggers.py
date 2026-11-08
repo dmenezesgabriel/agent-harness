@@ -42,7 +42,7 @@ class AtifAgent(FakeAgent):
     fmt = staticmethod(atif)
 
 
-class SkillsInvoked(unittest.TestCase):
+class WhenParsingClaudeTranscripts(unittest.TestCase):
     def test_collects_skill_calls_in_order(self) -> None:
         self.assertEqual(skills_invoked(stream("a", "b")), ["a", "b"])
 
@@ -51,7 +51,7 @@ class SkillsInvoked(unittest.TestCase):
         self.assertEqual(skills_invoked(f"not json\n{other}\n{stream('a')}"), ["a"])
 
 
-class SkillsInvokedAtif(unittest.TestCase):
+class WhenParsingAtifTranscripts(unittest.TestCase):
     def test_collects_skill_calls_in_order(self) -> None:
         self.assertEqual(skills_invoked_atif(atif("a", "b")), ["a", "b"])
 
@@ -67,7 +67,7 @@ class SkillsInvokedAtif(unittest.TestCase):
         self.assertEqual((skills_invoked_atif("not json"), skills_invoked_atif("[]")), ([], []))
 
 
-class Rates(unittest.TestCase):
+class WhenScoringTriggerRates(unittest.TestCase):
     def test_expected_skill_rate(self) -> None:
         self.assertAlmostEqual(trigger_rate([["a"], ["b"], ["a", "c"]], ("a",)), 2 / 3)
 
@@ -81,7 +81,7 @@ class Rates(unittest.TestCase):
         self.assertEqual((passed(0.5, ("a",)), passed(0.67, ("a",)), passed(0.5, ()), passed(0.33, ())), (False, True, False, True))
 
 
-class LoadQueries(unittest.TestCase):
+class WhenLoadingQueryFiles(unittest.TestCase):
     def test_bad_entry_names_file_and_missing_key(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp, "q.json")
@@ -99,7 +99,7 @@ class LoadQueries(unittest.TestCase):
         self.assertEqual(shapes[0], shapes[1])
 
 
-class Main(unittest.TestCase):
+class WhenRunningMain(unittest.TestCase):
     def run_main(self, agent: FakeAgent, *extra: str) -> tuple[int, list[dict[str, object]]]:
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp, "q.json")
@@ -153,14 +153,14 @@ class Main(unittest.TestCase):
             with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
                 code = main(["--queries", str(path), "--runs", "2", "--keep-transcripts", str(keep)], lambda _m: agent)
             self.assertEqual(code, 1)
-            records = [json.loads(l) for l in (keep / "runs.jsonl").read_text().splitlines()]
+            records = [json.loads(line) for line in (keep / "runs.jsonl").read_text().splitlines()]
             self.assertEqual((sum("loaded" in r for r in records), sum("error" in r for r in records)), (2, 2))
             self.assertEqual([p.suffix for p in (keep / "pos").iterdir()], [".jsonl"] * 2)
             self.assertTrue(all(p.name.endswith(".err.txt") for p in (keep / "miss").iterdir()))
             out = io.StringIO()
             with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
                 code = main(["--queries", str(path), "--score-transcripts", str(keep)])
-            scored = [json.loads(l) for l in out.getvalue().splitlines()]
+            scored = [json.loads(line) for line in out.getvalue().splitlines()]
             self.assertEqual((code, [r["passed"] for r in scored]), (1, [True, False]))
             self.assertEqual((scored[0]["runs_ok"], scored[0]["ci95"], scored[1]["ci95"]), (2, [0.34, 1.0], [0.0, 0.0]))
 

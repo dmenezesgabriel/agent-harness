@@ -15,11 +15,17 @@ Skill rules that fail validation or review:
 ## Test skill scripts
 
 ```bash
-python3 -I -m unittest discover -s skills/<name>/scripts   # Python paths; language tests skip
-uv run --with tree-sitter-language-pack python -I -m unittest discover -s skills/<name>/scripts   # all languages
+make check                                                  # full gate: pytest+coverage, ruff, pyright (strict), bandit, vulture, radon, xenon, deptry, pip-audit
+make commit-check                                           # same gate minus pip-audit (network) — runs in both pre-commit configs
+uv run pytest                                               # tests only (includes doctests)
+uv run python -I -m unittest discover -s skills/<name>/scripts   # one skill
+make mutmut                                                 # mutation testing (slow, run deliberately)
+python3 -I -m unittest discover -s skills/<name>/scripts    # no venv: Python paths only, language tests skip
 ```
 
-The `find-*` scripts parse Python with the stdlib and TypeScript/JavaScript, Java, and Kotlin with tree-sitter (PEP 723 dependency declared in each script). Non-Python runs need `uv`.
+`make sync` once per clone. `make <target>` names each stage (test, lint, types, security, deadcode, deps, complexity, audit).
+
+The `find-*` scripts parse Python with the stdlib and TypeScript/JavaScript, Java, and Kotlin with tree-sitter. Each script's PEP 723 header pins `tree-sitter-language-pack` and sets `tool.uv.exclude-newer`, so `uv run` on a script never resolves post-cutoff releases. The root `pyproject.toml`/`uv.lock` pins every tool and dependency by exact version + hash, gates installs to wheels only (`no-build`), and applies the same release cutoff.
 
 ## Measure triggering
 
@@ -47,10 +53,11 @@ scripts/validate-skills.sh skills/<name>   # one skill
 Exit 0 = every skill valid; 1 = a skill failed (reason printed); 2 = validator not installed.
 Run it after every skill change, before committing.
 
-An opt-in pre-commit hook runs the same check and blocks the commit on failure (it warns and skips when the validator is not installed):
+Two opt-in pre-commit setups run `make commit-check` plus skill validation and block the commit on failure:
 
 ```bash
-git config core.hooksPath .githooks
+git config core.hooksPath .githooks   # repo hook (warns and skips when validator/make is missing)
+pre-commit install                  # or the pre-commit framework, .pre-commit-config.yaml
 ```
 
 ### Validator setup (once per clone; `research_repos/` is gitignored)
