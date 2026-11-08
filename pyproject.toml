@@ -1,0 +1,121 @@
+[project]
+name = "agent-harness-dev"
+version = "0.0.0"
+description = "Dev environment and locked deps for the find-* skill scripts; not a package."
+requires-python = ">=3.11"
+dependencies = [
+    "tree-sitter-language-pack==1.22.1",
+]
+
+[dependency-groups]
+dev = [
+    "pytest==9.2.0",
+    "pytest-cov==7.1.0",
+    "ruff==0.17.3",
+    "pyright==1.1.414",
+    "bandit==1.9.4",
+    "deptry==0.25.1",
+    "vulture==2.16",
+    "radon==6.0.1",
+    "xenon==0.9.3",
+    "mutmut==3.8.1",
+    "pip-audit==2.10.1",
+    "zizmor==1.31.1",
+    "python-semantic-release==10.7.0",
+    "shellcheck-py==0.11.0.1",
+]
+
+[tool.uv]
+package = false
+# Supply-chain guards: nothing released after this date is resolvable, and
+# uv.lock pins every artifact by hash. Update the cutoff deliberately.
+exclude-newer = "2026-11-01T00:00:00Z"
+# Wheels only — never execute sdist build code during installs.
+no-build = true
+
+[tool.pytest.ini_options]
+testpaths = ["skills", "evals"]
+# Terse output for agent consumption: quiet dots, one-line skip reasons, short tracebacks.
+addopts = "-q -ra --tb=short --strict-markers --doctest-modules --ignore=evals/triggers/fixtures --ignore-glob=*/mutants --cov=skills --cov-report=term-missing"
+
+[tool.coverage.run]
+source = ["skills"]
+omit = ["*/test_*.py"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+# Fully covered files are not actionable; only partially covered files list lines.
+skip_covered = true
+fail_under = 90
+
+[tool.ruff]
+target-version = "py310"
+# Codebase hand-wraps up to ~143 chars; keep lint-only (no format gate).
+line-length = 150
+# One line per finding (file:line:col, code, message); the default adds a code frame each.
+output-format = "concise"
+# evals/triggers/fixtures is deliberately smelly sample code for the trigger evals.
+extend-exclude = ["*/__pycache__/*", "*/fixtures/*", "*/mutants/*"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "S"]
+
+[tool.ruff.lint.per-file-ignores]
+"*/test_*.py" = ["S101"]
+
+[tool.pyright]
+# Floor, not the dev interpreter: targeting the minimum supported version makes
+# pyright flag newer-only APIs as errors.
+pythonVersion = "3.11"
+include = ["skills", "evals"]
+exclude = ["**/fixtures", "**/mutants"]
+venvPath = "."
+venv = ".venv"
+typeCheckingMode = "strict"
+
+[tool.bandit]
+exclude_dirs = ["__pycache__", "fixtures", "mutants"]
+
+[tool.bandit.assert_used]
+skips = ["*/test_*.py"]
+
+[tool.vulture]
+paths = ["skills", "evals/triggers/run_triggers.py", "evals/triggers/test_run_triggers.py"]
+exclude = ["*/mutants/*"]
+min_confidence = 60
+# unittest discovers test_* methods and When* classes by reflection;
+# 'line' is the Finding dataclass field serialized through asdict().
+ignore_names = ["test_*", "When*", "setUp", "tearDown", "line"]
+
+[tool.deptry]
+known_first_party = [
+    "find_feature_envy",
+    "find_nested_branches",
+    "find_pass_through",
+    "find_train_wrecks",
+    "run_triggers",
+]
+
+# Tool deps are invoked as CLIs, not imported — DEP002 (unused) is expected.
+[tool.deptry.per_rule_ignores]
+DEP002 = [
+    "pytest",
+    "pytest-cov",
+    "ruff",
+    "pyright",
+    "bandit",
+    "deptry",
+    "vulture",
+    "radon",
+    "xenon",
+    "mutmut",
+    "pip-audit",
+    "zizmor",
+    "python-semantic-release",
+    "shellcheck-py",
+]
+
+# mutmut config lives in skills/*/scripts/setup.cfg — mutation runs per-skill
+# with cwd inside scripts/ because hyphenated skill dirs cannot form the
+# dotted package path mutmut derives mutant keys from. See `make mutmut`.

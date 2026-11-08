@@ -1,0 +1,26 @@
+version: 2
+updates:
+  # uv reads [tool.uv] exclude-newer during `uv lock`, so update PRs can only
+  # propose releases at or before the cutoff — advance the cutoff in
+  # pyproject.toml deliberately, then dependabot fills in the gap.
+  # PEP 723 headers in skills/*/scripts/*.py are not covered by any
+  # dependabot ecosystem; bump those pins manually with the project dep.
+  - package-ecosystem: uv
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 5
+    groups:
+      dev-tools:
+        dependency-type: development
+      runtime:
+        dependency-type: production
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 5

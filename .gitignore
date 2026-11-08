@@ -1,3 +1,11 @@
 research_repos
 __pycache__/
 evals/transcripts/
+.venv/
+.pytest_cache/
+.ruff_cache/
+mutants/
+.mutmut-cache/
+.coverage*
+htmlcov/
+coverage.xml
