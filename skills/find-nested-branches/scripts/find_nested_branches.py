@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 # /// script
-# dependencies = ["tree-sitter-language-pack"]
+# requires-python = ">=3.10"
+# dependencies = ["tree-sitter-language-pack==1.22.1"]
+# [tool.uv]
+# exclude-newer = "2026-11-01T00:00:00Z"
 # ///
 """Report functions whose control flow nests or uses else/elif — flat-methods smells.
 
@@ -15,7 +18,10 @@ import json
 import sys
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from tree_sitter import Node
 
 FunctionNode = ast.FunctionDef | ast.AsyncFunctionDef
 _DECISION = (ast.If, ast.For, ast.AsyncFor, ast.While, ast.Match)
@@ -87,7 +93,7 @@ def find_nested(source: str, path: str) -> list[Finding]:
     1
     """
     functions = [n for n in ast.walk(ast.parse(source, filename=path)) if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))]
-    findings = []
+    findings: list[Finding] = []
     for fn in functions:
         elses, elifs = _if_counts(fn)
         depth = _depth(fn, 0)
@@ -96,13 +102,19 @@ def find_nested(source: str, path: str) -> list[Finding]:
     return findings
 
 
-def _is_branchy(node: Any, parent_type: str, family: str) -> bool:
+def node_text(node: Node) -> str:
+    """Decoded source text of `node` ('' when tree-sitter reports no text)."""
+    text = node.text
+    return text.decode() if text is not None else ""
+
+
+def _is_branchy(node: Node, parent_type: str, family: str) -> bool:
     if node.type in _IF[family]:
         return family != "kotlin" or parent_type in _STATEMENT_PARENTS
     return node.type in _DECISIONS[family]
 
 
-def _alternative_kind(node: Any, family: str) -> str | None:
+def _alternative_kind(node: Node, family: str) -> str | None:
     """'elif', 'else', or None for an if node's else branch."""
     alternative = node.child_by_field_name("alternative")
     if alternative is None:
@@ -116,7 +128,7 @@ def _alternative_kind(node: Any, family: str) -> str | None:
     return "elif" if inner is not None and inner.type == "if_expression" else "else"
 
 
-def _tree_if_counts(fn: Any, family: str) -> tuple[int, int]:
+def _tree_if_counts(fn: Node, family: str) -> tuple[int, int]:
     elses = elifs = 0
     stack = [(child, fn.type) for child in fn.children]
     while stack:
@@ -129,7 +141,7 @@ def _tree_if_counts(fn: Any, family: str) -> tuple[int, int]:
     return elses, elifs
 
 
-def _tree_depth(node: Any, family: str) -> int:
+def _tree_depth(node: Node, family: str) -> int:
     best = 0
     for child in node.children:
         next_level = 1 if _is_branchy(child, node.type, family) else 0
@@ -137,17 +149,18 @@ def _tree_depth(node: Any, family: str) -> int:
     return best
 
 
-def _function_name(node: Any, family: str) -> str:
+def _function_name(node: Node, family: str) -> str:
     if family == "kotlin":
-        return next((c.text.decode() for c in node.named_children if c.type == "simple_identifier"), "<anonymous>")
+        return next((node_text(c) for c in node.named_children if c.type == "simple_identifier"), "<anonymous>")
     name = node.child_by_field_name("name")
     if name is not None:
-        return name.text.decode()
+        return node_text(name)
     parent = node.parent
     if parent is not None and parent.type in {"variable_declarator", "pair"}:
-        named = parent.child_by_field_name("name")
+        field = "key" if parent.type == "pair" else "name"
+        named = parent.child_by_field_name(field)
         if named is not None:
-            return named.text.decode()
+            return node_text(named)
     return "<anonymous>"
 
 
@@ -168,14 +181,14 @@ def find_nested_tree(source: bytes, path: str, grammar: str) -> list[Finding]:
     if tree.root_node.has_error:
         raise SyntaxError(f"{path!r}: could not parse as {grammar}; expected valid source")
     family = _FAMILY[grammar]
-    functions = []
+    functions: list[Node] = []
     stack = [tree.root_node]
     while stack:
         node = stack.pop()
         if node.type in _FUNCTIONS[family]:
             functions.append(node)
         stack.extend(node.children)
-    findings = []
+    findings: list[Finding] = []
     for fn in functions:
         elses, elifs = _tree_if_counts(fn, family)
         depth = _tree_depth(fn, family)
@@ -184,7 +197,7 @@ def find_nested_tree(source: bytes, path: str, grammar: str) -> list[Finding]:
     return findings
 
 
-def _source_files(target: Path) -> list[Path]:
+def source_files(target: Path) -> list[Path]:
     if target.is_file():
         if target.suffix != ".py" and target.suffix not in _LANGUAGES:
             raise FileNotFoundError(
@@ -209,6 +222,15 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
+def _scan_file(file: Path) -> tuple[int, list[Finding]]:
+    """(parsed-count, findings) for `file`: warn-and-skip parse errors, let MissingTreeSitter through."""
+    try:
+        return 1, _find_in_file(file)
+    except (SyntaxError, UnicodeDecodeError) as error:
+        print(f"warning: {error}; skipped", file=sys.stderr)
+        return 0, []
+
+
 def _find_in_file(file: Path) -> list[Finding]:
     if file.suffix == ".py":
         return find_nested(file.read_text(), str(file))
@@ -217,22 +239,22 @@ def _find_in_file(file: Path) -> list[Finding]:
 
 def main(argv: list[str]) -> int:
     args = _parse_args(argv)
+    paths: list[str] = args.paths
     try:
-        files = [f for arg in args.paths for f in _source_files(Path(arg))]
+        files = [f for arg in paths for f in source_files(Path(arg))]
     except FileNotFoundError as error:
         print(f"error: {error}", file=sys.stderr)
         return 2
-    findings = []
+    findings: list[Finding] = []
     parsed = 0
     for file in files:
         try:
-            findings += _find_in_file(file)
-            parsed += 1
+            parsed_file, found = _scan_file(file)
         except MissingTreeSitter as error:
             print(f"error: {error}", file=sys.stderr)
             return 2
-        except (SyntaxError, UnicodeDecodeError) as error:
-            print(f"warning: {error}; skipped", file=sys.stderr)
+        parsed += parsed_file
+        findings += found
     if files and not parsed:
         return 2
     for finding in findings:

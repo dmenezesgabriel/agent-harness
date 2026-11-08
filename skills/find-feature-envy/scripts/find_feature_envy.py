@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 # /// script
-# dependencies = ["tree-sitter-language-pack"]
+# requires-python = ">=3.10"
+# dependencies = ["tree-sitter-language-pack==1.22.1"]
+# [tool.uv]
+# exclude-newer = "2026-11-01T00:00:00Z"
 # ///
 """Report functions that read several attributes of one foreign value — feature envy.
 
@@ -13,9 +16,12 @@ import argparse
 import ast
 import json
 import sys
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from tree_sitter import Node
 
 FunctionNode = ast.FunctionDef | ast.AsyncFunctionDef
 _MIN_ATTRS = 3
@@ -46,7 +52,7 @@ class Finding:
     line: int
     name: str
     target: str
-    attrs: list[str] = field(default_factory=list)
+    attrs: list[str]
 
 
 def _param_names(args: ast.arguments) -> set[str]:
@@ -62,7 +68,7 @@ def find_envy(source: str, path: str) -> list[Finding]:
     'u'
     """
     functions = [n for n in ast.walk(ast.parse(source, filename=path)) if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))]
-    findings = []
+    findings: list[Finding] = []
     for fn in functions:
         params = _param_names(fn.args)
         hits: dict[str, set[str]] = {}
@@ -75,19 +81,25 @@ def find_envy(source: str, path: str) -> list[Finding]:
     return findings
 
 
-def _ts_params(fn: Any) -> set[str]:
+def node_text(node: Node) -> str:
+    """Decoded source text of `node` ('' when tree-sitter reports no text)."""
+    text = node.text
+    return text.decode() if text is not None else ""
+
+
+def _ts_params(fn: Node) -> set[str]:
     params = fn.child_by_field_name("parameters")
     if params is None:
         return set()
-    names = set()
+    names: set[str] = set()
     for child in params.named_children:
         pattern = child.child_by_field_name("pattern") if child.type in {"required_parameter", "optional_parameter"} else None
         if pattern is not None and pattern.type == "identifier":
-            names.add(pattern.text.decode())
+            names.add(node_text(pattern))
     return names
 
 
-def _ts_hits(fn: Any, params: set[str]) -> dict[str, set[str]]:
+def _ts_hits(fn: Node, params: set[str]) -> dict[str, set[str]]:
     hits: dict[str, set[str]] = {}
     stack = [fn]
     while stack:
@@ -97,24 +109,24 @@ def _ts_hits(fn: Any, params: set[str]) -> dict[str, set[str]]:
             continue
         obj = node.child_by_field_name("object")
         prop = node.child_by_field_name("property")
-        if obj is not None and obj.type == "identifier" and obj.text.decode() in params and prop is not None:
-            hits.setdefault(obj.text.decode(), set()).add(prop.text.decode())
+        if obj is not None and obj.type == "identifier" and node_text(obj) in params and prop is not None:
+            hits.setdefault(node_text(obj), set()).add(node_text(prop))
     return hits
 
 
-def _java_params(fn: Any) -> set[str]:
+def _java_params(fn: Node) -> set[str]:
     params = fn.child_by_field_name("parameters")
     if params is None:
         return set()
-    names = set()
+    names: set[str] = set()
     for child in params.named_children:
         name = child.child_by_field_name("name") if child.type == "formal_parameter" else None
         if name is not None:
-            names.add(name.text.decode())
+            names.add(node_text(name))
     return names
 
 
-def _java_hits(fn: Any, params: set[str]) -> dict[str, set[str]]:
+def _java_hits(fn: Node, params: set[str]) -> dict[str, set[str]]:
     hits: dict[str, set[str]] = {}
     stack = [fn]
     while stack:
@@ -126,24 +138,24 @@ def _java_hits(fn: Any, params: set[str]) -> dict[str, set[str]]:
             obj, attr = node.child_by_field_name("object"), node.child_by_field_name("name")
         else:
             continue
-        if obj is not None and obj.type == "identifier" and obj.text.decode() in params and attr is not None:
-            hits.setdefault(obj.text.decode(), set()).add(attr.text.decode())
+        if obj is not None and obj.type == "identifier" and node_text(obj) in params and attr is not None:
+            hits.setdefault(node_text(obj), set()).add(node_text(attr))
     return hits
 
 
-def _kotlin_params(fn: Any) -> set[str]:
+def _kotlin_params(fn: Node) -> set[str]:
     params = next((c for c in fn.children if c.type == "function_value_parameters"), None)
     if params is None:
         return set()
-    names = set()
+    names: set[str] = set()
     for child in params.named_children:
         ident = next((c for c in child.named_children if c.type == "simple_identifier"), None) if child.type == "parameter" else None
         if ident is not None:
-            names.add(ident.text.decode())
+            names.add(node_text(ident))
     return names
 
 
-def _kotlin_hits(fn: Any, params: set[str]) -> dict[str, set[str]]:
+def _kotlin_hits(fn: Node, params: set[str]) -> dict[str, set[str]]:
     hits: dict[str, set[str]] = {}
     stack = [fn]
     while stack:
@@ -154,8 +166,8 @@ def _kotlin_hits(fn: Any, params: set[str]) -> dict[str, set[str]]:
         receiver = node.children[0]
         suffix = next((c for c in node.children if c.type == "navigation_suffix"), None)
         ident = next((c for c in suffix.named_children if c.type == "simple_identifier"), None) if suffix is not None else None
-        if receiver.type == "simple_identifier" and receiver.text.decode() in params and ident is not None:
-            hits.setdefault(receiver.text.decode(), set()).add(ident.text.decode())
+        if receiver.type == "simple_identifier" and node_text(receiver) in params and ident is not None:
+            hits.setdefault(node_text(receiver), set()).add(node_text(ident))
     return hits
 
 
@@ -163,17 +175,18 @@ _PARAMS = {"ts": _ts_params, "java": _java_params, "kotlin": _kotlin_params}
 _HITS = {"ts": _ts_hits, "java": _java_hits, "kotlin": _kotlin_hits}
 
 
-def _function_name(node: Any, family: str) -> str:
+def _function_name(node: Node, family: str) -> str:
     if family == "kotlin":
-        return next((c.text.decode() for c in node.named_children if c.type == "simple_identifier"), "<anonymous>")
+        return next((node_text(c) for c in node.named_children if c.type == "simple_identifier"), "<anonymous>")
     name = node.child_by_field_name("name")
     if name is not None:
-        return name.text.decode()
+        return node_text(name)
     parent = node.parent
     if parent is not None and parent.type in {"variable_declarator", "pair"}:
-        named = parent.child_by_field_name("name")
+        field = "key" if parent.type == "pair" else "name"
+        named = parent.child_by_field_name(field)
         if named is not None:
-            return named.text.decode()
+            return node_text(named)
     return "<anonymous>"
 
 
@@ -194,14 +207,14 @@ def find_envy_tree(source: bytes, path: str, grammar: str) -> list[Finding]:
     if tree.root_node.has_error:
         raise SyntaxError(f"{path!r}: could not parse as {grammar}; expected valid source")
     family = _FAMILY[grammar]
-    functions = []
+    functions: list[Node] = []
     stack = [tree.root_node]
     while stack:
         node = stack.pop()
         if node.type in _FUNCTIONS[family]:
             functions.append(node)
         stack.extend(node.children)
-    findings = []
+    findings: list[Finding] = []
     for fn in functions:
         params = _PARAMS[family](fn)
         if not params:
@@ -212,7 +225,7 @@ def find_envy_tree(source: bytes, path: str, grammar: str) -> list[Finding]:
     return findings
 
 
-def _source_files(target: Path) -> list[Path]:
+def source_files(target: Path) -> list[Path]:
     if target.is_file():
         if target.suffix != ".py" and target.suffix not in _LANGUAGES:
             raise FileNotFoundError(
@@ -237,6 +250,15 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
+def _scan_file(file: Path) -> tuple[int, list[Finding]]:
+    """(parsed-count, findings) for `file`: warn-and-skip parse errors, let MissingTreeSitter through."""
+    try:
+        return 1, _find_in_file(file)
+    except (SyntaxError, UnicodeDecodeError) as error:
+        print(f"warning: {error}; skipped", file=sys.stderr)
+        return 0, []
+
+
 def _find_in_file(file: Path) -> list[Finding]:
     if file.suffix == ".py":
         return find_envy(file.read_text(), str(file))
@@ -245,22 +267,22 @@ def _find_in_file(file: Path) -> list[Finding]:
 
 def main(argv: list[str]) -> int:
     args = _parse_args(argv)
+    paths: list[str] = args.paths
     try:
-        files = [f for arg in args.paths for f in _source_files(Path(arg))]
+        files = [f for arg in paths for f in source_files(Path(arg))]
     except FileNotFoundError as error:
         print(f"error: {error}", file=sys.stderr)
         return 2
-    findings = []
+    findings: list[Finding] = []
     parsed = 0
     for file in files:
         try:
-            findings += _find_in_file(file)
-            parsed += 1
+            parsed_file, found = _scan_file(file)
         except MissingTreeSitter as error:
             print(f"error: {error}", file=sys.stderr)
             return 2
-        except (SyntaxError, UnicodeDecodeError) as error:
-            print(f"warning: {error}; skipped", file=sys.stderr)
+        parsed += parsed_file
+        findings += found
     if files and not parsed:
         return 2
     for finding in findings:

@@ -11,7 +11,7 @@ import argparse
 import json
 import math
 import shutil
-import subprocess
+import subprocess  # nosec B404 -- needed to invoke the claude/devin CLIs; argv list form, never shell
 import sys
 import tempfile
 import time
@@ -30,6 +30,11 @@ AgentRunner = Callable[[str, Path], str]
 TranscriptParser = Callable[[str], list[str]]
 
 
+def _loads(text: str) -> Json:
+    """json.loads result retyped as this module's Json union."""
+    return json.loads(text)
+
+
 class AgentRunError(RuntimeError):
     """The agent run produced no result, so it says nothing about triggering."""
 
@@ -42,11 +47,30 @@ class Query:
     expect: tuple[str, ...]
 
 
+def _query(item: Json) -> Query:
+    """Build a Query from one queries.json entry; TypeError names the offending field."""
+    if not isinstance(item, dict):
+        raise TypeError(f"{item!r} is not an object")
+    values: dict[str, str] = {}
+    for field in ("id", "query", "split"):
+        value = item.get(field)
+        if not isinstance(value, str):
+            raise TypeError(f"{item!r}: {field!r} must be a string")
+        values[field] = value
+    expect = item.get("expect")
+    if not isinstance(expect, list) or not all(isinstance(e, str) for e in expect):
+        raise TypeError(f"{item!r}: 'expect' must be a list of strings")
+    names = [e for e in expect if isinstance(e, str)]
+    return Query(values["id"], values["query"], values["split"], tuple(names))
+
+
 def load_queries(path: Path) -> list[Query]:
-    raw = json.loads(path.read_text())
+    raw = _loads(path.read_text())
+    if not isinstance(raw, list):
+        raise ValueError(f"{str(path)!r}: expected a JSON array of query objects; got {type(raw).__name__}")
     try:
-        return [Query(q["id"], q["query"], q["split"], tuple(q["expect"])) for q in raw]
-    except (KeyError, TypeError) as error:
+        return [_query(item) for item in raw]
+    except TypeError as error:
         raise ValueError(f"{str(path)!r}: each entry needs id, query, split, expect; got {error!r}") from error
 
 
@@ -54,7 +78,15 @@ def _skill_names(event: Json) -> list[str]:
     message = event.get("message") if isinstance(event, dict) else None
     content = message.get("content") if isinstance(message, dict) else None
     blocks = content if isinstance(content, list) else []
-    return [b["input"]["skill"] for b in blocks if isinstance(b, dict) and b.get("name") == "Skill" and b.get("type") == "tool_use"]
+    names: list[str] = []
+    for block in blocks:
+        if not isinstance(block, dict) or block.get("type") != "tool_use" or block.get("name") != "Skill":
+            continue
+        tool_input = block.get("input")
+        skill = tool_input.get("skill") if isinstance(tool_input, dict) else None
+        if isinstance(skill, str):
+            names.append(skill)
+    return names
 
 
 def skills_invoked(stream: str) -> list[str]:
@@ -62,7 +94,7 @@ def skills_invoked(stream: str) -> list[str]:
     names: list[str] = []
     for line in stream.splitlines():
         try:
-            names += _skill_names(json.loads(line))
+            names += _skill_names(_loads(line))
         except json.JSONDecodeError:
             continue
     return names
@@ -77,18 +109,19 @@ def _atif_skill_names(tool_calls: Json) -> list[str]:
         args = call.get("arguments")
         if isinstance(args, str):
             try:
-                args = json.loads(args)
+                args = _loads(args)
             except json.JSONDecodeError:
                 continue
-        if isinstance(args, dict) and isinstance(args.get("skill"), str):
-            names.append(args["skill"])
+        skill = args.get("skill") if isinstance(args, dict) else None
+        if isinstance(skill, str):
+            names.append(skill)
     return names
 
 
 def skills_invoked_atif(stream: str) -> list[str]:
     """Skill names invoked in a devin --export ATIF transcript, in order."""
     try:
-        doc = json.loads(stream)
+        doc = _loads(stream)
     except json.JSONDecodeError:
         return []
     steps = doc.get("steps") if isinstance(doc, dict) else None
@@ -97,6 +130,11 @@ def skills_invoked_atif(stream: str) -> list[str]:
         if isinstance(step, dict):
             names += _atif_skill_names(step.get("tool_calls"))
     return names
+
+
+def _str_list(value: Json) -> list[str]:
+    """String members of a JSON list; empty list for anything else."""
+    return [item for item in value if isinstance(item, str)] if isinstance(value, list) else []
 
 
 def _hit(names: list[str], expect: tuple[str, ...]) -> bool:
@@ -129,7 +167,7 @@ def make_claude_runner(model: str) -> AgentRunner:
     def run(text: str, project: Path) -> str:
         command = ["claude", "-p", text, "--output-format", "stream-json", "--verbose", "--max-turns", "5", "--model", model]
         try:
-            done = subprocess.run(command, cwd=project, stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=240)
+            done = subprocess.run(command, cwd=project, stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=240)  # noqa: S603  # nosec B603 -- fixed argv list; query text is an argv element, never shell-expanded
         except subprocess.TimeoutExpired as error:
             raise AgentRunError(f"claude timed out after {error.timeout}s on {text[:50]!r}") from error
         if '"type":"result"' not in done.stdout:
@@ -148,15 +186,17 @@ def make_devin_runner(model: str, permission_mode: str | None = None) -> AgentRu
             command += ["--permission-mode", permission_mode]
         command += ["--", text]
         try:
-            done = subprocess.run(command, cwd=project, stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=300)
+            done = subprocess.run(command, cwd=project, stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=300)  # noqa: S603  # nosec B603 -- fixed argv list; query text is an argv element, never shell-expanded
         except subprocess.TimeoutExpired as error:
             raise AgentRunError(f"devin timed out after {error.timeout}s on {text[:50]!r}") from error
         try:
             atif = export.read_text()
-            doc = json.loads(atif)
-            steps = doc.get("steps") if isinstance(doc, dict) else None
-        except (OSError, json.JSONDecodeError):
-            steps = None
+            doc: Json = _loads(atif)
+        except (OSError, json.JSONDecodeError) as error:
+            raise AgentRunError(
+                f"devin exited {done.returncode} with no readable ATIF export; stderr: {done.stderr[-200:]!r}"
+            ) from error
+        steps = doc.get("steps") if isinstance(doc, dict) else None
         if not steps:
             raise AgentRunError(f"devin exited {done.returncode} with no ATIF steps; stderr: {done.stderr[-200:]!r}")
         return atif
@@ -204,8 +244,11 @@ def evaluate(query: Query, runs: int, runner: AgentRunner, invoke: str | None = 
     """Run `query` `runs` times; with `invoke`, the user-invoked skill is not counted as a trigger."""
     if keep:
         (keep / query.id).mkdir(parents=True, exist_ok=True)
+    def attempt(_: int) -> list[str] | None:
+        return _attempt(query, runner, parse, keep, ext, delay)
+
     with ThreadPoolExecutor(max_workers=workers or runs) as pool:
-        attempts = list(pool.map(lambda _: _attempt(query, runner, parse, keep, ext, delay), range(runs)))
+        attempts = list(pool.map(attempt, range(runs)))
     ok = [[name for name in a if name != invoke] for a in attempts if a is not None]
     rate = trigger_rate(ok, query.expect)
     loaded = Counter(name for r in ok for name in r)
@@ -224,15 +267,16 @@ def score(keep: Path, queries: list[Query]) -> int:
     records: dict[str, list[Json]] = {q.id: [] for q in queries}
     for line in lines:
         try:
-            record = json.loads(line)
+            record = _loads(line)
         except json.JSONDecodeError:
             continue
-        if isinstance(record, dict) and record.get("id") in records:
-            records[record["id"]].append(record)
-    results = []
+        rid = record.get("id") if isinstance(record, dict) else None
+        if isinstance(rid, str) and rid in records:
+            records[rid].append(record)
+    results: list[dict[str, object]] = []
     for query in queries:
         recs = records[query.id]
-        ok = [r["loaded"] for r in recs if isinstance(r.get("loaded"), list)]
+        ok = [_str_list(r["loaded"]) for r in recs if isinstance(r, dict) and isinstance(r.get("loaded"), list)]
         lo, hi = wilson(sum(_hit(r, query.expect) for r in ok), len(ok))
         rate = trigger_rate(ok, query.expect)
         loaded = Counter(name for r in ok for name in r)
@@ -286,11 +330,22 @@ def main(argv: list[str], make_runner: Callable[[str], AgentRunner] | None = Non
     if args.invoke:
         queries = [Query(q.id, f"/{args.invoke} {q.text}", q.split, q.expect) for q in queries]
     devin = args.harness == "devin"
-    factory = make_runner or (lambda m: make_devin_runner(m, args.permission_mode) if devin else make_claude_runner(m))
+    model: str = args.model
+    permission_mode: str | None = args.permission_mode
+    runs: int = args.runs
+    invoke: str | None = args.invoke
+    workers: int | None = args.workers
+    delay: float = args.delay
+    keep: Path | None = args.keep_transcripts
+    ext = ".json" if devin else ".jsonl"
+
+    def factory(m: str) -> AgentRunner:
+        return make_devin_runner(m, permission_mode) if devin else make_claude_runner(m)
+
+    build_runner = make_runner if make_runner is not None else factory
     parse = skills_invoked_atif if devin else skills_invoked
-    runner = factory(args.model)
-    results = [evaluate(q, args.runs, runner, args.invoke, parse, args.workers,
-                        args.delay, args.keep_transcripts, ".json" if devin else ".jsonl")
+    runner = build_runner(model)
+    results = [evaluate(q, runs, runner, invoke, parse, workers, delay, keep, ext)
                for q in queries]
     return _report(results)
 

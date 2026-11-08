@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 # /// script
-# dependencies = ["tree-sitter-language-pack"]
+# requires-python = ">=3.10"
+# dependencies = ["tree-sitter-language-pack==1.22.1"]
+# [tool.uv]
+# exclude-newer = "2026-11-01T00:00:00Z"
 # ///
 """Report expressions that reach through three or more links — Law of Demeter train wrecks.
 
@@ -15,7 +18,10 @@ import json
 import sys
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from tree_sitter import Node
 
 _MIN_HOPS = 3
 _RECEIVERS = ("self", "cls")
@@ -76,7 +82,7 @@ def find_wrecks(source: str, path: str) -> list[Finding]:
     """
     tree = ast.parse(source, filename=path)
     parents = {id(child): node for node in ast.walk(tree) for child in ast.iter_child_nodes(node)}
-    findings = []
+    findings: list[Finding] = []
     for node in ast.walk(tree):
         if not isinstance(node, (ast.Attribute, ast.Subscript)):
             continue
@@ -89,13 +95,19 @@ def find_wrecks(source: str, path: str) -> list[Finding]:
     return findings
 
 
-def _receiver(node: Any, spec: tuple[str | int, int]) -> Any:
+def node_text(node: Node) -> str:
+    """Decoded source text of `node` ('' when tree-sitter reports no text)."""
+    text = node.text
+    return text.decode() if text is not None else ""
+
+
+def _receiver(node: Node, spec: tuple[str | int, int]) -> Node | None:
     field = spec[0]
     return node.children[field] if isinstance(field, int) and len(node.children) > field else (
         node.child_by_field_name(field) if isinstance(field, str) else None)
 
 
-def _tree_hops(node: Any, links: dict[str, tuple[str | int, int]]) -> tuple[int, Any]:
+def _tree_hops(node: Node | None, links: dict[str, tuple[str | int, int]]) -> tuple[int, Node | None]:
     """(hops, base node) for the chain rooted at `node`; stops at the first non-link."""
     hops = 0
     while node is not None and node.type in links:
@@ -107,9 +119,9 @@ def _tree_hops(node: Any, links: dict[str, tuple[str | int, int]]) -> tuple[int,
     return hops, node
 
 
-def _tree_parents(root: Any) -> dict[int, Any]:
+def _tree_parents(root: Node) -> dict[int, Node]:
     """Map stable tree-sitter node ids to parents; Python `id()` is unstable across accesses."""
-    parents: dict[int, Any] = {}
+    parents: dict[int, Node] = {}
     stack = [root]
     while stack:
         node = stack.pop()
@@ -138,7 +150,7 @@ def find_wrecks_tree(source: bytes, path: str, grammar: str) -> list[Finding]:
     family = _FAMILY[grammar]
     links = _LINKS[family]
     parents = _tree_parents(tree.root_node)
-    findings = []
+    findings: list[Finding] = []
     stack = [tree.root_node]
     while stack:
         node = stack.pop()
@@ -153,11 +165,11 @@ def find_wrecks_tree(source: bytes, path: str, grammar: str) -> list[Finding]:
         if base is not None and base.type in _FREE_BASES[family]:
             hops -= 1
         if not continued and hops >= _MIN_HOPS:
-            findings.append(Finding(path, node.start_point[0] + 1, node.text.decode(), hops))
+            findings.append(Finding(path, node.start_point[0] + 1, node_text(node), hops))
     return findings
 
 
-def _source_files(target: Path) -> list[Path]:
+def source_files(target: Path) -> list[Path]:
     if target.is_file():
         if target.suffix != ".py" and target.suffix not in _LANGUAGES:
             raise FileNotFoundError(
@@ -182,6 +194,15 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
+def _scan_file(file: Path) -> tuple[int, list[Finding]]:
+    """(parsed-count, findings) for `file`: warn-and-skip parse errors, let MissingTreeSitter through."""
+    try:
+        return 1, _find_in_file(file)
+    except (SyntaxError, UnicodeDecodeError) as error:
+        print(f"warning: {error}; skipped", file=sys.stderr)
+        return 0, []
+
+
 def _find_in_file(file: Path) -> list[Finding]:
     if file.suffix == ".py":
         return find_wrecks(file.read_text(), str(file))
@@ -190,22 +211,22 @@ def _find_in_file(file: Path) -> list[Finding]:
 
 def main(argv: list[str]) -> int:
     args = _parse_args(argv)
+    paths: list[str] = args.paths
     try:
-        files = [f for arg in args.paths for f in _source_files(Path(arg))]
+        files = [f for arg in paths for f in source_files(Path(arg))]
     except FileNotFoundError as error:
         print(f"error: {error}", file=sys.stderr)
         return 2
-    findings = []
+    findings: list[Finding] = []
     parsed = 0
     for file in files:
         try:
-            findings += _find_in_file(file)
-            parsed += 1
+            parsed_file, found = _scan_file(file)
         except MissingTreeSitter as error:
             print(f"error: {error}", file=sys.stderr)
             return 2
-        except (SyntaxError, UnicodeDecodeError) as error:
-            print(f"warning: {error}; skipped", file=sys.stderr)
+        parsed += parsed_file
+        findings += found
     if files and not parsed:
         return 2
     for finding in findings:

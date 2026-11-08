@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 # /// script
-# dependencies = ["tree-sitter-language-pack"]
+# requires-python = ">=3.10"
+# dependencies = ["tree-sitter-language-pack==1.22.1"]
+# [tool.uv]
+# exclude-newer = "2026-11-01T00:00:00Z"
 # ///
 """Report pass-through functions: bodies that only forward their own parameters to another call.
 
@@ -15,7 +18,10 @@ import json
 import sys
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from tree_sitter import Node
 
 ArgShape = tuple[str, ...]
 FunctionNode = ast.FunctionDef | ast.AsyncFunctionDef
@@ -114,18 +120,24 @@ def find_pass_throughs(source: str, path: str) -> list[Finding]:
     return [Finding(path, fn.lineno, fn.name, callee) for fn in functions if (callee := _pass_through_callee(fn))]
 
 
-def _ts_params(fn: Any) -> list[str]:
+def node_text(node: Node) -> str:
+    """Decoded source text of `node` ('' when tree-sitter reports no text)."""
+    text = node.text
+    return text.decode() if text is not None else ""
+
+
+def _ts_params(fn: Node) -> list[str]:
     params = fn.child_by_field_name("parameters")
     if params is None:
         return []
-    names = []
+    names: list[str] = []
     for child in params.named_children:
         pattern = child.child_by_field_name("pattern") if child.type in {"required_parameter", "optional_parameter"} else None
-        names.append(pattern.text.decode() if pattern is not None else _UNKNOWN)
+        names.append(node_text(pattern) if pattern is not None else _UNKNOWN)
     return names
 
 
-def _ts_call(fn: Any) -> Any:
+def _ts_call(fn: Node) -> Node | None:
     body = fn.child_by_field_name("body")
     if body is None:
         return None
@@ -140,14 +152,14 @@ def _ts_call(fn: Any) -> Any:
     return inner[0] if len(inner) == 1 and inner[0].type == "call_expression" else None
 
 
-def _ts_args(call: Any) -> list[str]:
+def _ts_args(call: Node) -> list[str]:
     args = call.child_by_field_name("arguments")
     if args is None:
         return []
-    return [c.text.decode() if c.type == "identifier" else _UNKNOWN for c in args.named_children]
+    return [node_text(c) if c.type == "identifier" else _UNKNOWN for c in args.named_children]
 
 
-def _ts_callee(call: Any) -> str | None:
+def _ts_callee(call: Node) -> str | None:
     func = call.child_by_field_name("function")
     if func is None:
         return None
@@ -155,21 +167,21 @@ def _ts_callee(call: Any) -> str | None:
         obj = func.child_by_field_name("object")
         if obj is not None and obj.type == "super":
             return None
-    return func.text.decode()
+    return node_text(func)
 
 
-def _java_params(fn: Any) -> list[str]:
+def _java_params(fn: Node) -> list[str]:
     params = fn.child_by_field_name("parameters")
     if params is None:
         return []
-    names = []
+    names: list[str] = []
     for child in params.named_children:
         name = child.child_by_field_name("name") if child.type == "formal_parameter" else None
-        names.append(name.text.decode() if name is not None else _UNKNOWN)
+        names.append(node_text(name) if name is not None else _UNKNOWN)
     return names
 
 
-def _java_call(fn: Any) -> Any:
+def _java_call(fn: Node) -> Node | None:
     body = fn.child_by_field_name("body")
     if body is None:
         return None
@@ -180,39 +192,39 @@ def _java_call(fn: Any) -> Any:
     return inner[0] if len(inner) == 1 and inner[0].type == "method_invocation" else None
 
 
-def _java_args(call: Any) -> list[str]:
+def _java_args(call: Node) -> list[str]:
     args = call.child_by_field_name("arguments")
     if args is None:
         return []
-    return [c.text.decode() if c.type == "identifier" else _UNKNOWN for c in args.named_children]
+    return [node_text(c) if c.type == "identifier" else _UNKNOWN for c in args.named_children]
 
 
-def _java_callee(call: Any) -> str | None:
+def _java_callee(call: Node) -> str | None:
     obj = call.child_by_field_name("object")
     if obj is not None and obj.type == "super":
         return None
     name = call.child_by_field_name("name")
     if name is None:
         return None
-    return f"{obj.text.decode()}.{name.text.decode()}" if obj is not None else name.text.decode()
+    return f"{node_text(obj)}.{node_text(name)}" if obj is not None else node_text(name)
 
 
-def _kotlin_params(fn: Any) -> list[str]:
+def _kotlin_params(fn: Node) -> list[str]:
     params = next((c for c in fn.children if c.type == "function_value_parameters"), None)
     if params is None:
         return []
-    names = []
+    names: list[str] = []
     for child in params.named_children:
         ident = next((c for c in child.named_children if c.type == "simple_identifier"), None) if child.type == "parameter" else None
-        names.append(ident.text.decode() if ident is not None else _UNKNOWN)
+        names.append(node_text(ident) if ident is not None else _UNKNOWN)
     return names
 
 
-def _kotlin_call(fn: Any) -> Any:
+def _kotlin_call(fn: Node) -> Node | None:
     body = next((c for c in fn.children if c.type == "function_body"), None)
     if body is None:
         return None
-    if body.text.decode().lstrip().startswith("="):
+    if node_text(body).lstrip().startswith("="):
         named = body.named_children
         return named[0] if len(named) == 1 and named[0].type == "call_expression" else None
     named = body.named_children
@@ -225,23 +237,23 @@ def _kotlin_call(fn: Any) -> Any:
     return calls[0] if len(calls) == 1 else None
 
 
-def _kotlin_args(call: Any) -> list[str]:
+def _kotlin_args(call: Node) -> list[str]:
     suffix = next((c for c in call.children if c.type == "call_suffix"), None)
     arguments = next((c for c in suffix.named_children if c.type == "value_arguments"), None) if suffix is not None else None
     if arguments is None:
         return []
-    names = []
+    names: list[str] = []
     for value in arguments.named_children:
         inner = value.named_children
-        names.append(inner[0].text.decode() if len(inner) == 1 and inner[0].type == "simple_identifier" else _UNKNOWN)
+        names.append(node_text(inner[0]) if len(inner) == 1 and inner[0].type == "simple_identifier" else _UNKNOWN)
     return names
 
 
-def _kotlin_callee(call: Any) -> str | None:
+def _kotlin_callee(call: Node) -> str | None:
     callee = call.children[0] if call.children else None
     if callee is None:
         return None
-    text = callee.text.decode()
+    text = node_text(callee)
     return None if text.startswith(("super.", "super<")) else text
 
 
@@ -251,7 +263,7 @@ _ARGS = {"ts": _ts_args, "java": _java_args, "kotlin": _kotlin_args}
 _CALLEE = {"ts": _ts_callee, "java": _java_callee, "kotlin": _kotlin_callee}
 
 
-def _is_annotated(fn: Any, family: str) -> bool:
+def _is_annotated(fn: Node, family: str) -> bool:
     if family == "ts":
         sibling = fn.prev_named_sibling
         return sibling is not None and sibling.type == "decorator"
@@ -261,7 +273,7 @@ def _is_annotated(fn: Any, family: str) -> bool:
     return any(c.type in {"annotation", "marker_annotation"} for c in modifiers.named_children)
 
 
-def _tree_pass_through_callee(fn: Any, family: str) -> str | None:
+def _tree_pass_through_callee(fn: Node, family: str) -> str | None:
     if _is_annotated(fn, family):
         return None
     call = _SINGLE_CALL[family](fn)
@@ -274,17 +286,18 @@ def _tree_pass_through_callee(fn: Any, family: str) -> str | None:
     return _CALLEE[family](call)
 
 
-def _function_name(node: Any, family: str) -> str:
+def _function_name(node: Node, family: str) -> str:
     if family == "kotlin":
-        return next((c.text.decode() for c in node.named_children if c.type == "simple_identifier"), "<anonymous>")
+        return next((node_text(c) for c in node.named_children if c.type == "simple_identifier"), "<anonymous>")
     name = node.child_by_field_name("name")
     if name is not None:
-        return name.text.decode()
+        return node_text(name)
     parent = node.parent
     if parent is not None and parent.type in {"variable_declarator", "pair"}:
-        named = parent.child_by_field_name("name")
+        field = "key" if parent.type == "pair" else "name"
+        named = parent.child_by_field_name(field)
         if named is not None:
-            return named.text.decode()
+            return node_text(named)
     return "<anonymous>"
 
 
@@ -305,14 +318,14 @@ def find_pass_throughs_tree(source: bytes, path: str, grammar: str) -> list[Find
     if tree.root_node.has_error:
         raise SyntaxError(f"{path!r}: could not parse as {grammar}; expected valid source")
     family = _FAMILY[grammar]
-    functions = []
+    functions: list[Node] = []
     stack = [tree.root_node]
     while stack:
         node = stack.pop()
         if node.type in _FUNCTIONS[family]:
             functions.append(node)
         stack.extend(node.children)
-    findings = []
+    findings: list[Finding] = []
     for fn in functions:
         callee = _tree_pass_through_callee(fn, family)
         if callee is not None:
@@ -320,7 +333,7 @@ def find_pass_throughs_tree(source: bytes, path: str, grammar: str) -> list[Find
     return findings
 
 
-def _source_files(target: Path) -> list[Path]:
+def source_files(target: Path) -> list[Path]:
     if target.is_file():
         if target.suffix != ".py" and target.suffix not in _LANGUAGES:
             raise FileNotFoundError(
@@ -345,6 +358,15 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
+def _scan_file(file: Path) -> tuple[int, list[Finding]]:
+    """(parsed-count, findings) for `file`: warn-and-skip parse errors, let MissingTreeSitter through."""
+    try:
+        return 1, _find_in_file(file)
+    except (SyntaxError, UnicodeDecodeError) as error:
+        print(f"warning: {error}; skipped", file=sys.stderr)
+        return 0, []
+
+
 def _find_in_file(file: Path) -> list[Finding]:
     if file.suffix == ".py":
         return find_pass_throughs(file.read_text(), str(file))
@@ -353,22 +375,22 @@ def _find_in_file(file: Path) -> list[Finding]:
 
 def main(argv: list[str]) -> int:
     args = _parse_args(argv)
+    paths: list[str] = args.paths
     try:
-        files = [f for arg in args.paths for f in _source_files(Path(arg))]
+        files = [f for arg in paths for f in source_files(Path(arg))]
     except FileNotFoundError as error:
         print(f"error: {error}", file=sys.stderr)
         return 2
-    findings = []
+    findings: list[Finding] = []
     parsed = 0
     for file in files:
         try:
-            findings += _find_in_file(file)
-            parsed += 1
+            parsed_file, found = _scan_file(file)
         except MissingTreeSitter as error:
             print(f"error: {error}", file=sys.stderr)
             return 2
-        except (SyntaxError, UnicodeDecodeError) as error:
-            print(f"warning: {error}; skipped", file=sys.stderr)
+        parsed += parsed_file
+        findings += found
     if files and not parsed:
         return 2
     for finding in findings:
