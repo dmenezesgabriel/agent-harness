@@ -1,0 +1,17 @@
+# Enable with `pre-commit install`. Hooks run the locked uv env via make —
+# the same targets as `make check` (minus network-only pip-audit and mutmut).
+repos:
+  - repo: local
+    hooks:
+      - id: commit-check
+        name: Quality gate (make commit-check)
+        entry: make commit-check
+        language: system
+        pass_filenames: false
+        always_run: true
+      - id: validate-skills
+        name: Validate skills (skills-ref)
+        entry: make validate
+        language: system
+        pass_filenames: false
+        always_run: true

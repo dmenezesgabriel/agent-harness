@@ -5,9 +5,14 @@ set -euo pipefail
 
 root="$(git rev-parse --show-toplevel)"
 
-if [[ ! -x "$root/research_repos/skills-ref/.venv/bin/skills-ref" ]]; then
+if [[ -x "$root/research_repos/skills-ref/.venv/bin/skills-ref" ]]; then
+  "$root/scripts/validate-skills.sh"
+else
   echo "pre-commit: skills-ref not installed; skipping skill validation (see CLAUDE.md 'Validator setup')" >&2
-  exit 0
 fi
 
-"$root/scripts/validate-skills.sh"
+if command -v make >/dev/null && command -v uv >/dev/null; then
+  make -C "$root" commit-check
+else
+  echo "pre-commit: make/uv not found; skipping script quality gate (make commit-check)" >&2
+fi
