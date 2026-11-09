@@ -18,9 +18,9 @@ Pick the task type first. It decides everything after.
 
 Open a checklist with these steps. A step you skip stays listed as `skip: <reason>`.
 
-1. **Work**: smallest change that solves the problem; run it or test it.
+1. **Work**: smallest change that solves the problem; run it or test it. When a failing test fits, drive the change with [tdd](../tdd/SKILL.md).
 2. **Right**: apply each principle whose situation fits; run each check that fits.
-3. **Prove**: show the evidence (test or command output), not a claim.
+3. **Prove**: show the evidence (test or command output), not a claim — [principle-prove-it-works](../principle-prove-it-works/SKILL.md).
 
 ## 3. Principles
 
@@ -39,6 +39,12 @@ Apply when the situation fits. Load the named skill before you cite it.
 - **Law of Demeter** ([principle-law-of-demeter](../principle-law-of-demeter/SKILL.md)). Callers chain through values to reach a result — train wrecks, deep key paths. Ask the neighbor for the outcome.
 - **Domain types over primitives** ([principle-domain-types-over-primitives](../principle-domain-types-over-primitives/SKILL.md)). Meaning travels in bare primitives; swaps and re-validation at call sites. Parse once into named types.
 - **Flat methods** ([principle-flat-methods](../principle-flat-methods/SKILL.md)). Control flow nests into arrows and if/elif chains. No else: guard clauses, early returns, dispatch.
+- **Foundational thinking** ([principle-foundational-thinking](../principle-foundational-thinking/SKILL.md)). Before writing logic: core types, scaffold sequencing, shared state. Data shape first.
+- **Subtract before you add** ([principle-subtract-before-you-add](../principle-subtract-before-you-add/SKILL.md)). An addition or refactor onto a complicated base. Remove dead weight first, then build.
+- **Fix root causes** ([principle-fix-root-causes](../principle-fix-root-causes/SKILL.md)). Debugging; a fix only moved the symptom. Trace to the first wrong decision and fix there.
+- **Attack the premise** ([principle-attack-the-premise](../principle-attack-the-premise/SKILL.md)). Two or more fixes sharing one premise failed the same gate. Write the premise down and test it.
+- **Sequence verifiable units** ([principle-sequence-verifiable-units](../principle-sequence-verifiable-units/SKILL.md)). Multi-step work, sweeps, commit stacks. Small units that each end in a check.
+- **Test behavior, not implementation** ([principle-test-behavior-not-implementation](../principle-test-behavior-not-implementation/SKILL.md)). Writing or judging a test. Assert what users can observe.
 
 ## 4. Checks
 
@@ -46,6 +52,8 @@ Apply when the situation fits. Load the named skill before you cite it.
 - **Nested branches** ([find-nested-branches](../find-nested-branches/SKILL.md)). Functions with else/elif or control flow nested past one level. Judge each finding with [principle-flat-methods](../principle-flat-methods/SKILL.md).
 - **Train wrecks** ([find-train-wrecks](../find-train-wrecks/SKILL.md)). Chains reaching through three or more links. Judge each finding with [principle-law-of-demeter](../principle-law-of-demeter/SKILL.md).
 - **Feature envy** ([find-feature-envy](../find-feature-envy/SKILL.md)). Functions reading several attributes of one foreign value. Judge each finding with [principle-tell-dont-ask](../principle-tell-dont-ask/SKILL.md).
+- **Swallowed errors** ([find-swallowed-errors](../find-swallowed-errors/SKILL.md)). Exception handlers with an empty or return-only body. Judge each finding with [principle-fix-root-causes](../principle-fix-root-causes/SKILL.md).
+- **Tautological assertions** ([find-tautological-assertions](../find-tautological-assertions/SKILL.md)). Assertions that compare an expression to itself or assert a constant. Judge each finding with [principle-test-behavior-not-implementation](../principle-test-behavior-not-implementation/SKILL.md).
 
 ## Reply
 
