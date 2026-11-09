@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import re
 import shutil
 import subprocess  # nosec B404 -- needed to invoke the claude/devin CLIs; argv list form, never shell
 import sys
@@ -74,37 +75,53 @@ def load_queries(path: Path) -> list[Query]:
         raise ValueError(f"{str(path)!r}: each entry needs id, query, split, expect; got {error!r}") from error
 
 
+SKILL_FILE = re.compile(r"skills/([a-z0-9-]+)/SKILL\.md")
+
+
+def _unique(names: list[str]) -> list[str]:
+    """Order-preserving de-dup so `loaded` counts runs, not repeat loads within one run."""
+    return list(dict.fromkeys(names))
+
+
+def _file_read_skill(tool_input: Json) -> list[str]:
+    """Skills whose SKILL.md a read/exec call opened; the spec counts a SKILL.md load as a trigger."""
+    return SKILL_FILE.findall(json.dumps(tool_input))
+
+
 def _skill_names(event: Json) -> list[str]:
     message = event.get("message") if isinstance(event, dict) else None
     content = message.get("content") if isinstance(message, dict) else None
     blocks = content if isinstance(content, list) else []
     names: list[str] = []
     for block in blocks:
-        if not isinstance(block, dict) or block.get("type") != "tool_use" or block.get("name") != "Skill":
+        if not isinstance(block, dict) or block.get("type") != "tool_use":
             continue
         tool_input = block.get("input")
-        skill = tool_input.get("skill") if isinstance(tool_input, dict) else None
-        if isinstance(skill, str):
-            names.append(skill)
+        if block.get("name") in ("Read", "Bash"):
+            names += _file_read_skill(tool_input)
+        elif block.get("name") == "Skill":
+            skill = tool_input.get("skill") if isinstance(tool_input, dict) else None
+            if isinstance(skill, str):
+                names.append(skill)
     return names
 
 
 def skills_invoked(stream: str) -> list[str]:
-    """Skill names called in a claude stream-json transcript, in order."""
+    """Skills loaded in a claude stream-json transcript (Skill calls and SKILL.md reads), first-load order."""
     names: list[str] = []
     for line in stream.splitlines():
         try:
             names += _skill_names(_loads(line))
         except json.JSONDecodeError:
             continue
-    return names
+    return _unique(names)
 
 
 def _atif_skill_names(tool_calls: Json) -> list[str]:
     calls = tool_calls if isinstance(tool_calls, list) else []
     names: list[str] = []
     for call in calls:
-        if not isinstance(call, dict) or call.get("function_name") != "skill":
+        if not isinstance(call, dict):
             continue
         args = call.get("arguments")
         if isinstance(args, str):
@@ -112,14 +129,17 @@ def _atif_skill_names(tool_calls: Json) -> list[str]:
                 args = _loads(args)
             except json.JSONDecodeError:
                 continue
-        skill = args.get("skill") if isinstance(args, dict) else None
-        if isinstance(skill, str):
-            names.append(skill)
+        if call.get("function_name") in ("read", "exec"):
+            names += _file_read_skill(args)
+        elif call.get("function_name") == "skill":
+            skill = args.get("skill") if isinstance(args, dict) else None
+            if isinstance(skill, str):
+                names.append(skill)
     return names
 
 
 def skills_invoked_atif(stream: str) -> list[str]:
-    """Skill names invoked in a devin --export ATIF transcript, in order."""
+    """Skills loaded in a devin --export ATIF transcript (skill calls and SKILL.md reads), first-load order."""
     try:
         doc = _loads(stream)
     except json.JSONDecodeError:
@@ -129,7 +149,7 @@ def skills_invoked_atif(stream: str) -> list[str]:
     for step in steps if isinstance(steps, list) else []:
         if isinstance(step, dict):
             names += _atif_skill_names(step.get("tool_calls"))
-    return names
+    return _unique(names)
 
 
 def _str_list(value: Json) -> list[str]:
@@ -177,7 +197,7 @@ def make_claude_runner(model: str) -> AgentRunner:
     return run
 
 
-def make_devin_runner(model: str, permission_mode: str | None = None) -> AgentRunner:
+def make_devin_runner(model: str, permission_mode: str | None = None, timeout: int = 300) -> AgentRunner:
     def run(text: str, project: Path) -> str:
         export = project / ".atif-export.json"
         command = ["devin", "-p", "--model", model, "--export", str(export),
@@ -186,7 +206,7 @@ def make_devin_runner(model: str, permission_mode: str | None = None) -> AgentRu
             command += ["--permission-mode", permission_mode]
         command += ["--", text]
         try:
-            done = subprocess.run(command, cwd=project, stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=300)  # noqa: S603  # nosec B603 -- fixed argv list; query text is an argv element, never shell-expanded
+            done = subprocess.run(command, cwd=project, stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=timeout)  # noqa: S603  # nosec B603 -- fixed argv list; query text is an argv element, never shell-expanded
         except subprocess.TimeoutExpired as error:
             raise AgentRunError(f"devin timed out after {error.timeout}s on {text[:50]!r}") from error
         try:
@@ -204,10 +224,12 @@ def make_devin_runner(model: str, permission_mode: str | None = None) -> AgentRu
     return run
 
 
-def _prepare_project(project: Path) -> None:
-    for skill in sorted((REPO / "skills").iterdir()):
-        shutil.copytree(skill, project / ".claude" / "skills" / skill.name, ignore=shutil.ignore_patterns("__pycache__"))
-    shutil.copytree(HERE / "fixtures", project, dirs_exist_ok=True)
+def prepare_project(project: Path, fixtures: tuple[Path, ...], with_skills: bool = True) -> None:
+    """Fill a sandbox with the repo's skills (unless `with_skills` is False) and the fixture layers, in order."""
+    for skill in sorted((REPO / "skills").iterdir()) if with_skills else []:
+        shutil.copytree(skill, project / ".claude" / "skills" / skill.name, ignore=shutil.ignore_patterns("__pycache__", "mutants"))
+    for layer in fixtures:
+        shutil.copytree(layer, project, dirs_exist_ok=True)
 
 
 def _record(keep: Path, query: Query, raw: str, loaded: list[str] | None, ext: str) -> None:
@@ -220,12 +242,12 @@ def _record(keep: Path, query: Query, raw: str, loaded: list[str] | None, ext: s
 
 
 def _attempt(query: Query, runner: AgentRunner, parse: TranscriptParser,
-             keep: Path | None, ext: str, delay: float) -> list[str] | None:
+             keep: Path | None, ext: str, delay: float, fixtures: tuple[Path, ...]) -> list[str] | None:
     raw, loaded = "", None
     try:
         with tempfile.TemporaryDirectory() as tmp:
             project = Path(tmp)
-            _prepare_project(project)
+            prepare_project(project, fixtures)
             raw = runner(query.text, project)
             loaded = parse(raw)
     except AgentRunError as error:
@@ -240,12 +262,13 @@ def _attempt(query: Query, runner: AgentRunner, parse: TranscriptParser,
 
 def evaluate(query: Query, runs: int, runner: AgentRunner, invoke: str | None = None,
              parse: TranscriptParser = skills_invoked, workers: int | None = None,
-             delay: float = 0.0, keep: Path | None = None, ext: str = ".jsonl") -> dict[str, object]:
+             delay: float = 0.0, keep: Path | None = None, ext: str = ".jsonl",
+             fixtures: tuple[Path, ...] = (HERE / "fixtures",)) -> dict[str, object]:
     """Run `query` `runs` times; with `invoke`, the user-invoked skill is not counted as a trigger."""
     if keep:
         (keep / query.id).mkdir(parents=True, exist_ok=True)
     def attempt(_: int) -> list[str] | None:
-        return _attempt(query, runner, parse, keep, ext, delay)
+        return _attempt(query, runner, parse, keep, ext, delay, fixtures)
 
     with ThreadPoolExecutor(max_workers=workers or runs) as pool:
         attempts = list(pool.map(attempt, range(runs)))
@@ -257,13 +280,13 @@ def evaluate(query: Query, runs: int, runner: AgentRunner, invoke: str | None = 
             "passed": bool(ok) and passed(rate, query.expect)}
 
 
-def score(keep: Path, queries: list[Query]) -> int:
-    """Recompute per-query results from a --keep-transcripts directory, with 95% Wilson CIs."""
+def _load_records(keep: Path, queries: list[Query]) -> dict[str, list[Json]] | None:
+    """runs.jsonl records grouped by query id; None (after printing why) when unreadable."""
     try:
         lines = (keep / "runs.jsonl").read_text().splitlines()
     except OSError as error:
         print(f"error: {error}", file=sys.stderr)
-        return 2
+        return None
     records: dict[str, list[Json]] = {q.id: [] for q in queries}
     for line in lines:
         try:
@@ -273,18 +296,66 @@ def score(keep: Path, queries: list[Query]) -> int:
         rid = record.get("id") if isinstance(record, dict) else None
         if isinstance(rid, str) and rid in records:
             records[rid].append(record)
+    return records
+
+
+def _ok_runs(recs: list[Json], invoke: str | None) -> list[list[str]]:
+    """Loaded-skill lists of successful attempts, without the user-invoked skill."""
+    loaded = [_str_list(r["loaded"]) for r in recs if isinstance(r, dict) and isinstance(r.get("loaded"), list)]
+    return [[name for name in run if name != invoke] for run in loaded]
+
+
+def score(keep: Path, queries: list[Query], invoke: str | None = None, pool: bool = False) -> int:
+    """Recompute results from a --keep-transcripts directory, with 95% Wilson CIs; `pool` groups by expected skill."""
+    records = _load_records(keep, queries)
+    if records is None:
+        return 2
+    runs = {q.id: _ok_runs(records[q.id], invoke) for q in queries}
+    if pool:
+        return _report_pooled(pooled(queries, runs))
     results: list[dict[str, object]] = []
     for query in queries:
-        recs = records[query.id]
-        ok = [_str_list(r["loaded"]) for r in recs if isinstance(r, dict) and isinstance(r.get("loaded"), list)]
+        ok = runs[query.id]
         lo, hi = wilson(sum(_hit(r, query.expect) for r in ok), len(ok))
         rate = trigger_rate(ok, query.expect)
         loaded = Counter(name for r in ok for name in r)
         results.append({"id": query.id, "split": query.split, "expect": list(query.expect),
-                        "runs_ok": len(ok), "errors": len(recs) - len(ok), "loaded": dict(loaded),
+                        "runs_ok": len(ok), "errors": len(records[query.id]) - len(ok), "loaded": dict(loaded),
                         "rate": round(rate, 2), "ci95": [round(lo, 2), round(hi, 2)],
                         "passed": bool(ok) and passed(rate, query.expect)})
     return _report(results)
+
+
+def pooled(queries: list[Query], runs_by_query: dict[str, list[list[str]]]) -> list[dict[str, object]]:
+    """Pool successful runs of queries that share an `expect` set, with a 95% Wilson CI.
+
+    `conclusive` means the CI sits fully on the passing side of THRESHOLD, so a pooled
+    group can settle what three runs of one query cannot. Example: two queries x 3 runs,
+    all hits, give CI [0.61, 1.0].
+    """
+    groups: dict[tuple[str, ...], list[Query]] = {}
+    for query in queries:
+        groups.setdefault(query.expect, []).append(query)
+    results: list[dict[str, object]] = []
+    for expect, members in groups.items():
+        ok = [run for q in members for run in runs_by_query[q.id]]
+        hits = sum(_hit(run, expect) for run in ok)
+        lo, hi = wilson(hits, len(ok))
+        conclusive = bool(ok) and (lo > THRESHOLD if expect else hi < THRESHOLD)
+        results.append({"expect": list(expect), "queries": [q.id for q in members], "runs": len(ok),
+                        "hits": hits, "rate": round(hits / len(ok), 2) if ok else 0.0,
+                        "ci95": [round(lo, 2), round(hi, 2)], "conclusive": conclusive,
+                        "passed": bool(ok) and passed(hits / len(ok), expect)})
+    return results
+
+
+def _report_pooled(results: list[dict[str, object]]) -> int:
+    for result in results:
+        print(json.dumps(result), flush=True)
+    conclusive = sum(r["conclusive"] is True for r in results)
+    print(f"pooled groups: {len(results)}, conclusive: {conclusive}, passed: {sum(r['passed'] is True for r in results)}",
+          file=sys.stderr)
+    return 0 if all(r["passed"] and r["conclusive"] for r in results) else 1
 
 
 def _report(results: list[dict[str, object]]) -> int:
@@ -313,6 +384,11 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--delay", type=float, default=0.0, help="seconds to wait after each attempt")
     parser.add_argument("--keep-transcripts", type=Path, metavar="DIR",
                         help="save each attempt's transcript under DIR and append DIR/runs.jsonl")
+    parser.add_argument("--fixtures", type=Path, action="append", metavar="DIR",
+                        help="project files copied into each attempt's sandbox; repeat to layer dirs in order "
+                             "(default: evals/triggers/fixtures)")
+    parser.add_argument("--pooled", action="store_true",
+                        help="with --score-transcripts: pool runs of queries sharing an expect set and report a CI per group")
     parser.add_argument("--score-transcripts", type=Path, metavar="DIR",
                         help="aggregate DIR/runs.jsonl instead of running the agent")
     return parser.parse_args(argv)
@@ -326,7 +402,7 @@ def main(argv: list[str], make_runner: Callable[[str], AgentRunner] | None = Non
         print(f"error: {error}", file=sys.stderr)
         return 2
     if args.score_transcripts:
-        return score(args.score_transcripts, queries)
+        return score(args.score_transcripts, queries, args.invoke, args.pooled)
     if args.invoke:
         queries = [Query(q.id, f"/{args.invoke} {q.text}", q.split, q.expect) for q in queries]
     devin = args.harness == "devin"
@@ -345,7 +421,7 @@ def main(argv: list[str], make_runner: Callable[[str], AgentRunner] | None = Non
     build_runner = make_runner if make_runner is not None else factory
     parse = skills_invoked_atif if devin else skills_invoked
     runner = build_runner(model)
-    results = [evaluate(q, runs, runner, invoke, parse, workers, delay, keep, ext)
+    results = [evaluate(q, runs, runner, invoke, parse, workers, delay, keep, ext, tuple(args.fixtures or [HERE / "fixtures"]))
                for q in queries]
     return _report(results)
 

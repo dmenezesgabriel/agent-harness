@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from run_triggers import AgentRunError, load_queries, main, passed, skills_invoked, skills_invoked_atif, trigger_rate
+from run_triggers import AgentRunError, Query, load_queries, main, passed, pooled, skills_invoked, skills_invoked_atif, trigger_rate
 
 
 def stream(*skills: str) -> str:
@@ -67,6 +67,65 @@ class WhenParsingAtifTranscripts(unittest.TestCase):
         self.assertEqual((skills_invoked_atif("not json"), skills_invoked_atif("[]")), ([], []))
 
 
+class WhenAgentReadsSkillFilesDirectly(unittest.TestCase):
+    """The spec counts a loaded SKILL.md as a trigger, whichever tool opened it."""
+
+    def test_claude_read_and_bash_of_skill_md_count_once(self) -> None:
+        events = [
+            {"type": "assistant", "message": {"content": [
+                {"type": "tool_use", "name": "Read", "input": {"file_path": "/p/.claude/skills/a/SKILL.md"}}]}},
+            {"type": "assistant", "message": {"content": [
+                {"type": "tool_use", "name": "Bash", "input": {"command": "cat .claude/skills/a/SKILL.md .claude/skills/b/SKILL.md"}}]}},
+            {"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "Skill", "input": {"skill": "a"}}]}},
+        ]
+        self.assertEqual(skills_invoked("\n".join(json.dumps(e) for e in events)), ["a", "b"])
+
+    def test_devin_read_and_exec_of_skill_md_count_once(self) -> None:
+        doc = json.dumps({"steps": [{"source": "agent", "tool_calls": [
+            {"function_name": "read", "arguments": {"file_path": "/work/.claude/skills/law/SKILL.md"}},
+            {"function_name": "exec", "arguments": {"command": "cat .claude/skills/law/SKILL.md"}},
+            {"function_name": "skill", "arguments": {"skill": "em"}},
+        ]}]})
+        self.assertEqual(skills_invoked_atif(doc), ["law", "em"])
+
+    def test_reading_other_files_is_not_a_load(self) -> None:
+        doc = json.dumps({"steps": [{"source": "agent", "tool_calls": [
+            {"function_name": "read", "arguments": {"file_path": "/work/src/skills_list.md"}},
+            {"function_name": "exec", "arguments": {"command": "ls .claude/skills"}},
+        ]}]})
+        self.assertEqual(skills_invoked_atif(doc), [])
+
+
+class WhenPoolingRunsByExpectedSkill(unittest.TestCase):
+    QUERIES = [Query("a1", "q", "train", ("a",)), Query("a2", "q", "train", ("a",)),
+               Query("n1", "q", "train", ()), Query("b1", "q", "train", ("b",))]
+
+    def pool(self, **runs: list[list[str]]) -> dict[str, dict[str, object]]:
+        """Pooled groups keyed by their member query ids, e.g. "['a1', 'a2']"."""
+        everything = {q.id: runs.get(q.id, []) for q in self.QUERIES}
+        return {str(group["queries"]): group for group in pooled(self.QUERIES, everything)}
+
+    def test_queries_sharing_expect_pool_their_runs(self) -> None:
+        groups = self.pool(a1=[["a"]] * 3, a2=[["a"]] * 3)
+        self.assertEqual(groups["['a1', 'a2']"]["runs"], 6)
+
+    def test_six_of_six_is_conclusive_but_three_of_three_is_not(self) -> None:
+        groups = self.pool(a1=[["a"]] * 3, a2=[["a"]] * 3, b1=[["b"]] * 3)
+        self.assertEqual((groups["['a1', 'a2']"]["conclusive"], groups["['b1']"]["conclusive"]), (True, False))
+
+    def test_negatives_conclusive_only_when_ci_upper_bound_is_below_threshold(self) -> None:
+        few, many = self.pool(n1=[[]] * 3), self.pool(n1=[[]] * 8)
+        self.assertEqual((few["['n1']"]["conclusive"], many["['n1']"]["conclusive"]), (False, True))
+
+    def test_a_group_that_hits_half_its_runs_fails(self) -> None:
+        group = self.pool(a1=[["a"], []], a2=[["a"], []])["['a1', 'a2']"]
+        self.assertEqual((group["hits"], group["passed"]), (2, False))
+
+    def test_a_group_without_runs_is_neither_passed_nor_conclusive(self) -> None:
+        group = self.pool()["['b1']"]
+        self.assertEqual((group["runs"], group["passed"], group["conclusive"]), (0, False, False))
+
+
 class WhenScoringTriggerRates(unittest.TestCase):
     def test_expected_skill_rate(self) -> None:
         self.assertAlmostEqual(trigger_rate([["a"], ["b"], ["a", "c"]], ("a",)), 2 / 3)
@@ -88,6 +147,13 @@ class WhenLoadingQueryFiles(unittest.TestCase):
             path.write_text('[{"id": "x"}]')
             with self.assertRaisesRegex(ValueError, r"q\.json.*id, query, split, expect.*'query'"):
                 load_queries(path)
+
+    def test_every_expected_skill_exists_and_ids_are_unique(self) -> None:
+        skills = {path.name for path in (Path(__file__).parents[2] / "skills").iterdir()}
+        for name in ("queries.json", "app/queries.json", "fresh.json"):
+            queries = load_queries(Path(__file__).parent / name)
+            unknown = {skill for q in queries for skill in q.expect} - skills
+            self.assertEqual((name, unknown, len({q.id for q in queries})), (name, set(), len(queries)))
 
     def test_shipped_queries_are_balanced_per_split(self) -> None:
         queries = load_queries(Path(__file__).parent / "queries.json")
@@ -163,6 +229,36 @@ class WhenRunningMain(unittest.TestCase):
             scored = [json.loads(line) for line in out.getvalue().splitlines()]
             self.assertEqual((code, [r["passed"] for r in scored]), (1, [True, False]))
             self.assertEqual((scored[0]["runs_ok"], scored[0]["ci95"], scored[1]["ci95"]), (2, [0.34, 1.0], [0.0, 0.0]))
+
+    def test_fixtures_flag_layers_dirs_in_order_over_an_empty_default(self) -> None:
+        seen: list[tuple[bool, str]] = []
+
+        def agent(_text: str, project: Path) -> str:
+            seen.append((not (project / "src").exists(), (project / "app.txt").read_text()))
+            return stream()
+
+        with tempfile.TemporaryDirectory() as tmp:
+            for name, text in (("base", "base"), ("top", "top")):
+                Path(tmp, name).mkdir()
+                Path(tmp, name, "app.txt").write_text(text)
+            path = Path(tmp, "q.json")
+            path.write_text(json.dumps([{"id": "neg", "query": "rename it", "split": "train", "expect": []}]))
+            args = ["--queries", str(path), "--runs", "1", "--fixtures", str(Path(tmp, "base")), "--fixtures", str(Path(tmp, "top"))]
+            with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+                main(args, lambda _m: agent)
+        self.assertEqual(seen, [(True, "top")])
+
+    def test_pooled_scoring_strips_the_invoked_skill(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            keep, path = Path(tmp, "keep"), Path(tmp, "q.json")
+            keep.mkdir()
+            path.write_text(json.dumps([{"id": "neg", "query": "rename it", "split": "train", "expect": []}]))
+            (keep / "runs.jsonl").write_text('{"id": "neg", "loaded": ["mode"]}\n' * 8)
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+                code = main(["--queries", str(path), "--score-transcripts", str(keep), "--invoke", "mode", "--pooled"])
+            group = json.loads(out.getvalue())
+        self.assertEqual((code, group["hits"], group["conclusive"]), (0, 0, True))
 
     def test_exit_2_on_missing_queries_file(self) -> None:
         with contextlib.redirect_stderr(io.StringIO()):
