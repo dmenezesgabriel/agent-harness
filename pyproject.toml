@@ -36,7 +36,7 @@ no-build = true
 [tool.pytest.ini_options]
 testpaths = ["skills", "evals"]
 # Terse output for agent consumption: quiet dots, one-line skip reasons, short tracebacks.
-addopts = "-q -ra --tb=short --strict-markers --doctest-modules --ignore=evals/triggers/fixtures --ignore-glob=*/mutants --cov=skills --cov-report=term-missing"
+addopts = "-q -ra --tb=short --strict-markers --doctest-modules --ignore-glob=*/fixtures --ignore-glob=*/mutants --cov=skills --cov-report=term-missing"
 
 [tool.coverage.run]
 source = ["skills"]
@@ -100,6 +100,9 @@ known_first_party = [
 ]
 
 # Tool deps are invoked as CLIs, not imported — DEP002 (unused) is expected.
+# Sample projects the evals copy into sandboxes; their `src` package is not ours.
+extend_exclude = [".*/fixtures"]
+
 [tool.deptry.per_rule_ignores]
 DEP002 = [
     "pytest",
