@@ -94,6 +94,7 @@ known_first_party = [
     "find_nested_branches",
     "find_pass_through",
     "find_swallowed_errors",
+    "find_tautological_assertions",
     "find_train_wrecks",
     "run_triggers",
 ]
