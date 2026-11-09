@@ -1,0 +1,104 @@
+[
+  {
+    "id": "cart-crash",
+    "prompt": "Fix the crash in src/checkout.py: submitting an empty cart throws KeyError on 'items'. Add a regression test.",
+    "checks": [
+      {
+        "name": "suite_passes"
+      },
+      {
+        "name": "hidden_passes",
+        "file": "outcomes/fixtures/test_cart_crash.py"
+      },
+      {
+        "name": "tests_added"
+      },
+      {
+        "name": "tests_fail_on_original",
+        "files": [
+          "src/checkout.py"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "slack-channel",
+    "prompt": "Add a 'slack' channel to src/notifications.py; users have a slack_id field. Cover it with a test.",
+    "checks": [
+      {
+        "name": "suite_passes"
+      },
+      {
+        "name": "hidden_passes",
+        "file": "outcomes/fixtures/test_slack_channel.py"
+      },
+      {
+        "name": "tests_added"
+      },
+      {
+        "name": "branching_not_increased",
+        "path": "src/notifications.py"
+      }
+    ]
+  },
+  {
+    "id": "hollow-tests",
+    "prompt": "tests/test_pricing.py is all green but a pricing bug got to prod last week. Strengthen the tests for src/pricing.py.",
+    "checks": [
+      {
+        "name": "suite_passes"
+      },
+      {
+        "name": "no_tautologies",
+        "path": "tests"
+      },
+      {
+        "name": "mutants_killed",
+        "file": "src/pricing.py",
+        "min": 4,
+        "mutants": [
+          [
+            "qty >= 100",
+            "qty > 100"
+          ],
+          [
+            "qty >= 10",
+            "qty > 10"
+          ],
+          [
+            "base_cents * 80 // 100",
+            "base_cents * 85 // 100"
+          ],
+          [
+            "base_cents * 90 // 100",
+            "base_cents * 95 // 100"
+          ],
+          [
+            "unit_price_cents(base_cents, qty) * qty",
+            "unit_price_cents(base_cents, qty) + qty"
+          ]
+        ]
+      }
+    ]
+  },
+  {
+    "id": "ingest-errors",
+    "prompt": "Prices go missing from the nightly import (src/ingest.py) and nothing tells us why. Make the import's failures visible.",
+    "checks": [
+      {
+        "name": "suite_passes"
+      },
+      {
+        "name": "hidden_passes",
+        "file": "outcomes/fixtures/test_ingest_errors.py"
+      },
+      {
+        "name": "tests_added"
+      },
+      {
+        "name": "no_swallowed_errors",
+        "path": "src/ingest.py"
+      }
+    ]
+  }
+]

@@ -81,7 +81,14 @@ exclude_dirs = ["__pycache__", "fixtures", "mutants"]
 skips = ["*/test_*.py"]
 
 [tool.vulture]
-paths = ["skills", "evals/triggers/run_triggers.py", "evals/triggers/test_run_triggers.py"]
+paths = [
+    "skills",
+    "evals/triggers/run_triggers.py",
+    "evals/triggers/test_run_triggers.py",
+    "evals/triggers/run_outcomes.py",
+    "evals/triggers/outcome_checks.py",
+    "evals/triggers/test_outcomes.py",
+]
 exclude = ["*/mutants/*"]
 min_confidence = 60
 # unittest discovers test_* methods and When* classes by reflection;
@@ -96,6 +103,8 @@ known_first_party = [
     "find_swallowed_errors",
     "find_tautological_assertions",
     "find_train_wrecks",
+    "outcome_checks",
+    "run_outcomes",
     "run_triggers",
 ]
 
