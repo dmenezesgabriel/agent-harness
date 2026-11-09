@@ -12,7 +12,7 @@ Talk only to your immediate friends: code may use the values it holds, its param
 **Why:** each extra hop couples the caller to every link's structure. Rename `address` and every traversal in every caller breaks — the caller learned three structures to fetch one value (hidden dependencies; see [principle-avoid-complexity](../principle-avoid-complexity/SKILL.md)).
 
 **Test:**
-- Count the hops: `a.b.c.d`, `foo().bar().baz()`, `x["a"]["b"]["c"]`. More than one reach is a violation.
+- Count the hops: `a.b.c.d`, `foo().bar().baz()`, `x["a"]["b"]["c"]`. More than one reach is a violation; [find-train-wrecks](../find-train-wrecks/SKILL.md) lists only three or more links, so judge a two-link reach by whether the caller learned another value's structure.
 - Does the caller know the path, or does it ask the neighbor for the result? Move the traversal to whoever owns the first hop — `report.billing_city()`.
 - Deep key paths into data documents count too: `cfg["db"]["pool"]["size"]` couples the reader to the document's shape; put access behind one function owned next to the format.
 
