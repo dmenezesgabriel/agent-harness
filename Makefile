@@ -35,8 +35,8 @@ deps:
 # Worst block today is C(14); the gate blocks D+ and keeps the average at A.
 # radon reports only B+ blocks (agent-token-efficient); xenon enforces.
 complexity:
-	@$(UV) radon cc skills evals/triggers/run_triggers.py evals/triggers/run_outcomes.py evals/triggers/outcome_checks.py -a -n B
-	@$(UV) xenon --max-absolute C --max-modules C --max-average A skills evals/triggers/run_triggers.py evals/triggers/run_outcomes.py evals/triggers/outcome_checks.py
+	@$(UV) radon cc skills evals/triggers/run_triggers.py evals/triggers/run_outcomes.py evals/triggers/outcome_checks.py -a -n B -i mutants
+	@$(UV) xenon --max-absolute C --max-modules C --max-average A -e "*/mutants/*" skills evals/triggers/run_triggers.py evals/triggers/run_outcomes.py evals/triggers/outcome_checks.py
 
 shell:
 	@$(UV) shellcheck scripts/*.sh .githooks/pre-commit
