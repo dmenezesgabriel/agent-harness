@@ -191,6 +191,45 @@ def _enclosing(node: Node, family: str) -> str:
     return "<module>"
 
 
+def _truth_kind(first: Node, literal: str, operators: set[str]) -> str | None:
+    """'always-true' when `first` is the literal itself, 'same-operands' when it compares a value to itself."""
+    if _norm(first) == literal:
+        return "always-true"
+    return "same-operands" if _binary_same(first, operators) else None
+
+
+def _ts_expect_kind(expect_call: Node, prop: str, args: list[Node]) -> str | None:
+    """expect(x).toBe(x) or expect(true).toBeTruthy()."""
+    expect_fn = expect_call.child_by_field_name("function")
+    expect_args = _call_args(expect_call, "arguments")
+    if expect_fn is None or node_text(expect_fn) != "expect" or not expect_args:
+        return None
+    subject = _norm(_unwrap(expect_args[0]))
+    if prop in _EXPECT_SAME and args and subject == _norm(_unwrap(args[0])):
+        return "same-operands"
+    return "always-true" if prop in _EXPECT_TRUTHY and subject == "true" else None
+
+
+def _ts_assert_member_kind(prop: str, args: list[Node]) -> str | None:
+    """assert.equal(x, x), assert.ok(true), assert.ok(x === x)."""
+    first = _unwrap(args[0])
+    if prop in _ASSERT_SAME and len(args) >= 2 and _norm(first) == _norm(_unwrap(args[1])):
+        return "same-operands"
+    if prop == "ok" and _norm(first) == "true":
+        return "always-true"
+    return "same-operands" if prop in _ASSERT_SAME | {"ok"} and _binary_same(first, _BINARY_SAME) else None
+
+
+def _ts_method_kind(function: Node, args: list[Node]) -> str | None:
+    prop = node_text(function.child_by_field_name("property") or function)
+    obj = function.child_by_field_name("object")
+    if obj is None:
+        return None
+    if obj.type == "call_expression":
+        return _ts_expect_kind(obj, prop, args)
+    return _ts_assert_member_kind(prop, args) if node_text(obj) == "assert" and args else None
+
+
 def _ts_member_kind(call: Node) -> str | None:
     """expect(x).toBe(x), assert.equal(x,x), assert.ok(true), bare assert(true|x==x)."""
     function = call.child_by_field_name("function")
@@ -198,56 +237,38 @@ def _ts_member_kind(call: Node) -> str | None:
         return None
     args = _call_args(call, "arguments")
     if function.type == "member_expression":
-        prop = node_text(function.child_by_field_name("property") or function)
-        obj = function.child_by_field_name("object")
-        if obj is not None and obj.type == "call_expression":
-            expect_fn = obj.child_by_field_name("function")
-            expect_args = _call_args(obj, "arguments")
-            if expect_fn is not None and node_text(expect_fn) == "expect" and expect_args:
-                if prop in _EXPECT_SAME and args and _norm(_unwrap(expect_args[0])) == _norm(_unwrap(args[0])):
-                    return "same-operands"
-                if prop in _EXPECT_TRUTHY and _norm(_unwrap(expect_args[0])) == "true":
-                    return "always-true"
-        elif obj is not None and node_text(obj) == "assert" and args:
-            first = _unwrap(args[0])
-            if prop in _ASSERT_SAME and len(args) >= 2 and _norm(first) == _norm(_unwrap(args[1])):
-                return "same-operands"
-            if prop in {"ok"} and _norm(first) == "true":
-                return "always-true"
-            if prop in _ASSERT_SAME | {"ok"} and _binary_same(first, _BINARY_SAME):
-                return "same-operands"
-    elif function.type == "identifier" and node_text(function) in {"assert", "assertTrue", "assert_"} and args:
-        first = _unwrap(args[0])
-        if _norm(first) == "true":
-            return "always-true"
-        if _binary_same(first, _BINARY_SAME):
-            return "same-operands"
+        return _ts_method_kind(function, args)
+    if function.type == "identifier" and node_text(function) in {"assert", "assertTrue", "assert_"} and args:
+        return _truth_kind(_unwrap(args[0]), "true", _BINARY_SAME)
     return None
+
+
+# Java truth assertions: the literal that makes them hollow, and the self-comparison operators.
+_JAVA_TRUTH = {"assertTrue": ("true", {"=="}), "assertFalse": ("false", {"!="})}
+
+
+def _java_assert_statement_kind(node: Node) -> str | None:
+    expr = _unwrap(node.named_children[0]) if node.named_children else None
+    return _truth_kind(expr, "true", {"=="}) if expr is not None else None
 
 
 def _java_kind(node: Node) -> str | None:
     if node.type == "assert_statement":
-        expr = _unwrap(node.named_children[0]) if node.named_children else None
-        if expr is not None and _norm(expr) == "true":
-            return "always-true"
-        return "same-operands" if expr is not None and _binary_same(expr, {"=="}) else None
+        return _java_assert_statement_kind(node)
     if node.type != "method_invocation":
         return None
     name_node = node.child_by_field_name("name")
     name = node_text(name_node) if name_node is not None else ""
-    if name not in _ASSERT_SAME | {"assertTrue", "assertFalse"}:
+    if name not in _ASSERT_SAME | _JAVA_TRUTH.keys():
         return None
     args_node = next((c for c in node.named_children if c.type == "argument_list"), None)
     args = args_node.named_children if args_node is not None else []
     if len(args) >= 2 and name in _ASSERT_SAME and _norm(_unwrap(args[0])) == _norm(_unwrap(args[1])):
         return "same-operands"
-    if args:
-        first = _unwrap(args[0])
-        if name == "assertTrue" and (_norm(first) == "true" or _binary_same(first, {"=="})):
-            return "always-true" if _norm(first) == "true" else "same-operands"
-        if name == "assertFalse" and (_norm(first) == "false" or _binary_same(first, {"!="})):
-            return "always-true" if _norm(first) == "false" else "same-operands"
-    return None
+    if not args or name not in _JAVA_TRUTH:
+        return None
+    literal, operators = _JAVA_TRUTH[name]
+    return _truth_kind(_unwrap(args[0]), literal, operators)
 
 
 def _kotlin_kind(node: Node) -> str | None:
