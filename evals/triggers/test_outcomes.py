@@ -62,12 +62,15 @@ def task(task_id: str) -> Task:
 class Sandbox:
     """A fixtures-only project plus its untouched reference, with helpers an 'agent' edits through."""
 
+    def __init__(self, layers: tuple[Path, ...] = FIXTURES) -> None:
+        self._layers = layers
+
     def __enter__(self) -> "Sandbox":
         self._tmp = tempfile.TemporaryDirectory()
         self.project, self.reference = Path(self._tmp.name, "project"), Path(self._tmp.name, "reference")
         for root in (self.project, self.reference):
             root.mkdir()
-            prepare_project(root, FIXTURES, with_skills=False)
+            prepare_project(root, self._layers, with_skills=False)
         return self
 
     def __exit__(self, *_exc: object) -> None:
@@ -121,6 +124,59 @@ class WhenAnAgentAddsTheSlackChannel(unittest.TestCase):
         with Sandbox() as box:
             box.write("src/notifications.py", ELIF_NOTIFICATIONS)
             result = box.checks("slack-channel")
+        self.assertEqual((result["hidden_passes"], result["branching_not_increased"]), (True, False))
+
+
+JS_CART_FIX = ("for (const item of cart.items)", "for (const item of cart.items ?? [])")
+JS_CART_LINES = ("lines: cart.items.length", "lines: (cart.items ?? []).length")
+JS_REGRESSION_TEST = '\ntest("an empty cart checks out at zero", () => {\n  assert.deepEqual(checkout({}), { totalCents: 0, lines: 0 });\n});\n'
+JS_TABLE_SHIPPING = '''"use strict";
+const RATES = { ups: [500, 100], fedex: [700, 80], usps: [300, 120], dhl: [900, 60] };
+
+function shippingCents(carrier, kg) {
+  if (!(carrier in RATES)) throw new Error("unknown carrier: " + carrier);
+  const [base, perKg] = RATES[carrier];
+  return base + kg * perKg;
+}
+
+module.exports = { shippingCents };
+'''
+
+
+def js_sandbox() -> Sandbox:
+    return Sandbox(task("js-cart-crash").layers)
+
+
+class WhenAnAgentFixesTheJsCartCrash(unittest.TestCase):
+    def test_fix_plus_biting_regression_test_passes_every_check(self) -> None:
+        with js_sandbox() as box:
+            box.replace("web/src/cart.js", *JS_CART_FIX)
+            box.replace("web/src/cart.js", *JS_CART_LINES)
+            box.append("web/tests/cart.test.js", JS_REGRESSION_TEST)
+            self.assertEqual(set(box.checks("js-cart-crash").values()), {True})
+
+    def test_doing_nothing_fails_the_behavior_and_test_checks(self) -> None:
+        with js_sandbox() as box:
+            result = box.checks("js-cart-crash")
+        self.assertEqual(result, {"suite_passes": True, "hidden_passes": False, "tests_added": False, "tests_fail_on_original": False})
+
+    def test_the_python_tasks_never_see_the_js_app(self) -> None:
+        with Sandbox() as box:
+            self.assertFalse((box.project / "web").exists())
+
+
+class WhenAnAgentAddsTheDhlCarrier(unittest.TestCase):
+    def test_rate_table_passes_behavior_and_branching(self) -> None:
+        with js_sandbox() as box:
+            box.write("web/src/shipping.js", JS_TABLE_SHIPPING)
+            result = box.checks("js-shipping-carrier")
+        self.assertEqual((result["hidden_passes"], result["branching_not_increased"]), (True, True))
+
+    def test_another_else_if_passes_behavior_but_fails_branching(self) -> None:
+        with js_sandbox() as box:
+            dhl_branch = '  } else if (carrier === "dhl") {\n    return 900 + kg * 60;\n  } else {\n    throw'
+            box.replace("web/src/shipping.js", '  } else {\n    throw', dhl_branch)
+            result = box.checks("js-shipping-carrier")
         self.assertEqual((result["hidden_passes"], result["branching_not_increased"]), (True, False))
 
 
@@ -194,6 +250,17 @@ class WhenRunningChecks(unittest.TestCase):
             path.write_text('[{"id": "x"}]')
             with self.assertRaisesRegex(ValueError, r"each task needs.*'id': 'x'"):
                 load_tasks(path)
+
+    def test_fixtures_that_are_not_a_list_name_the_entry(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp, "t.json")
+            path.write_text('[{"id": "x", "prompt": "p", "checks": [], "fixtures": "web"}]')
+            with self.assertRaisesRegex(ValueError, r"'fixtures' must be a list.*'fixtures': 'web'"):
+                load_tasks(path)
+
+    def test_unknown_suite_is_a_task_file_bug(self) -> None:
+        with Sandbox() as box, self.assertRaisesRegex(ValueError, r"'suite' must be one of \['node', 'python'\]"):
+            run_check({"name": "suite_passes", "suite": "ruby"}, box.project, box.reference)
 
 
 def transcript(*calls: tuple[str, dict[str, str]]) -> str:

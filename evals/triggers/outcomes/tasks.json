@@ -100,5 +100,60 @@
         "path": "src/ingest.py"
       }
     ]
+  },
+  {
+    "id": "js-cart-crash",
+    "fixtures": [
+      "outcomes/js_fixtures"
+    ],
+    "prompt": "Fix the crash in web/src/cart.js: checking out a cart with no items field ({}) throws TypeError 'cart.items is not iterable'. Add a regression test.",
+    "checks": [
+      {
+        "name": "suite_passes",
+        "suite": "node"
+      },
+      {
+        "name": "hidden_passes",
+        "file": "outcomes/fixtures/hidden_js_cart_crash.test.js",
+        "suite": "node"
+      },
+      {
+        "name": "tests_added",
+        "suite": "node"
+      },
+      {
+        "name": "tests_fail_on_original",
+        "files": [
+          "web/src/cart.js"
+        ],
+        "suite": "node"
+      }
+    ]
+  },
+  {
+    "id": "js-shipping-carrier",
+    "fixtures": [
+      "outcomes/js_fixtures"
+    ],
+    "prompt": "Add a 'dhl' carrier to web/src/shipping.js: 900 cents base plus 60 cents per kg. Cover it with a test.",
+    "checks": [
+      {
+        "name": "suite_passes",
+        "suite": "node"
+      },
+      {
+        "name": "hidden_passes",
+        "file": "outcomes/fixtures/hidden_js_shipping_carrier.test.js",
+        "suite": "node"
+      },
+      {
+        "name": "tests_added",
+        "suite": "node"
+      },
+      {
+        "name": "branching_not_increased",
+        "path": "web/src/shipping.js"
+      }
+    ]
   }
 ]

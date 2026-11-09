@@ -52,6 +52,11 @@ class Task:
     id: str
     prompt: str
     checks: tuple[Spec, ...]
+    fixtures: tuple[Path, ...] = ()  # layers added on top of FIXTURES for this task only, e.g. the JS app
+
+    @property
+    def layers(self) -> tuple[Path, ...]:
+        return (*FIXTURES, *self.fixtures)
 
 
 def load_tasks(path: Path) -> list[Task]:
@@ -59,10 +64,13 @@ def load_tasks(path: Path) -> list[Task]:
     raw = cast("list[dict[str, object]]", json.loads(path.read_text()))
     tasks: list[Task] = []
     for entry in raw:
-        checks = entry.get("checks")
+        checks, layers = entry.get("checks"), entry.get("fixtures", [])
         if not isinstance(entry.get("id"), str) or not isinstance(entry.get("prompt"), str) or not isinstance(checks, list):
             raise ValueError(f"{str(path)!r}: each task needs string id, string prompt and list checks; got {entry!r}")
-        tasks.append(Task(str(entry["id"]), str(entry["prompt"]), tuple(cast("list[Spec]", checks))))
+        if not isinstance(layers, list):
+            raise ValueError(f"{str(path)!r}: optional 'fixtures' must be a list of dirs relative to {str(HERE)!r}; got {entry!r}")
+        fixtures = tuple(HERE / str(layer) for layer in cast("list[object]", layers))
+        tasks.append(Task(str(entry["id"]), str(entry["prompt"]), tuple(cast("list[Spec]", checks)), fixtures))
     return tasks
 
 
@@ -183,7 +191,7 @@ def attempt(task: Task, arm: str, runner: AgentRunner, reference: Path, keep: Pa
     """One agent run in a fresh sandbox, scored; the transcript lands in keep/<task>-<arm>/."""
     with tempfile.TemporaryDirectory() as tmp:
         project = Path(tmp)
-        prepare_project(project, FIXTURES, with_skills=arm != "none")
+        prepare_project(project, task.layers, with_skills=arm != "none")
         try:
             raw = runner(arm_prompt(task, arm), project)
         except AgentRunError as error:
@@ -204,12 +212,13 @@ def run(tasks: list[Task], arms: list[str], runs: int, runner: AgentRunner, keep
     """Round-robin over runs, then tasks, then arms, so drift or throttling hits every arm alike."""
     keep.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory() as ref:
-        reference = Path(ref)
-        prepare_project(reference, FIXTURES, with_skills=False)
+        references = {task.id: Path(ref, task.id) for task in tasks}
+        for task in tasks:
+            prepare_project(references[task.id], task.layers, with_skills=False)
         for _ in range(runs):
             for task in tasks:
                 for arm in arms:
-                    record = attempt(task, arm, runner, reference, keep)
+                    record = attempt(task, arm, runner, references[task.id], keep)
                     with open(keep / "outcomes.jsonl", "a") as handle:
                         handle.write(json.dumps(record) + "\n")
                     time.sleep(delay)

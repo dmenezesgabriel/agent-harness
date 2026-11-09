@@ -24,8 +24,26 @@ HERE = Path(__file__).resolve().parent
 # -B: -I ignores PYTHONDONTWRITEBYTECODE, and a same-size, same-second file swap (mutant, then original)
 # would otherwise be served from a stale .pyc.
 UNITTEST = [sys.executable, "-I", "-B", "-m", "unittest", "discover", "-s", "tests", "-t", "."]
-IMPORT_FAILURE = re.compile(r"ImportError|ModuleNotFoundError|cannot import name")
+IMPORT_FAILURE = re.compile(r"ImportError|ModuleNotFoundError|cannot import name|Cannot find module")
 Spec = dict[str, object]
+
+
+@dataclass(frozen=True)
+class Suite:
+    """How one language's tests run: the dir the runner starts in, its argv, where tests live and how one is spelled."""
+    root: str
+    command: tuple[str, ...]
+    only: str  # argv tail that runs one test file, `{name}` substituted
+    test_glob: str
+    test_def: re.Pattern[str]
+    hidden_name: str
+
+
+SUITES = {
+    "python": Suite(".", tuple(UNITTEST), "-p {name}", "*.py", re.compile(r"^\s*def test_", re.M), "hidden_behavior_test.py"),
+    # node --test discovers **/*.test.js under the root; node_modules is skipped.
+    "node": Suite("web", ("node", "--test"), "tests/{name}", "*.test.js", re.compile(r"^\s*(?:test|it)\(", re.M), "hidden_behavior.test.js"),
+}
 
 
 @dataclass(frozen=True)
@@ -48,14 +66,21 @@ def _text(spec: Spec, key: str) -> str:
     return value
 
 
-def _run(command: list[str], cwd: Path) -> subprocess.CompletedProcess[str]:
-    env = {"PATH": os.environ.get("PATH", "")}
+def _run(command: list[str], cwd: Path, extra_env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
+    env = {"PATH": os.environ.get("PATH", ""), **(extra_env or {})}
     return subprocess.run(command, cwd=cwd, env=env, capture_output=True, text=True, timeout=60, check=False)  # noqa: S603  # nosec B603 -- fixed argv
 
 
-def run_suite(project: Path) -> subprocess.CompletedProcess[str]:
-    """The project's own tests via unittest discovery, exactly as an agent would run them."""
-    return _run(UNITTEST, project)
+def _suite(spec: Spec) -> Suite:
+    name = spec.get("suite", "python")
+    if not isinstance(name, str) or name not in SUITES:
+        raise ValueError(f"check spec 'suite' must be one of {sorted(SUITES)}; got {spec!r}")
+    return SUITES[name]
+
+
+def run_suite(project: Path, suite: Suite = SUITES["python"]) -> subprocess.CompletedProcess[str]:
+    """The project's own tests, run the way an agent would run them (unittest discovery, node --test)."""
+    return _run(list(suite.command), project / suite.root)
 
 
 @contextmanager
@@ -67,14 +92,16 @@ def scratch_copy(project: Path) -> Generator[Path, None, None]:
         yield work
 
 
-def count_tests(root: Path) -> int:
-    return sum(len(re.findall(r"^\s*def test_", path.read_text(), re.M)) for path in (root / "tests").rglob("*.py"))
+def count_tests(root: Path, suite: Suite = SUITES["python"]) -> int:
+    tests = root / suite.root / "tests"
+    return sum(len(suite.test_def.findall(path.read_text())) for path in tests.rglob(suite.test_glob))
 
 
 def finder_findings(skill: str, script: str, target: Path) -> list[dict[str, object]]:
     """JSON-lines findings of a find-* script on `target`; empty when nothing is found."""
-    command = [sys.executable, "-I", str(REPO / "skills" / skill / "scripts" / script), str(target)]
-    done = _run(command, REPO)
+    # uv run: the script's PEP 723 header brings tree-sitter for non-Python targets; HOME locates uv's cache.
+    command = ["uv", "run", "--quiet", str(REPO / "skills" / skill / "scripts" / script), str(target)]
+    done = _run(command, REPO, {"HOME": os.environ.get("HOME", "")})
     if done.returncode not in (0, 1):
         raise ValueError(f"{script} exited {done.returncode} on {str(target)!r}: {done.stderr[-200:]!r}")
     return [json.loads(line) for line in done.stdout.splitlines() if line.strip()]
@@ -86,19 +113,21 @@ def _branches(target: Path) -> int:
 
 
 def suite_passes(ctx: Context) -> CheckResult:
-    return CheckResult(run_suite(ctx.project).returncode == 0)
+    return CheckResult(run_suite(ctx.project, _suite(ctx.spec)).returncode == 0)
 
 
 def tests_added(ctx: Context) -> CheckResult:
-    delta = count_tests(ctx.project) - count_tests(ctx.reference)
+    suite = _suite(ctx.spec)
+    delta = count_tests(ctx.project, suite) - count_tests(ctx.reference, suite)
     return CheckResult(delta >= 1, delta)
 
 
 def hidden_passes(ctx: Context) -> CheckResult:
     """Copy a held-back behavior test into the project and run it; the agent never saw it."""
+    suite = _suite(ctx.spec)
     with scratch_copy(ctx.project) as work:
-        shutil.copy(HERE / _text(ctx.spec, "file"), work / "tests" / "hidden_behavior_test.py")
-        done = _run([*UNITTEST, "-p", "hidden_behavior_test.py"], work)
+        shutil.copy(HERE / _text(ctx.spec, "file"), work / suite.root / "tests" / suite.hidden_name)
+        done = _run([*suite.command, *suite.only.format(name=suite.hidden_name).split()], work / suite.root)
     return CheckResult(done.returncode == 0)
 
 
@@ -110,7 +139,7 @@ def tests_fail_on_original(ctx: Context) -> CheckResult:
     with scratch_copy(ctx.project) as work:
         for name in cast("list[str]", files):
             shutil.copy(ctx.reference / name, work / name)
-        done = run_suite(work)
+        done = run_suite(work, _suite(ctx.spec))
     return CheckResult(done.returncode != 0 and not IMPORT_FAILURE.search(done.stderr + done.stdout))
 
 
@@ -142,14 +171,14 @@ def mutants_killed(ctx: Context) -> CheckResult:
     target, mutants, minimum = _text(ctx.spec, "file"), ctx.spec.get("mutants"), ctx.spec.get("min")
     if not isinstance(mutants, list) or not isinstance(minimum, int):
         raise ValueError(f"check spec needs a list 'mutants' and an int 'min'; got {ctx.spec!r}")
-    original = (ctx.reference / target).read_text()
+    original, suite = (ctx.reference / target).read_text(), _suite(ctx.spec)
     killed = 0
     with scratch_copy(ctx.project) as work:
         for old, new in cast("list[list[str]]", mutants):
             (work / target).write_text(original.replace(old, new, 1))
-            killed += run_suite(work).returncode != 0
+            killed += run_suite(work, suite).returncode != 0
         (work / target).write_text(original)
-        if run_suite(work).returncode != 0:
+        if run_suite(work, suite).returncode != 0:
             return CheckResult(False, 0)
     return CheckResult(killed >= minimum, killed)
 
