@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 
 from outcome_checks import run_check
-from run_outcomes import FIXTURES, Task, arm_prompt, edit_order, load_tasks, main, project_diff
+from run_outcomes import FIXTURES, Task, arm_prompt, edit_order, load_tasks, main, project_diff, red_first
 from run_triggers import prepare_project
 
 TASKS = load_tasks(Path(__file__).parent / "outcomes" / "tasks.json")
@@ -220,6 +220,41 @@ class WhenReadingEditOrderFromATranscript(unittest.TestCase):
 
     def test_missing_either_kind_of_edit_is_undetermined(self) -> None:
         self.assertIsNone(edit_order(transcript(("edit", {"file_path": "/w/src/x.py"}))))
+
+
+def observed(*calls: tuple[str, dict[str, str], str]) -> str:
+    """An ATIF export with one step per (tool, arguments, output), each call's output attached by id."""
+    steps = [{"source": "agent", "tool_calls": [{"tool_call_id": f"c{i}", "function_name": n, "arguments": a}],
+              "observation": {"results": [{"source_call_id": f"c{i}", "content": out}]}}
+             for i, (n, a, out) in enumerate(calls)]
+    return json.dumps({"steps": steps})
+
+
+WRITE_TEST = ("write", {"file_path": "/w/tests/test_cart.py"}, "written")
+FIX_SRC = ("edit", {"file_path": "/w/src/checkout.py"}, "updated")
+RUN_TESTS = {"command": "python3 -m unittest discover -s tests"}
+
+
+class WhenReadingRedBeforeGreenFromATranscript(unittest.TestCase):
+    def test_a_failing_test_run_between_test_and_fix_is_red_first(self) -> None:
+        raw = observed(WRITE_TEST, ("exec", RUN_TESTS, "KeyError: 'items'\nFAILED (errors=1)"), FIX_SRC)
+        self.assertTrue(red_first(raw))
+
+    def test_a_test_written_first_but_never_run_is_not_red_first(self) -> None:
+        self.assertFalse(red_first(observed(WRITE_TEST, FIX_SRC)))
+
+    def test_a_passing_run_before_the_fix_is_not_red_first(self) -> None:
+        self.assertFalse(red_first(observed(WRITE_TEST, ("exec", RUN_TESTS, "Ran 4 tests\n\nOK"), FIX_SRC)))
+
+    def test_a_crash_from_a_non_test_command_is_not_red_first(self) -> None:
+        repro = ("exec", {"command": "python3 -c 'checkout({})'"}, "Traceback ... KeyError")
+        self.assertFalse(red_first(observed(WRITE_TEST, repro, FIX_SRC)))
+
+    def test_a_failing_run_after_the_fix_is_not_red_first(self) -> None:
+        self.assertFalse(red_first(observed(WRITE_TEST, FIX_SRC, ("exec", RUN_TESTS, "FAILED (failures=1)"))))
+
+    def test_src_first_is_never_red_first(self) -> None:
+        self.assertFalse(red_first(observed(FIX_SRC, ("exec", RUN_TESTS, "FAILED"), WRITE_TEST)))
 
 
 class WhenDiffingAProject(unittest.TestCase):

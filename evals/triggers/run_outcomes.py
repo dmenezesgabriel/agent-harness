@@ -42,6 +42,9 @@ ARMS = ("none", "skills", "router")
 IGNORED_PARTS = {".claude", "__pycache__", ".atif-export.json"}
 # A shell write into tests/ or src/: redirection, tee, or sed -i with a quoted script.
 EXEC_WRITE = re.compile(r"(?:>>?\s*|\btee\s+(?:-a\s+)?|\bsed\s+-i\S*\s+(?:-e\s+)?(?:'[^']*'|\"[^\"]*\")\s+)\S*?\b(tests|src)/")
+TEST_RUN = re.compile(r"\b(?:unittest|pytest)\b")
+# unittest prints FAILED (failures=N) or ERROR/Error lines; pytest prints "N failed"; a crash prints Traceback.
+RED_OUTPUT = re.compile(r"\bFAILED\b|\bfailed\b|\bERROR\b|Error\b|Traceback")
 
 
 @dataclass(frozen=True)
@@ -110,16 +113,59 @@ def _tool_calls(raw: str) -> list[Json]:
     return calls
 
 
-def edit_order(raw: str) -> str | None:
-    """'test-first' or 'src-first' from the first write into each of tests/ and src/ (a heuristic); None if either is missing."""
+def _first_writes(calls: list[Json]) -> dict[str, int]:
+    """Index of the first call writing into tests/ and into src/, for the kinds present."""
     first: dict[str, int] = {}
-    for index, call in enumerate(_tool_calls(raw)):
+    for index, call in enumerate(calls):
         touched = _touched(call)
         if touched:
             first.setdefault(touched, index)
+    return first
+
+
+def edit_order(raw: str) -> str | None:
+    """'test-first' or 'src-first' from the first write into each of tests/ and src/ (a heuristic); None if either is missing."""
+    first = _first_writes(_tool_calls(raw))
     if "tests" not in first or "src" not in first:
         return None
     return "test-first" if first["tests"] < first["src"] else "src-first"
+
+
+def _outputs_by_call(raw: str) -> dict[str, str]:
+    """Tool output text keyed by the id of the call that produced it."""
+    doc = cast("dict[str, Json]", json.loads(raw))
+    steps = doc.get("steps")
+    outputs: dict[str, str] = {}
+    for step in steps if isinstance(steps, list) else []:
+        observation = step.get("observation") if isinstance(step, dict) else None
+        results = observation.get("results") if isinstance(observation, dict) else None
+        for result in results if isinstance(results, list) else []:
+            if isinstance(result, dict):
+                outputs[str(result.get("source_call_id"))] = str(result.get("content", ""))
+    return outputs
+
+
+def _is_red_run(call: Json, outputs: dict[str, str]) -> bool:
+    """A unittest/pytest exec whose output shows a failure."""
+    if not isinstance(call, dict) or call.get("function_name") != "exec":
+        return False
+    args = call.get("arguments")
+    command = str(args.get("command", "")) if isinstance(args, dict) else ""
+    return bool(TEST_RUN.search(command) and RED_OUTPUT.search(outputs.get(str(call.get("tool_call_id")), "")))
+
+
+def red_first(raw: str) -> bool:
+    """True when a test run between the first write into tests/ and the first into src/ showed a failure: red seen before green.
+
+    Stricter than edit_order: a test written first but never run failing does not count. Output fetched later
+    (a backgrounded run read via another tool) is missed, so this undercounts.
+    """
+    calls = _tool_calls(raw)
+    first = _first_writes(calls)
+    if "tests" not in first or "src" not in first or first["tests"] > first["src"]:
+        return False
+    outputs = _outputs_by_call(raw)
+    return any(_is_red_run(call, outputs) for call in calls[first["tests"]:first["src"]])
 
 
 def score_checks(task: Task, project: Path, reference: Path) -> dict[str, dict[str, object]]:
@@ -149,6 +195,7 @@ def attempt(task: Task, arm: str, runner: AgentRunner, reference: Path, keep: Pa
         order = edit_order(raw)
         if order is not None:
             checks["test_first"] = {"passed": order == "test-first", "value": None}
+            checks["red_first"] = {"passed": red_first(raw), "value": None}
         return {"task": task.id, "arm": arm, "loaded": skills_invoked_atif(raw), "checks": checks,
                 "diff": project_diff(reference, project)}
 
