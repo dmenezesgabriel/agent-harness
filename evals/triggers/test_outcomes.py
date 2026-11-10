@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from outcome_checks import run_check
+from outcome_checks import JS_DECISION, run_check
 from run_outcomes import FIXTURES, Task, arm_prompt, edit_order, load_tasks, main, project_diff, red_first
 from run_triggers import prepare_project
 
@@ -126,6 +126,39 @@ class WhenAnAgentAddsTheSlackChannel(unittest.TestCase):
             result = box.checks("slack-channel")
         self.assertEqual((result["hidden_passes"], result["branching_not_increased"]), (True, False))
 
+    def test_dispatch_table_adds_no_conditional(self) -> None:
+        with Sandbox() as box:
+            box.write("src/notifications.py", DISPATCH_NOTIFICATIONS)
+            self.assertIs(box.checks("slack-channel")["conditionals_not_increased"], True)
+
+    def test_another_elif_adds_a_conditional(self) -> None:
+        with Sandbox() as box:
+            box.write("src/notifications.py", ELIF_NOTIFICATIONS)
+            self.assertIs(box.checks("slack-channel")["conditionals_not_increased"], False)
+
+    def test_one_guard_clause_per_channel_drops_elses_but_still_adds_a_conditional(self) -> None:
+        with Sandbox() as box:
+            box.write("src/notifications.py", GUARD_NOTIFICATIONS)
+            result = box.checks("slack-channel")
+        self.assertEqual((result["branching_not_increased"], result["conditionals_not_increased"]), (True, False))
+
+
+GUARD_NOTIFICATIONS = '''def send(channel: str, user: dict, text: str) -> str:
+    if channel == "email":
+        return "email:" + user["email"] + ":" + text
+    if channel == "sms":
+        return "sms:" + user["phone"] + ":" + text
+    if channel == "slack":
+        return "slack:" + user["slack_id"] + ":" + text
+    raise ValueError("unknown channel: " + channel)
+'''
+
+
+class WhenCountingJsDecisionPoints(unittest.TestCase):
+    def test_optional_chaining_and_nullish_coalescing_are_not_decisions(self) -> None:
+        source = "const a = b?.c ?? d;\nconst e = f ? 1 : 2;\nif (g) {}\nswitch (h) { case 1: break; }\n"
+        self.assertEqual(len(JS_DECISION.findall(source)), 3)
+
 
 JS_CART_FIX = ("for (const item of cart.items)", "for (const item of cart.items ?? [])")
 JS_CART_LINES = ("lines: cart.items.length", "lines: (cart.items ?? []).length")
@@ -170,14 +203,16 @@ class WhenAnAgentAddsTheDhlCarrier(unittest.TestCase):
         with js_sandbox() as box:
             box.write("web/src/shipping.js", JS_TABLE_SHIPPING)
             result = box.checks("js-shipping-carrier")
-        self.assertEqual((result["hidden_passes"], result["branching_not_increased"]), (True, True))
+        self.assertEqual((result["hidden_passes"], result["branching_not_increased"], result["conditionals_not_increased"]),
+                         (True, True, True))
 
     def test_another_else_if_passes_behavior_but_fails_branching(self) -> None:
         with js_sandbox() as box:
             dhl_branch = '  } else if (carrier === "dhl") {\n    return 900 + kg * 60;\n  } else {\n    throw'
             box.replace("web/src/shipping.js", '  } else {\n    throw', dhl_branch)
             result = box.checks("js-shipping-carrier")
-        self.assertEqual((result["hidden_passes"], result["branching_not_increased"]), (True, False))
+        self.assertEqual((result["hidden_passes"], result["branching_not_increased"], result["conditionals_not_increased"]),
+                         (True, False, False))
 
 
 class WhenAnAgentStrengthensHollowTests(unittest.TestCase):

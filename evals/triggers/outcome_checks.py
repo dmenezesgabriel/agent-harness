@@ -6,6 +6,7 @@ runs code or counts findings, so the same project always scores the same.
 """
 from __future__ import annotations
 
+import ast
 import json
 import os
 import re
@@ -152,6 +153,32 @@ def branching_not_increased(ctx: Context) -> CheckResult:
     return CheckResult(delta <= 0, delta)
 
 
+# Decision points in JS source: `if (`, `case x:` and ternaries. `?.` and `??` are not decisions.
+JS_DECISION = re.compile(r"\bif\s*\(|\bcase\b|(?<!\?)\?(?![.?])")
+
+
+def _conditionals(target: Path) -> int:
+    """Decision points in one file: Python if/elif, conditional expressions and match cases; JS if, case and ternary."""
+    source = target.read_text()
+    if target.suffix != ".py":
+        return len(JS_DECISION.findall(source))
+    nodes = ast.walk(ast.parse(source))
+    return sum(isinstance(node, (ast.If, ast.IfExp, ast.match_case)) for node in nodes)
+
+
+def conditionals_not_increased(ctx: Context) -> CheckResult:
+    """Adding a variant must not add a decision point; value is after minus before.
+
+    Stricter than branching_not_increased: rewriting an if/elif chain as one guard clause per variant
+    removes the elses but still edits working code for each new variant, so it fails here.
+    """
+    path = _text(ctx.spec, "path")
+    if not (ctx.project / path).exists():
+        return CheckResult(False)
+    delta = _conditionals(ctx.project / path) - _conditionals(ctx.reference / path)
+    return CheckResult(delta <= 0, delta)
+
+
 def no_tautologies(ctx: Context) -> CheckResult:
     count = len(finder_findings("find-tautological-assertions", "find_tautological_assertions.py", ctx.project / _text(ctx.spec, "path")))
     return CheckResult(count == 0, count)
@@ -189,6 +216,7 @@ CHECKS: dict[str, Callable[[Context], CheckResult]] = {
     "hidden_passes": hidden_passes,
     "tests_fail_on_original": tests_fail_on_original,
     "branching_not_increased": branching_not_increased,
+    "conditionals_not_increased": conditionals_not_increased,
     "no_tautologies": no_tautologies,
     "no_swallowed_errors": no_swallowed_errors,
     "mutants_killed": mutants_killed,

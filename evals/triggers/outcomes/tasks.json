@@ -38,6 +38,10 @@
       {
         "name": "branching_not_increased",
         "path": "src/notifications.py"
+      },
+      {
+        "name": "conditionals_not_increased",
+        "path": "src/notifications.py"
       }
     ]
   },
@@ -152,6 +156,10 @@
       },
       {
         "name": "branching_not_increased",
+        "path": "web/src/shipping.js"
+      },
+      {
+        "name": "conditionals_not_increased",
         "path": "web/src/shipping.js"
       }
     ]
