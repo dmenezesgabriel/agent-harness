@@ -307,6 +307,16 @@ class WhenReadingRedBeforeGreenFromATranscript(unittest.TestCase):
         raw = observed(WRITE_TEST, ("exec", RUN_TESTS, "KeyError: 'items'\nFAILED (errors=1)"), FIX_SRC)
         self.assertTrue(red_first(raw))
 
+    def test_a_failing_node_test_run_is_red_first(self) -> None:
+        node_run = ("exec", {"command": "cd web && node --test tests/cart.test.js"}, "ℹ pass 1\nℹ fail 1\n✖ failing tests:")
+        raw = observed(("write", {"file_path": "/w/web/tests/cart.test.js"}, "written"), node_run,
+                       ("edit", {"file_path": "/w/web/src/cart.js"}, "updated"))
+        self.assertTrue(red_first(raw))
+
+    def test_a_passing_node_test_run_is_not_red_first(self) -> None:
+        node_run = ("exec", {"command": "node --test"}, "ℹ pass 3\nℹ fail 0")
+        self.assertFalse(red_first(observed(WRITE_TEST, node_run, FIX_SRC)))
+
     def test_a_test_written_first_but_never_run_is_not_red_first(self) -> None:
         self.assertFalse(red_first(observed(WRITE_TEST, FIX_SRC)))
 

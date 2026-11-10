@@ -42,9 +42,10 @@ ARMS = ("none", "skills", "router")
 IGNORED_PARTS = {".claude", "__pycache__", ".atif-export.json"}
 # A shell write into tests/ or src/: redirection, tee, or sed -i with a quoted script.
 EXEC_WRITE = re.compile(r"(?:>>?\s*|\btee\s+(?:-a\s+)?|\bsed\s+-i\S*\s+(?:-e\s+)?(?:'[^']*'|\"[^\"]*\")\s+)\S*?\b(tests|src)/")
-TEST_RUN = re.compile(r"\b(?:unittest|pytest)\b")
-# unittest prints FAILED (failures=N) or ERROR/Error lines; pytest prints "N failed"; a crash prints Traceback.
-RED_OUTPUT = re.compile(r"\bFAILED\b|\bfailed\b|\bERROR\b|Error\b|Traceback")
+TEST_RUN = re.compile(r"\b(?:unittest|pytest)\b|\bnode\s+--test\b|\bnpm\s+(?:run\s+)?test\b")
+# unittest prints FAILED (failures=N) or ERROR/Error lines; pytest prints "N failed"; a crash prints Traceback;
+# node --test prints "ℹ fail N" and "✖ failing tests".
+RED_OUTPUT = re.compile(r"\bFAILED\b|\bfailed\b|\bERROR\b|Error\b|Traceback|ℹ fail [1-9]|✖ failing tests")
 
 
 @dataclass(frozen=True)
