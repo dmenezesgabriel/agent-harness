@@ -19,7 +19,7 @@ Pick the task type first. It decides everything after.
 Open a checklist with these steps. A step you skip stays listed as `skip: <reason>`.
 
 1. **Work**: smallest change that solves the problem; run it or test it. When a failing test fits, drive the change with [tdd](../tdd/SKILL.md).
-2. **Right**: run every check in section 4 on each file this change edited and show its output; a check takes seconds and sees what a read-through misses. For each finding in code this change touched, load the principle named next to the check and fix the design there. The function you extended counts as touched, so a case you added to an if/elif chain or switch is a finding. List findings elsewhere without fixing them. Then apply any other principle whose situation fits.
+2. **Right**: apply each principle whose situation fits, and run each check that fits, to the code this change touches. Fix the design problem you find there; leave adjacent code alone.
 3. **Prove**: show the evidence (test or command output), not a claim — [principle-prove-it-works](../principle-prove-it-works/SKILL.md).
 
 ## 3. Principles
