@@ -69,42 +69,54 @@ python3 -I evals/triggers/run_triggers.py --score-transcripts evals/transcripts/
 
 ### Measured results
 
-All devin `swe-2-medium`, serial with `--delay 10`; transcripts under `evals/transcripts/` (gitignored), re-score with `--score-transcripts DIR [--pooled]`. Pooled groups share an `expect` set; `conclusive` means the 95% CI sits fully on the passing side of 0.5.
+Devin, serial with `--delay 10`, on two models: `swe-2-medium` (2026-11-08/09) and `swe-2-flash-medium` (2026-11-09/10, `flash-*` dirs). Transcripts under `evals/transcripts/` (gitignored); re-score with `--score-transcripts DIR [--pooled]`. Pooled groups share an `expect` set; `conclusive` means the 95% CI sits fully on the passing side of 0.5. The agent runs in the real environment, including a host hook (`devjob-guard`) that rejects heavy commands until the agent retries with a bypass; it hits every arm alike but adds steps.
 
 **Organic triggering** (nothing invoked):
-- `queries.json`, 84 queries x 3 runs (`devin-2026-11-08-rerun`): 84/84 pass; 25 of 32 pooled groups conclusive, none failing.
-- `app/queries.json`, 28 queries on the app fixtures (`devin-app-2026-11-09`): 14 pooled groups, all pass, 12 conclusive. The 8 near-miss negatives (tests layout, `except` vs bare `except`, `assertTrue` vs `assertIsNotNone`, ...) load nothing in 24 runs (CI [0, 0.14]). Not conclusive: `find-tautological-assertions` 8/10 (CI [0.49, 0.94]) and one `fix-root-causes` query at 3/4.
-- Small feature requests are the weak spot: the router fires on 3/5 (`app-add-slack`, CI [0.23, 0.88]) and 3/4 (`app-json-flag-real`) of runs, against 9/9 for review and refactor requests. The description is deliberately not broadened to catch them, since a wider one would also fire on one-line edits; invoke `/engineering-mode` for those.
+- `queries.json`, 84 queries x 3 runs. Medium (`devin-2026-11-08-rerun`): 84/84 pass, 25 of 32 pooled groups conclusive. Flash (`flash-2026-11-09`): 79/84, 30 of 32 groups pass, 20 conclusive; all five misses are should-trigger validation queries, three of them at 1/2 after a timeout (`magic-constants`, `special-case-branch`, `pw-reset-flow`), plus `billing-breaks` and `sub-csv-branch` at 1/3.
+- `app/queries.json`, 28 queries on the app fixtures. Medium (`devin-app-2026-11-09`): 14 groups pass, 12 conclusive. Flash (`flash-app-2026-11-09`): 12 of 14 pass; `app-rows-dropped` loads nothing (0/3) and `app-readonly-repo` 1/3. On both models the 8 near-miss negatives (tests layout, `except` vs bare `except`, `assertTrue` vs `assertIsNotNone`, ...) load nothing in 24 runs (CI [0, 0.14]).
+- Small feature requests are the weak spot on medium: the router fires on 3/5 (`app-add-slack`) and 3/4 (`app-json-flag-real`), against 9/9 for review and refactor requests (flash: 10/11 over the four router queries). The description is deliberately not broadened to catch them, since a wider one would also fire on one-line edits; invoke `/engineering-mode` for those.
 
-**Routing after `/engineering-mode`** (`devin-router-2026-11-09`, `devin-router-app-2026-11-09`): all 27 other skills load through the router at least once. 49/52 leaf queries on `queries.json` reached the expected skill on the first pass (all three misses were dropped queries, see `--invoke`); on the app fixtures all 13 scorable pooled groups pass and 11 are conclusive (the four router-expected queries cannot be scored under `--invoke`). Conceptual negatives load nothing (0/21). Weakest links when judged one skill at a time: `tdd` 4/7, `find-train-wrecks` 5/10 (often `law-of-demeter` loads instead), `find-feature-envy` 3/5. The router's pointer to `tdd` is soft: two of three invoked runs of "write the test before you touch the code" did the work without loading it.
+**Routing after `/engineering-mode`**: all 27 other skills load through the router at least once on both models. Medium (`devin-router-2026-11-09`, `devin-router-app-2026-11-09`): 49/52 leaf queries reached the expected skill on the first pass (all three misses were dropped queries, see `--invoke`); on the app fixtures all 13 scorable groups pass, 11 conclusive; conceptual negatives load nothing (0/21). Flash (`flash-router-2026-11-09`, `flash-router-app-2026-11-09`): 27 of 30 leaf groups pass (22 conclusive) and 13 of 13 on the app; negatives load something in 1/15 and 3/23 runs (all three on "index a nested dict", which loads `law-of-demeter`). Weakest links: `find-train-wrecks` (medium 5/10, flash 1/3; `law-of-demeter` often loads instead), `find-tautological-assertions` (flash 3/6), `principle-sequence-verifiable-units` (flash 2/5), `tdd` (medium 4/7, flash 6/6).
 
-**What the skills change in the work** (`run_outcomes.py`, below). Correct behavior is unchanged by skills: every arm passes the held-out behavior tests (hidden_passes 71/71 across all arms). What changes is how the work is done, and only when the router is invoked.
+**What the skills change in the work** (`run_outcomes.py`, below): how the work is done, mostly when the router is invoked. On medium every arm passed the held-out behavior tests (71/71); on flash the only behavior failures are in the unaided arms of `ingest-errors` (none 6/8, skills 7/8, router 8/8).
 
 ### Outcome evals
 
-`evals/triggers/run_outcomes.py` runs the same coding tasks in a fresh sandbox of the app fixtures under three arms — `none` (no skills installed), `skills` (installed, the agent decides) and `router` (prompt prefixed with `/engineering-mode`) — then scores each finished project with deterministic checks (`outcome_checks.py`, no LLM judge). Tasks and held-out behavior tests are in `evals/triggers/outcomes/`; the agent never sees the hidden tests.
+`evals/triggers/run_outcomes.py` runs the same coding tasks in a fresh sandbox of the app fixtures under three arms — `none` (no skills installed), `skills` (installed, the agent decides) and `router` (prompt prefixed with `/engineering-mode`) — then scores each finished project with deterministic checks (`outcome_checks.py`, no LLM judge). Tasks and held-out behavior tests are in `evals/triggers/outcomes/`; the agent never sees the hidden tests. The `js-*` tasks add a small JavaScript app (`outcomes/js_fixtures/`, its own fixture layer, so the Python tasks' sandbox is unchanged) tested with `node --test`.
 
 ```bash
-python3 -I evals/triggers/run_outcomes.py --runs 4 --keep-transcripts evals/transcripts/devin-outcomes   # 4 tasks x 3 arms x 4 runs
-python3 -I evals/triggers/run_outcomes.py --score --keep-transcripts evals/transcripts/devin-outcomes    # re-score, no agent calls
+python3 -I evals/triggers/run_outcomes.py --model swe-2-flash-medium --runs 8 --keep-transcripts evals/transcripts/flash-outcomes   # 6 tasks x 3 arms x 8 runs
+python3 -I evals/triggers/run_outcomes.py --score --keep-transcripts evals/transcripts/flash-outcomes    # re-score, no agent calls
 ```
 
-Attempts are serial with `--delay 10` and the runner has no `--workers` flag. Each record keeps the agent's diff. Checks: `suite_passes`, `hidden_passes`, `tests_added`, `tests_fail_on_original` (the new test fails once the fix is reverted, not on an import error), `branching_not_increased` (`find-nested-branches`), `no_tautologies`, `no_swallowed_errors`, `mutants_killed`, and `test_first` (a transcript heuristic: first write into `tests/` precedes the first into `src/`).
+Attempts are serial with `--delay 10` and the runner has no `--workers` flag. Each record keeps the agent's diff. Checks: `suite_passes`, `hidden_passes`, `tests_added`, `tests_fail_on_original` (the new test fails once the fix is reverted, not on an import error), `branching_not_increased` (`find-nested-branches`), `no_tautologies`, `no_swallowed_errors`, `mutants_killed`, and two transcript heuristics: `test_first` (the first write into `tests/` precedes the first into `src/`) and the stricter `red_first` (a unittest/pytest/`node --test` run between those two writes showed a failure). Requires `uv` (the checks run the `find-*` scripts) and `node` for the `js-*` tasks. Attempts that time out are recorded as errors and left out; under host load, cells that lost runs were topped up to n=8 with `--timeout 900`.
 
-Results (passes/runs; `devin-outcomes-2026-11-09`, n=8 per cell except `hollow-tests` n=4):
+Results, passes/runs, n=8 per cell unless shown (medium `devin-outcomes-2026-11-09`; flash `flash-outcomes-2026-11-09`, and for `js-*` that dir plus `flash-outcomes-js-2026-11-09`, two independent batches of 8):
 
-| Check | none | skills | router |
-|---|---|---|---|
-| `cart-crash` `test_first` | 0/8 | 5/6 | 7/7 |
-| `slack-channel` `test_first` | 0/8 | 0/8 | 4/8 |
-| `slack-channel` `branching_not_increased` | 0/8 | 1/8 | 4/8 |
-| `ingest-errors` `no_swallowed_errors` | 7/8 | 8/8 | 8/8 |
-| `hollow-tests` `mutants_killed` | 3/4 | 4/4 | 4/4 |
-| any task, `hidden_passes` | all pass | all pass | all pass |
+| Check | model | none | skills | router |
+|---|---|---|---|---|
+| `cart-crash` `test_first` | medium | 0/8 | 5/6 | 7/7 |
+| | flash | 0/8 | 7/8 | 8/8 |
+| `cart-crash` `red_first` | medium | 0/8 | 5/6 | 5/7 |
+| | flash | 0/8 | 7/8 | 6/8 |
+| `js-cart-crash` `test_first` | flash | 0/15 | 12/16 | 16/16 |
+| `js-cart-crash` `red_first` | flash | 0/15 | 12/16 | 15/16 |
+| `ingest-errors` `test_first` | medium | 0/6 | 2/7 | 6/8 |
+| | flash | 0/8 | 2/8 | 8/8 |
+| `ingest-errors` `no_swallowed_errors` | medium | 7/8 | 8/8 | 8/8 |
+| | flash | 6/8 | 7/8 | 8/8 |
+| `slack-channel` `test_first` | medium | 0/8 | 0/8 | 4/8 |
+| | flash | 0/8 | 0/8 | 4/8 |
+| `slack-channel` `branching_not_increased` | medium | 0/8 | 1/8 | 4/8 |
+| | flash | 0/8 | 1/8 | 3/8 |
+| `js-shipping-carrier` `branching_not_increased` | flash | 0/16 | 0/16 | 12/16 |
+| `js-shipping-carrier` `test_first` | flash | 0/16 | 0/16 | 10/16 |
+| `hollow-tests` `mutants_killed` | medium (n=4) | 3/4 | 4/4 | 4/4 |
+| | flash | 7/8 | 8/8 | 8/8 |
 
-Only the `cart-crash` `test_first` gap is significant (Fisher exact, none vs router p<0.001, vs skills p=0.003); `slack-channel` router vs none is p=0.077. `ingest-errors` has no headroom, since the unaided agent already removes the swallowed handlers 7 of 8 times. In the `skills` arm the agent loads `engineering-mode` but does not act on it for design (1/8), so the design effect needs the router invoked.
+Fisher exact, router vs none: test-first on a bug fix is significant on both models and both languages (`cart-crash` medium p<0.001, flash p<0.001; `js-cart-crash` p<0.001; `ingest-errors` medium p=0.010, flash p<0.001); skills alone also reach it on the two crash tasks (p<0.01) but not on `ingest-errors`. The design effect, not adding another branch for a new variant, is significant in JavaScript (`js-shipping-carrier` 12/16 vs 0/16, p<0.001) and for Python only with both models pooled (`slack-channel` 7/16 vs 0/16, p=0.007; per model p=0.077 and p=0.20). In the `skills` arm the agent loads `engineering-mode` but rarely acts on it for design (2/32 across both models and both variant tasks), so the design effect needs the router invoked. `ingest-errors` swallowed-error removal and `hollow-tests` have little headroom on either model.
 
-A rewrite of the router's phases (scan principles before editing) raised the router arm's design checks from 12/16 to 16/16 but not significantly overall (pooled 21/32 to 25/31, p=0.257) and left the `skills` arm unchanged, so it was not adopted.
+A rewrite of the router's phases (scan principles before editing) raised the medium router arm's design checks from 12/16 to 16/16 but not significantly overall (pooled 21/32 to 25/31, p=0.257) and left the `skills` arm unchanged, so it was not adopted.
 
 ### Earlier baselines
 
