@@ -91,6 +91,19 @@ python3 -I evals/triggers/run_outcomes.py --score --keep-transcripts evals/trans
 
 Attempts are serial with `--delay 10` and the runner has no `--workers` flag. Each record keeps the agent's diff. Checks: `suite_passes`, `hidden_passes`, `tests_added`, `tests_fail_on_original` (the new test fails once the fix is reverted, not on an import error), `branching_not_increased` (`find-nested-branches`), `no_tautologies`, `no_swallowed_errors`, `mutants_killed`, and two transcript heuristics: `test_first` (the first write into `tests/` precedes the first into `src/`) and the stricter `red_first` (a unittest/pytest/`node --test` run between those two writes showed a failure). Requires `uv` (the checks run the `find-*` scripts) and `node` for the `js-*` tasks. Attempts that time out are recorded as errors and left out; under host load, cells that lost runs were topped up to n=8 with `--timeout 900`.
 
+Every check operationalizes a claim from the source the matching skill cites, not a criterion invented for the eval. Each is a proxy, and its limit is listed:
+
+| Check | Skill | Source and claim | Operationalized as | Limit |
+|---|---|---|---|---|
+| `red_first` | `tdd` | Beck, *Test Driven Development: By Example*: red, "write a little test that doesn't work", before green | a test run between the first `tests/` write and the first `src/` write showed a failure | misses failures read later from a backgrounded run (undercounts) |
+| `test_first` | `tdd` | Beck, same: the test comes before the code | first `tests/` write precedes first `src/` write | path only; `red_first` is the stricter form |
+| `tests_fail_on_original` | `tdd`, `principle-fix-root-causes` | Hunt & Thomas, *The Pragmatic Programmer*, "Find bugs once": a found bug gets a test that catches it | the new tests fail, not on an import error, once the fix is reverted | needs the fixed file list in the task |
+| `hidden_passes`, `suite_passes` | `principle-prove-it-works` | Hunt & Thomas: "Don't assume it — prove it"; Ousterhout: working code is necessary, not sufficient | held-back behavior tests the agent never saw, and the project's own suite, pass | covers only the behaviors the hidden test names |
+| `conditionals_not_increased` | `principle-open-closed` | Meyer, *OOSC*: modules open for extension, closed for modification; Martin, *Agile Software Development* ch. 9: extend behavior "by adding new code, not by changing old code that already works", and a type switch that grows per variant is the canonical violation | adding the variant adds no decision point (if/elif/case/ternary) to the dispatching file | a proxy: it does not prove the next variant needs no edit; Martin's "strategic closure" is met here because each task's file already holds three variants when the fourth arrives |
+| `branching_not_increased` | `principle-flat-methods` | Bay, *Object Calisthenics*: "don't use the ELSE keyword" | else/elif count does not grow | guard clauses per variant pass it, so it is not an open-closed measure; earlier results that used it as the design check are restated with `conditionals_not_increased` |
+| `no_swallowed_errors` | `find-swallowed-errors`, `principle-fix-root-causes` | Hunt & Thomas: "Crash early", "dead programs tell no lies"; Agans, *Debugging* | no handler with an empty or return-only body in the file | a logged-then-ignored error still passes |
+| `mutants_killed`, `no_tautologies` | `principle-test-behavior-not-implementation`, `find-tautological-assertions` | Beck, "Test Desiderata": tests are predictive (pass means the code works) and behavioral | the agent's tests catch injected one-line bugs; no assertion compares a value with itself or a constant | a fixed mutant list, not full mutation testing |
+
 Results, passes/runs, n=8 per cell unless shown (medium `devin-outcomes-2026-11-09`; flash `flash-outcomes-2026-11-09`, and for `js-*` that dir plus `flash-outcomes-js-2026-11-09`, two independent batches of 8):
 
 | Check | model | none | skills | router |
@@ -107,14 +120,14 @@ Results, passes/runs, n=8 per cell unless shown (medium `devin-outcomes-2026-11-
 | | flash | 6/8 | 7/8 | 8/8 |
 | `slack-channel` `test_first` | medium | 0/8 | 0/8 | 4/8 |
 | | flash | 0/8 | 0/8 | 4/8 |
-| `slack-channel` `branching_not_increased` | medium | 0/8 | 1/8 | 4/8 |
-| | flash | 0/8 | 1/8 | 3/8 |
-| `js-shipping-carrier` `branching_not_increased` | flash | 0/16 | 0/16 | 12/16 |
+| `slack-channel` `conditionals_not_increased` | medium | 0/8 | 1/8 | 4/8 |
+| | flash | 0/8 | 0/8 | 1/8 |
+| `js-shipping-carrier` `conditionals_not_increased` | flash | 0/16 | 0/16 | 12/16 |
 | `js-shipping-carrier` `test_first` | flash | 0/16 | 0/16 | 10/16 |
 | `hollow-tests` `mutants_killed` | medium (n=4) | 3/4 | 4/4 | 4/4 |
 | | flash | 7/8 | 8/8 | 8/8 |
 
-Fisher exact, router vs none: test-first on a bug fix is significant on both models and both languages (`cart-crash` medium p<0.001, flash p<0.001; `js-cart-crash` p<0.001; `ingest-errors` medium p=0.010, flash p<0.001); skills alone also reach it on the two crash tasks (p<0.01) but not on `ingest-errors`. The design effect, not adding another branch for a new variant, is significant in JavaScript (`js-shipping-carrier` 12/16 vs 0/16, p<0.001) and for Python only with both models pooled (`slack-channel` 7/16 vs 0/16, p=0.007; per model p=0.077 and p=0.20). In the `skills` arm the agent loads `engineering-mode` but rarely acts on it for design (2/32 across both models and both variant tasks), so the design effect needs the router invoked. `ingest-errors` swallowed-error removal and `hollow-tests` have little headroom on either model.
+Fisher exact, router vs none: test-first on a bug fix is significant on both models and both languages (`cart-crash` medium p<0.001, flash p<0.001; `js-cart-crash` p<0.001; `ingest-errors` medium p=0.010, flash p<0.001); skills alone also reach it on the two crash tasks (p<0.01) but not on `ingest-errors`. The open-closed effect (`conditionals_not_increased`, rescored from the stored diffs; 2 of the 3 flash `slack-channel` router passes under `branching_not_increased` were one guard clause per variant) is significant in JavaScript (`js-shipping-carrier` 12/16 vs 0/16, p<0.001) and only marginally in Python (`slack-channel` both models pooled 5/16 vs 0/16, p=0.043; flash alone 1/8). Across all stored variant runs (both models, including the rejected router rewrite) the design changes in 22 of 24 runs where `principle-open-closed` loaded and in 5 of 87 where it did not; in the `skills` arm it never loaded organically on flash (0/24), so the effect needs the router invoked. `ingest-errors` swallowed-error removal and `hollow-tests` have little headroom on either model.
 
 A rewrite of the router's phases (scan principles before editing) raised the medium router arm's design checks from 12/16 to 16/16 but not significantly overall (pooled 21/32 to 25/31, p=0.257) and left the `skills` arm unchanged, so it was not adopted.
 

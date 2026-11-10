@@ -124,7 +124,10 @@ def tests_added(ctx: Context) -> CheckResult:
 
 
 def hidden_passes(ctx: Context) -> CheckResult:
-    """Copy a held-back behavior test into the project and run it; the agent never saw it."""
+    """Copy a held-back behavior test into the project and run it; the agent never saw it.
+
+    Operationalizes principle-prove-it-works: Hunt & Thomas, "Don't assume it — prove it".
+    """
     suite = _suite(ctx.spec)
     with scratch_copy(ctx.project) as work:
         shutil.copy(HERE / _text(ctx.spec, "file"), work / suite.root / "tests" / suite.hidden_name)
@@ -133,7 +136,10 @@ def hidden_passes(ctx: Context) -> CheckResult:
 
 
 def tests_fail_on_original(ctx: Context) -> CheckResult:
-    """The agent's tests must fail, not on an import error, once the fixed files are put back to the bug."""
+    """The agent's tests must fail, not on an import error, once the fixed files are put back to the bug.
+
+    Operationalizes "Find bugs once" (Hunt & Thomas): the bug gets a test that would have caught it.
+    """
     files = ctx.spec.get("files")
     if not isinstance(files, list):
         raise ValueError(f"check spec needs a list 'files'; got {ctx.spec!r}")
@@ -145,7 +151,11 @@ def tests_fail_on_original(ctx: Context) -> CheckResult:
 
 
 def branching_not_increased(ctx: Context) -> CheckResult:
-    """else/elif count in one file must not grow; value is after minus before (negative is better)."""
+    """else/elif count in one file must not grow; value is after minus before (negative is better).
+
+    Operationalizes principle-flat-methods (Bay, Object Calisthenics: "don't use the ELSE keyword"), not
+    open-closed: one guard clause per variant passes here. See conditionals_not_increased.
+    """
     path = _text(ctx.spec, "path")
     if not (ctx.project / path).exists():
         return CheckResult(False)
@@ -169,8 +179,11 @@ def _conditionals(target: Path) -> int:
 def conditionals_not_increased(ctx: Context) -> CheckResult:
     """Adding a variant must not add a decision point; value is after minus before.
 
-    Stricter than branching_not_increased: rewriting an if/elif chain as one guard clause per variant
-    removes the elses but still edits working code for each new variant, so it fails here.
+    Operationalizes principle-open-closed: Meyer (OOSC), modules closed for modification; Martin (Agile
+    Software Development, ch. 9), extend behavior "by adding new code, not by changing old code that
+    already works", with a per-variant type switch as the canonical violation. Stricter than
+    branching_not_increased: one guard clause per variant drops the elses but still edits working code
+    for each new variant, so it fails here.
     """
     path = _text(ctx.spec, "path")
     if not (ctx.project / path).exists():
@@ -180,12 +193,16 @@ def conditionals_not_increased(ctx: Context) -> CheckResult:
 
 
 def no_tautologies(ctx: Context) -> CheckResult:
+    """No assertion that compares a value with itself or a constant: Beck, "Test Desiderata" (tests are predictive)."""
     count = len(finder_findings("find-tautological-assertions", "find_tautological_assertions.py", ctx.project / _text(ctx.spec, "path")))
     return CheckResult(count == 0, count)
 
 
 def no_swallowed_errors(ctx: Context) -> CheckResult:
-    """Exception handlers that discard their error (find-swallowed-errors) in one file; value is the count."""
+    """Exception handlers that discard their error (find-swallowed-errors) in one file; value is the count.
+
+    Operationalizes principle-fix-root-causes: Hunt & Thomas, The Pragmatic Programmer ("crash early").
+    """
     target = ctx.project / _text(ctx.spec, "path")
     if not target.exists():
         return CheckResult(False)
@@ -194,7 +211,10 @@ def no_swallowed_errors(ctx: Context) -> CheckResult:
 
 
 def mutants_killed(ctx: Context) -> CheckResult:
-    """How many injected one-line bugs the agent's tests catch; passes at spec['min']."""
+    """How many injected one-line bugs the agent's tests catch; passes at spec['min'].
+
+    Operationalizes Beck's "Test Desiderata" predictive property: if the tests pass, the code works.
+    """
     target, mutants, minimum = _text(ctx.spec, "file"), ctx.spec.get("mutants"), ctx.spec.get("min")
     if not isinstance(mutants, list) or not isinstance(minimum, int):
         raise ValueError(f"check spec needs a list 'mutants' and an int 'min'; got {ctx.spec!r}")

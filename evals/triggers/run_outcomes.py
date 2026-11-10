@@ -166,6 +166,9 @@ def _is_red_run(call: Json, outputs: dict[str, str]) -> bool:
 def red_first(raw: str) -> bool:
     """True when a test run between the first write into tests/ and the first into src/ showed a failure: red seen before green.
 
+    Operationalizes the tdd skill's source, Beck (Test Driven Development: By Example): red, "write a little
+    test that doesn't work", comes before green.
+
     Stricter than edit_order: a test written first but never run failing does not count. Output fetched later
     (a backgrounded run read via another tool) is missed, so this undercounts.
     """
