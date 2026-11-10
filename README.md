@@ -131,6 +131,18 @@ Fisher exact, router vs none: test-first on a bug fix is significant on both mod
 
 A rewrite of the router's phases (scan principles before editing) raised the medium router arm's design checks from 12/16 to 16/16 but not significantly overall (pooled 21/32 to 25/31, p=0.257) and left the `skills` arm unchanged, so it was not adopted.
 
+#### Router A/B on one devin build (flash, 3000.12.43, 2026-11-10)
+
+The tables above ran on build 3000.12.32; comparing a change against them mixed the change with the build, so every arm below ran on the same build, router arm, n=8 per task (timeouts and usage-limit failures excluded and counted). Control = `engineering-mode` before the change (`ab-preC-*`).
+
+| Variant | Design: `conditionals_not_increased` (pix-fee, slack-channel, js-shipping-carrier) | `principle-open-closed` loaded | `ingest-errors` `hidden_passes` | Verdict |
+|---|---|---|---|---|
+| control | 14/23 (2/8, 4/7, 8/8) | 12/23 | 10/13 | — |
+| C: Right step runs every check on edited files and fixes findings | 15/21, p=0.54 | 13/21 | 7/15 | reverted: no design gain |
+| C3: Work step loads `principle-open-closed` when a change adds a case to an existing chain, switch, or dispatch | **39/44 (9/14, 15/15, 15/15), p=0.012** | **37/44, p=0.008** | 5/8, p=0.63 | adopted |
+
+C3 hidden tests pass on every completed design run (44/44) and on `cart-crash` 7/7. The `ingest-errors` failures in every arm, control included, are one behavior: the agent changes `load_rows` to return rows plus errors, breaking callers that expect a list (3/8 in the larger control). C first looked like it caused that regression (7/15 vs 13/13 on the older build); the same-build control showed the build does it too.
+
 ### Earlier baselines
 
 Before the current 84-query set (`evals/transcripts/devin-swe2-medium-*`, n=8 per query): every then-shipped query passed, and user-invoked mode routed to the expected leaf (`train-wreck-chain` → law-of-demeter, `arrow-code` → flat-methods, 3/3 each).
