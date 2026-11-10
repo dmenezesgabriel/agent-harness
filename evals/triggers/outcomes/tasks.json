@@ -163,5 +163,32 @@
         "path": "web/src/shipping.js"
       }
     ]
+  },
+  {
+    "id": "pix-fee",
+    "fixtures": [
+      "outcomes/fees/fixtures"
+    ],
+    "prompt": "Add 'pix' as a payment method in src/fees.py: the fee is 1% of the amount, rounded down. Cover it with a test.",
+    "checks": [
+      {
+        "name": "suite_passes"
+      },
+      {
+        "name": "hidden_passes",
+        "file": "outcomes/fixtures/test_pix_fee.py"
+      },
+      {
+        "name": "tests_added"
+      },
+      {
+        "name": "branching_not_increased",
+        "path": "src/fees.py"
+      },
+      {
+        "name": "conditionals_not_increased",
+        "path": "src/fees.py"
+      }
+    ]
   }
 ]

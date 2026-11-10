@@ -154,6 +154,37 @@ GUARD_NOTIFICATIONS = '''def send(channel: str, user: dict, text: str) -> str:
 '''
 
 
+FEES_TABLE = '''"""Processing fee in cents that we pay per payment, by payment method."""
+FEES = {"card": (30, 29, 1000), "paypal": (49, 349, 10000), "bank_transfer": (25, 0, 1), "pix": (0, 1, 100)}
+
+
+def fee_cents(method: str, amount_cents: int) -> int:
+    if method not in FEES:
+        raise ValueError("unknown payment method: " + method)
+    flat, numerator, denominator = FEES[method]
+    return flat + amount_cents * numerator // denominator
+'''
+PIX_BRANCH = ('    else:\n        raise', '    elif method == "pix":\n        return amount_cents // 100\n    else:\n        raise')
+
+
+class WhenAnAgentAddsThePixFee(unittest.TestCase):
+    def test_untouched_project_fails_the_hidden_behavior(self) -> None:
+        with Sandbox(task("pix-fee").layers) as box:
+            self.assertIs(box.checks("pix-fee")["hidden_passes"], False)
+
+    def test_fee_table_passes_behavior_and_adds_no_conditional(self) -> None:
+        with Sandbox(task("pix-fee").layers) as box:
+            box.write("src/fees.py", FEES_TABLE)
+            result = box.checks("pix-fee")
+        self.assertEqual((result["hidden_passes"], result["conditionals_not_increased"]), (True, True))
+
+    def test_another_elif_passes_behavior_but_adds_a_conditional(self) -> None:
+        with Sandbox(task("pix-fee").layers) as box:
+            box.replace("src/fees.py", *PIX_BRANCH)
+            result = box.checks("pix-fee")
+        self.assertEqual((result["hidden_passes"], result["conditionals_not_increased"]), (True, False))
+
+
 class WhenCountingJsDecisionPoints(unittest.TestCase):
     def test_optional_chaining_and_nullish_coalescing_are_not_decisions(self) -> None:
         source = "const a = b?.c ?? d;\nconst e = f ? 1 : 2;\nif (g) {}\nswitch (h) { case 1: break; }\n"
