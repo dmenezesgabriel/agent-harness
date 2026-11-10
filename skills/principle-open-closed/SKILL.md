@@ -1,6 +1,6 @@
 ---
 name: principle-open-closed
-description: Use when adding a new variant, case, format, or integration means editing existing working code — a growing switch, if/elif chain, registry, or dispatch — when choosing between modifying tested code and adding new code, or when designing plugin or extension points, even for a short snippet or a conceptual question. Extend behavior by adding code, not by changing code that already works.
+description: Use when a request adds one more case to code that already picks between several by name or type — another backend, locale, currency, user role, or file format — even when it reads as a one-line addition, because that is how a switch or if/elif chain grows. Also use when choosing between editing tested code and adding new code, or designing plugin or extension points, even for a short snippet or a conceptual question. Extend behavior by adding code, not by changing code that already works.
 ---
 
 # Open–closed
