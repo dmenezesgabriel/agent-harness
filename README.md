@@ -143,6 +143,8 @@ The tables above ran on build 3000.12.32; comparing a change against them mixed 
 
 C3 hidden tests pass on every completed design run (44/44) and on `cart-crash` 7/7. The `ingest-errors` failures in every arm, control included, are one behavior: the agent changes `load_rows` to return rows plus errors, breaking callers that expect a list (3/8 in the larger control). C first looked like it caused that regression (7/15 vs 13/13 on the older build); the same-build control showed the build does it too.
 
+Without the router (`skills` arm, same build, C3 vs control in interleaved blocks of 4, n=24 each), C3 does not help: `engineering-mode` loaded 12/24 vs 7/24, `principle-open-closed` 2/24 vs 0/24, design 1/24 vs 0/24. These agents answer "add X" in a few steps, matching the existing else-if style, and never reach the Work step's line. The open-closed effect is real only when `/engineering-mode` is invoked. A description rewrite of `principle-open-closed` (reverted 4d11537) also left organic loading at 1/22.
+
 ### Earlier baselines
 
 Before the current 84-query set (`evals/transcripts/devin-swe2-medium-*`, n=8 per query): every then-shipped query passed, and user-invoked mode routed to the expected leaf (`train-wreck-chain` → law-of-demeter, `arrow-code` → flat-methods, 3/3 each).
