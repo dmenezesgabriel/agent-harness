@@ -174,6 +174,8 @@ F does not move the holdout, and on `open_closed.json` its positives load open-c
 
 Held-out organic A/B for D (master) against no skills, interleaved blocks on the same build, n=8 per task per arm: `duration-day` design 2/8 vs 0/8 and `priority-urgent` 4/8 vs 0/8 (6/16 vs 0/16, p=0.018); hidden tests 16/16 in both arms. Pooling every D `skills` run on the two holdouts on this build (n=40) against every `none` run (n=24): design 12/40 vs 0/24 (p=0.002), hidden 39/40 vs 24/24. `principle-open-closed` loaded in 15/40 runs. Design passed in 12/15 of those and 0/25 of the rest (p<0.001), so the gain comes from runs that load the principle, and loading, not applying, is the organic bottleneck. These are observational splits: runs that load the skill may also differ in other ways.
 
+The spec predicts this ceiling (`optimizing-descriptions.mdx`): "A simple, one-step request ... may not trigger a ... skill even if the description matches perfectly, because the agent can handle it with basic tools." Both holdouts are one-line requests, and two description rewrites (E, F) did not raise loading against same-build controls. For small changes the measured way to get the skill applied is to invoke `/engineering-mode` (design 39/44, loads every run), not more description tuning.
+
 ### Earlier baselines
 
 Before the current 84-query set (`evals/transcripts/devin-swe2-medium-*`, n=8 per query): every then-shipped query passed, and user-invoked mode routed to the expected leaf (`train-wreck-chain` → law-of-demeter, `arrow-code` → flat-methods, 3/3 each).
