@@ -157,6 +157,8 @@ Over-reach checks for D: on `open_closed.json` (written before any change) the s
 
 Against no skills on the same build (`none` arm, n=24 on the three design tasks: design 0/24, hidden 24/24), `skills` with D reaches 6/24 (p=0.022) and the invoked router 39/44 (p<0.001), with hidden tests unchanged.
 
+A second batch of D (`skills`, n=24) replicated it: design 9/24, open-closed loaded 12/24 (first batch 6/24, 11/24; p=0.53 between batches). Pooled, D reaches design 15/48 vs `none` 0/24 (p=0.001). On the held-out `duration-day` task it does not generalize: `skills` 1/8 vs `none` 0/8, with `engineering-mode` loaded 0/8 and open-closed 1/8. "Add 'day' as a unit" reads as too small to need a skill, so organic triggering depends on how big the request sounds.
+
 E (branch `exp-oc-first-bullet`, not merged) reworded the open-closed "closure is strategic" gotcha after Martin's "take the first bullet", because router pix-fee runs that kept the `elif` quoted it. Router arm, interleaved blocks, n=8: on the held-out `duration-day` task the control already scored 7/8 and E 7/8 (no headroom); on the tuning task pix-fee 6/8 vs 8/8 (p=0.47). Not proven, so not adopted. The 2/8 `duration-day` hidden failures in each arm named the unit `"d"`, copying the file's abbreviations instead of the requested `'day'`.
 
 ### Earlier baselines
