@@ -161,6 +161,17 @@ A second batch of D (`skills`, n=24) replicated it: design 9/24, open-closed loa
 
 E (branch `exp-oc-first-bullet`, not merged) reworded the open-closed "closure is strategic" gotcha after Martin's "take the first bullet", because router pix-fee runs that kept the `elif` quoted it. Router arm, interleaved blocks, n=8: on the held-out `duration-day` task the control already scored 7/8 and E 7/8 (no headroom); on the tuning task pix-fee 6/8 vs 8/8 (p=0.47). Not proven, so not adopted. The 2/8 `duration-day` hidden failures in each arm named the unit `"d"`, copying the file's abbreviations instead of the requested `'day'`.
 
+F (branch `exp-em-request-words`, not merged) replaced D's description sentence with one in request words ("a request to add one more kind of something (a unit, method, type, carrier, channel, or format) ... load principle-open-closed"), because agents choose skills from the request before reading the code. `priority-urgent` was written and committed before F as a second holdout. `skills` arm, interleaved blocks with D on the same build, n=8 per task:
+
+| Task | Variant | `engineering-mode` | open-closed | design | hidden |
+|---|---|---|---|---|---|
+| `duration-day` (tuning) | D | 4/8 | 3/8 | 3/8 | 8/8 |
+| | F | 6/8 | 7/8 (p=0.12) | 5/8 (p=0.62) | 6/8 |
+| `priority-urgent` (held out) | D | 3/8 | 3/8 | 2/8 | 8/8 |
+| | F | 4/8 | 3/8 | 2/8 (p=1.0) | 8/8 |
+
+F does not move the holdout, and on `open_closed.json` its positives load open-closed 0/18 (D 2/17), with near-misses at 0/18 open-closed and 2/18 `engineering-mode`. Not adopted. D's `duration-day` load rate also changed between runs on the same build (`engineering-mode` 0/8, then 4/8), so n=8 differences on one task are within noise. F's two hidden failures named the unit `"d"`, as in E.
+
 ### Earlier baselines
 
 Before the current 84-query set (`evals/transcripts/devin-swe2-medium-*`, n=8 per query): every then-shipped query passed, and user-invoked mode routed to the expected leaf (`train-wreck-chain` → law-of-demeter, `arrow-code` → flat-methods, 3/3 each).
