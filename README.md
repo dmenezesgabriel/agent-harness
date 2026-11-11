@@ -155,6 +155,10 @@ Organic loads read the body and then skip it: the agent writes the fix before an
 
 Over-reach checks for D: on `open_closed.json` (written before any change) the six near-miss requests load `principle-open-closed` 0/18 (baseline 0/21) and `engineering-mode` 1/18 (3/21); the positives load open-closed 2/17 (0/22). On the bug-fix tasks open-closed loads 0/16. `cart-crash` `test_first` in the `skills` arm was 8/8 vs 0/8 for `none` (p<0.001) and 4/8 before D (p=0.077); `ingest-errors` hidden 7/8 for both `skills` and `none`. Organic design (6/24) stays far below the invoked router (39/44): agents that load the principle on their own still often keep the `elif`.
 
+Against no skills on the same build (`none` arm, n=24 on the three design tasks: design 0/24, hidden 24/24), `skills` with D reaches 6/24 (p=0.022) and the invoked router 39/44 (p<0.001), with hidden tests unchanged.
+
+E (branch `exp-oc-first-bullet`, not merged) reworded the open-closed "closure is strategic" gotcha after Martin's "take the first bullet", because router pix-fee runs that kept the `elif` quoted it. Router arm, interleaved blocks, n=8: on the held-out `duration-day` task the control already scored 7/8 and E 7/8 (no headroom); on the tuning task pix-fee 6/8 vs 8/8 (p=0.47). Not proven, so not adopted. The 2/8 `duration-day` hidden failures in each arm named the unit `"d"`, copying the file's abbreviations instead of the requested `'day'`.
+
 ### Earlier baselines
 
 Before the current 84-query set (`evals/transcripts/devin-swe2-medium-*`, n=8 per query): every then-shipped query passed, and user-invoked mode routed to the expected leaf (`train-wreck-chain` → law-of-demeter, `arrow-code` → flat-methods, 3/3 each).
