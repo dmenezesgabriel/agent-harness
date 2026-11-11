@@ -145,6 +145,16 @@ C3 hidden tests pass on every completed design run (44/44) and on `cart-crash` 7
 
 Without the router (`skills` arm, same build, C3 vs control in interleaved blocks of 4, n=24 each), C3 does not help: `engineering-mode` loaded 12/24 vs 7/24, `principle-open-closed` 2/24 vs 0/24, design 1/24 vs 0/24. These agents answer "add X" in a few steps, matching the existing else-if style, and never reach the Work step's line. The open-closed effect is real only when `/engineering-mode` is invoked. A description rewrite of `principle-open-closed` (reverted 4d11537) also left organic loading at 1/22.
 
+Organic loads read the body and then skip it: the agent writes the fix before any checklist step. D moves the trigger into `engineering-mode`'s description, which the agent sees before it decides. `skills` arm, same build, n=24 per variant on the three design tasks:
+
+| Variant | `principle-open-closed` loaded | design (`conditionals_not_increased`) | hidden |
+|---|---|---|---|
+| before C3 | 0/24 | 0/24 | 24/24 |
+| C3 (body line) | 2/24 | 1/24 | 24/24 |
+| D (C3 + description sentence) | **11/24**, p<0.001 vs before C3 | **6/24**, p=0.022 vs before C3 (p=0.097 vs C3) | 24/24 |
+
+Over-reach checks for D: on `open_closed.json` (written before any change) the six near-miss requests load `principle-open-closed` 0/18 (baseline 0/21) and `engineering-mode` 1/18 (3/21); the positives load open-closed 2/17 (0/22). On the bug-fix tasks open-closed loads 0/16. `cart-crash` `test_first` in the `skills` arm was 8/8 vs 0/8 for `none` (p<0.001) and 4/8 before D (p=0.077); `ingest-errors` hidden 7/8 for both `skills` and `none`. Organic design (6/24) stays far below the invoked router (39/44): agents that load the principle on their own still often keep the `elif`.
+
 ### Earlier baselines
 
 Before the current 84-query set (`evals/transcripts/devin-swe2-medium-*`, n=8 per query): every then-shipped query passed, and user-invoked mode routed to the expected leaf (`train-wreck-chain` → law-of-demeter, `arrow-code` → flat-methods, 3/3 each).
