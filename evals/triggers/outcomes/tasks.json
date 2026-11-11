@@ -217,5 +217,32 @@
         "path": "src/durations.py"
       }
     ]
+  },
+  {
+    "id": "priority-urgent",
+    "fixtures": [
+      "outcomes/priorities/fixtures"
+    ],
+    "prompt": "Add an 'urgent' priority in src/priorities.py with a 2-hour response deadline. Cover it with a test.",
+    "checks": [
+      {
+        "name": "suite_passes"
+      },
+      {
+        "name": "hidden_passes",
+        "file": "outcomes/fixtures/test_priority_urgent.py"
+      },
+      {
+        "name": "tests_added"
+      },
+      {
+        "name": "branching_not_increased",
+        "path": "src/priorities.py"
+      },
+      {
+        "name": "conditionals_not_increased",
+        "path": "src/priorities.py"
+      }
+    ]
   }
 ]

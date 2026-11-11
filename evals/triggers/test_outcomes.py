@@ -215,6 +215,36 @@ class WhenAnAgentAddsTheDayUnit(unittest.TestCase):
         self.assertEqual((result["hidden_passes"], result["conditionals_not_increased"]), (True, False))
 
 
+PRIORITIES_TABLE = '''"""Support-ticket response deadline in hours, by ticket priority."""
+RESPONSE_HOURS = {"low": 72, "normal": 24, "high": 8, "urgent": 2}
+
+
+def response_hours(priority: str) -> int:
+    if priority not in RESPONSE_HOURS:
+        raise ValueError("unknown priority: " + priority)
+    return RESPONSE_HOURS[priority]
+'''
+URGENT_BRANCH = ('    else:\n        raise', '    elif priority == "urgent":\n        return 2\n    else:\n        raise')
+
+
+class WhenAnAgentAddsTheUrgentPriority(unittest.TestCase):
+    def test_untouched_project_fails_the_hidden_behavior(self) -> None:
+        with Sandbox(task("priority-urgent").layers) as box:
+            self.assertIs(box.checks("priority-urgent")["hidden_passes"], False)
+
+    def test_priority_table_passes_behavior_and_adds_no_conditional(self) -> None:
+        with Sandbox(task("priority-urgent").layers) as box:
+            box.write("src/priorities.py", PRIORITIES_TABLE)
+            result = box.checks("priority-urgent")
+        self.assertEqual((result["hidden_passes"], result["conditionals_not_increased"]), (True, True))
+
+    def test_another_elif_passes_behavior_but_adds_a_conditional(self) -> None:
+        with Sandbox(task("priority-urgent").layers) as box:
+            box.replace("src/priorities.py", *URGENT_BRANCH)
+            result = box.checks("priority-urgent")
+        self.assertEqual((result["hidden_passes"], result["conditionals_not_increased"]), (True, False))
+
+
 class WhenCountingJsDecisionPoints(unittest.TestCase):
     def test_optional_chaining_and_nullish_coalescing_are_not_decisions(self) -> None:
         source = "const a = b?.c ?? d;\nconst e = f ? 1 : 2;\nif (g) {}\nswitch (h) { case 1: break; }\n"
