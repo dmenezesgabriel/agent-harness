@@ -1,6 +1,6 @@
 ---
 name: engineering-mode
-description: Use when starting a feature, bug fix, refactor, or code review — the whole change, not a single module or smell. Routes the task to the matching principles and checks before code is written or judged; questions about one design decision, test, or bug belong to the leaf skills.
+description: Use when starting a feature, bug fix, refactor, or code review — the whole change, not a single module or smell. Routes the task to the matching principles and checks before code is written or judged; questions about one design decision, test, or bug belong to the leaf skills. Adding a case to an existing if/elif chain, switch, or dispatch is a change, so load principle-open-closed before writing it.
 ---
 
 # Engineering mode
