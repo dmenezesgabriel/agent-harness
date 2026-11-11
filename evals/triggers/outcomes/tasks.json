@@ -190,5 +190,32 @@
         "path": "src/fees.py"
       }
     ]
+  },
+  {
+    "id": "duration-day",
+    "fixtures": [
+      "outcomes/durations/fixtures"
+    ],
+    "prompt": "Add 'day' as a unit in src/durations.py: one day is 86400 seconds. Cover it with a test.",
+    "checks": [
+      {
+        "name": "suite_passes"
+      },
+      {
+        "name": "hidden_passes",
+        "file": "outcomes/fixtures/test_duration_day.py"
+      },
+      {
+        "name": "tests_added"
+      },
+      {
+        "name": "branching_not_increased",
+        "path": "src/durations.py"
+      },
+      {
+        "name": "conditionals_not_increased",
+        "path": "src/durations.py"
+      }
+    ]
   }
 ]

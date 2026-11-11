@@ -185,6 +185,36 @@ class WhenAnAgentAddsThePixFee(unittest.TestCase):
         self.assertEqual((result["hidden_passes"], result["conditionals_not_increased"]), (True, False))
 
 
+DURATIONS_TABLE = '''"""Converts a duration with a unit into whole seconds."""
+SECONDS_PER_UNIT = {"s": 1, "min": 60, "h": 3600, "day": 86400}
+
+
+def to_seconds(amount: int, unit: str) -> int:
+    if unit not in SECONDS_PER_UNIT:
+        raise ValueError("unknown unit: " + unit)
+    return amount * SECONDS_PER_UNIT[unit]
+'''
+DAY_BRANCH = ('    else:\n        raise', '    elif unit == "day":\n        return amount * 86400\n    else:\n        raise')
+
+
+class WhenAnAgentAddsTheDayUnit(unittest.TestCase):
+    def test_untouched_project_fails_the_hidden_behavior(self) -> None:
+        with Sandbox(task("duration-day").layers) as box:
+            self.assertIs(box.checks("duration-day")["hidden_passes"], False)
+
+    def test_unit_table_passes_behavior_and_adds_no_conditional(self) -> None:
+        with Sandbox(task("duration-day").layers) as box:
+            box.write("src/durations.py", DURATIONS_TABLE)
+            result = box.checks("duration-day")
+        self.assertEqual((result["hidden_passes"], result["conditionals_not_increased"]), (True, True))
+
+    def test_another_elif_passes_behavior_but_adds_a_conditional(self) -> None:
+        with Sandbox(task("duration-day").layers) as box:
+            box.replace("src/durations.py", *DAY_BRANCH)
+            result = box.checks("duration-day")
+        self.assertEqual((result["hidden_passes"], result["conditionals_not_increased"]), (True, False))
+
+
 class WhenCountingJsDecisionPoints(unittest.TestCase):
     def test_optional_chaining_and_nullish_coalescing_are_not_decisions(self) -> None:
         source = "const a = b?.c ?? d;\nconst e = f ? 1 : 2;\nif (g) {}\nswitch (h) { case 1: break; }\n"
