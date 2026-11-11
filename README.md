@@ -176,6 +176,8 @@ Held-out organic A/B for D (master) against no skills, interleaved blocks on the
 
 The spec predicts this ceiling (`optimizing-descriptions.mdx`): "A simple, one-step request ... may not trigger a ... skill even if the description matches perfectly, because the agent can handle it with basic tools." Both holdouts are one-line requests, and two description rewrites (E, F) did not raise loading against same-build controls. For small changes the measured way to get the skill applied is to invoke `/engineering-mode` (design 39/44, loads every run), not more description tuning.
 
+Per-step attribution of the 40 held-out `skills` runs: `engineering-mode` loaded in 17. When it loaded, open-closed followed in 14/17 and design passed in 11/17. When it did not, open-closed loaded in 1/23 and design passed in 1/23. The router-to-leaf handoff and the leaf's effect both work; the miss is the router's own trigger on one-line requests.
+
 ### Earlier baselines
 
 Before the current 84-query set (`evals/transcripts/devin-swe2-medium-*`, n=8 per query): every then-shipped query passed, and user-invoked mode routed to the expected leaf (`train-wreck-chain` → law-of-demeter, `arrow-code` → flat-methods, 3/3 each).
