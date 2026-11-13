@@ -21,8 +21,8 @@ dev = [
     "mutmut==3.8.1",
     "pip-audit==2.10.1",
     "zizmor==1.31.1",
-    "python-semantic-release==10.7.0",
     "shellcheck-py==0.11.0.1",
+    "commitizen==4.19.3",
 ]
 
 [tool.uv]
@@ -126,7 +126,7 @@ DEP002 = [
     "mutmut",
     "pip-audit",
     "zizmor",
-    "python-semantic-release",
+    "commitizen",
     "shellcheck-py",
 ]
 
