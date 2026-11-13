@@ -12,6 +12,9 @@ updates:
     cooldown:
       default-days: 7
     open-pull-requests-limit: 5
+    commit-message: # build(deps): ... passes the Conventional Commit check in CI
+      prefix: build
+      include: scope
     groups:
       dev-tools:
         dependency-type: development
@@ -24,3 +27,6 @@ updates:
     cooldown:
       default-days: 7
     open-pull-requests-limit: 5
+    commit-message: # build(deps): ... passes the Conventional Commit check in CI
+      prefix: build
+      include: scope
