@@ -1,5 +1,8 @@
-# Enable with `pre-commit install`. Hooks run the locked uv env via make —
-# the same targets as `make check` (minus network-only pip-audit and mutmut).
+# Enable with `pre-commit install` (installs both hook types below). Hooks run
+# the locked uv env via make — the same targets as `make check` (minus
+# network-only pip-audit and mutmut) — and lint the commit message.
+default_install_hook_types: [pre-commit, commit-msg]
+default_stages: [pre-commit]
 repos:
   - repo: local
     hooks:
@@ -15,3 +18,10 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
+      # Conventional Commits decide the release (see CHANGELOG.md), so a
+      # message cz cannot parse is rejected before it lands.
+      - id: commit-message
+        name: Conventional Commit message (cz check)
+        entry: uv run --locked cz check --allow-abort --commit-msg-file
+        language: system
+        stages: [commit-msg]

@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# Opt-in with pre-commit: `git config core.hooksPath .githooks`.
+# Rejects a message that is not a Conventional Commit; the type decides the release (CHANGELOG.md).
+set -euo pipefail
+
+if command -v uv >/dev/null; then
+  uv run --locked --project "$(git rev-parse --show-toplevel)" cz check --allow-abort --commit-msg-file "$1"
+else
+  echo "commit-msg: uv not found; skipping Conventional Commit check (cz check)" >&2
+fi

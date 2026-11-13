@@ -39,7 +39,7 @@ complexity:
 	@$(UV) xenon --max-absolute C --max-modules C --max-average A -e "*/mutants/*" skills evals/triggers/run_triggers.py evals/triggers/run_outcomes.py evals/triggers/outcome_checks.py
 
 shell:
-	@$(UV) shellcheck scripts/*.sh .githooks/pre-commit
+	@$(UV) shellcheck scripts/*.sh .githooks/pre-commit .githooks/commit-msg
 
 # Full gate; `audit` hits the network, so run deliberately rather than per-commit.
 check: test lint types security deadcode deps complexity shell audit actions
