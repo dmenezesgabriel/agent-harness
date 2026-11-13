@@ -1,6 +1,5 @@
-# Quality gate and commit-message lint on every PR and push; on master, a passing
-# run cuts the release that the Conventional Commits since the last tag call for
-# (`cz bump`: semver tag + CHANGELOG.md + GitHub Release). Nothing to release is a no-op.
+# Quality gate and commit-message lint on every PR and push to master.
+# Releases are cut by merging the release-please PR (release.yml).
 name: CI
 
 on:
@@ -54,44 +53,3 @@ jobs:
           # A push that creates the branch has no "before"; check only its tip.
           if [[ "$BASE" =~ ^0+$ ]]; then BASE="$HEAD~1"; fi
           uv run --locked cz check --rev-range "$BASE..$HEAD"
-
-  release:
-    name: Release
-    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
-    needs: [quality, commits]
-    runs-on: ubuntu-latest
-    concurrency:
-      group: release
-      cancel-in-progress: false
-    permissions:
-      contents: write # push the bump commit and tag, create the GitHub Release
-    steps:
-      # The job pushes the bump commit and tag, so it keeps the checkout token;
-      # it uploads no artifacts.
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1 # zizmor: ignore[artipacked]
-        with:
-          fetch-depth: 0
-      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
-        with:
-          version: "0.11.8"
-          enable-cache: false
-      - run: uv sync --locked
-      - name: Bump version, changelog and tag
-        id: bump
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          before="$(uv run --locked cz version --project)"
-          # Exit 21 = no commit since the last tag calls for a release.
-          uv run --locked cz --no-raise 21 bump --yes --changelog-to-stdout --git-output-to-stderr > "$RUNNER_TEMP/notes.md"
-          after="$(uv run --locked cz version --project)"
-          if [[ "$after" != "$before" ]]; then echo "tag=v$after" >> "$GITHUB_OUTPUT"; fi
-      - name: Push the bump commit and tag
-        if: steps.bump.outputs.tag
-        run: git push --follow-tags origin HEAD:master
-      - name: GitHub Release
-        if: steps.bump.outputs.tag
-        env:
-          GH_TOKEN: ${{ github.token }}
-          TAG: ${{ steps.bump.outputs.tag }}
-        run: gh release create "$TAG" --title "$TAG" --notes-file "$RUNNER_TEMP/notes.md" --verify-tag

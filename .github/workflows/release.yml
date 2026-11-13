@@ -1,0 +1,28 @@
+# Release PR convention (release-please): each push to master updates one open
+# "chore: release X.Y.Z" PR with the version (.release-please-manifest.json) and
+# CHANGELOG.md entries that the Conventional Commits since the last release call for.
+# Merging that PR tags vX.Y.Z and creates the GitHub Release. Nothing is pushed to
+# master without review.
+name: Release
+
+on:
+  push:
+    branches: [master]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release-please:
+    name: Release PR and GitHub Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # create the vX.Y.Z tag and GitHub Release
+      pull-requests: write # open and update the release PR
+      issues: write # label the release PR (labels use the issues API)
+    steps:
+      - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
