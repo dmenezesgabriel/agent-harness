@@ -53,7 +53,7 @@ scripts/validate-skills.sh skills/<name>   # one skill
 Exit 0 = every skill valid; 1 = a skill failed (reason printed); 2 = validator not installed.
 Run it after every skill change, before committing.
 
-Two opt-in pre-commit setups run `make commit-check` plus skill validation, check that the message is a Conventional Commit (`cz check`; the type decides the release, see README "Install and update"), and block the commit on failure. CI (`.github/workflows/ci.yml`) runs the full `make check`, skill validation and the same message check, then releases from `master`:
+Two opt-in pre-commit setups run `make commit-check` plus skill validation, check that the message is a Conventional Commit (`cz check`; the type decides the release, see README "Install and update"), and block the commit on failure. CI (`.github/workflows/ci.yml`) runs the full `make check`, skill validation and the same message check; `release.yml` keeps the release-please PR up to date, and merging it cuts the release:
 
 ```bash
 git config core.hooksPath .githooks   # repo hook (warns and skips when validator/make is missing)
