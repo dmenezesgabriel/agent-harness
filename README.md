@@ -7,7 +7,7 @@ Small, harness-agnostic skill kit. Every skill follows the [Agent Skills spec](h
 Install every skill with the [`skills`](https://www.npmjs.com/package/skills) CLI, into any agent it supports (claude-code, cursor, opencode, devin, ...):
 
 ```bash
-npx skills@latest add dmenezesgabriel/pi-setup --skill '*' -a <agent>   # omit -a to choose; -g for user-level
+npx skills@latest add dmenezesgabriel/agent-harness --skill '*' -a <agent>   # omit -a to choose; -g for user-level
 npx skills@latest update                                                # pull the latest skills into every install
 ```
 
