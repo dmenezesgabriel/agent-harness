@@ -95,17 +95,10 @@ min_confidence = 60
 # 'line' is the Finding dataclass field serialized through asdict().
 ignore_names = ["test_*", "When*", "setUp", "tearDown", "line"]
 
-# Releases: Conventional Commits -> semver tag + CHANGELOG.md (`cz bump`).
-# The git tag is the kit's version (`npx skills update` reads the repo), so no
-# file holds a version to rewrite. While 0.x, a breaking change bumps minor.
+# commitizen only lints messages (`cz check`, in the commit-msg hooks and CI);
+# release-please turns the Conventional Commits into releases (release.yml).
 [tool.commitizen]
 name = "cz_conventional_commits"
-version_provider = "scm"
-tag_format = "v$version"
-major_version_zero = true
-update_changelog_on_bump = true
-changelog_incremental = true
-annotated_tag = true
 
 [tool.deptry]
 known_first_party = [
