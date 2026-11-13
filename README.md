@@ -2,6 +2,19 @@
 
 Small, harness-agnostic skill kit. Every skill follows the [Agent Skills spec](https://github.com/agentskills/agentskills/tree/main/docs) and lives at `skills/<name>/SKILL.md`. Validate all skills with `scripts/validate-skills.sh`.
 
+## Install and update
+
+Install every skill with the [`skills`](https://www.npmjs.com/package/skills) CLI, into any agent it supports (claude-code, cursor, opencode, devin, ...):
+
+```bash
+npx skills@latest add dmenezesgabriel/pi-setup --skill '*' -a <agent>   # omit -a to choose; -g for user-level
+npx skills@latest update                                                # pull the latest skills into every install
+```
+
+Install all skills, not a subset: `engineering-mode` routes to the others through relative links (`../tdd/SKILL.md`). On a small change, invoke `/engineering-mode` explicitly; on one-line requests agents load it on their own in fewer than half of the runs (see "Outcome evals").
+
+Releases are semver git tags (`vMAJOR.MINOR.PATCH`), with each one's changes listed in [`CHANGELOG.md`](CHANGELOG.md).
+
 ## Trigger evals
 
 `evals/triggers/run_triggers.py` measures how often each skill triggers on realistic queries. Each query runs `--runs` times in a fresh temp project holding the skills (copied to `.claude/skills/`) plus `evals/triggers/fixtures/`; a run "triggers" when the agent invokes a skill or reads its `SKILL.md` (the spec counts either). A should-trigger query passes at rate > 0.5, a should-not query at < 0.5.
