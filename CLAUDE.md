@@ -65,12 +65,7 @@ pre-commit install                  # or the pre-commit framework, .pre-commit-c
 `skills-ref` is the spec's reference validator (demo-grade, 536 lines, deps: click, strictyaml). Pinned to agentskills commit `69ef37e`.
 
 ```bash
-cd research_repos
-git clone --filter=blob:none --sparse https://github.com/agentskills/agentskills.git _as
-git -C _as checkout 69ef37e9424c0a7ea9dd2293b559e43ec8176379
-git -C _as sparse-checkout set skills-ref
-mv _as/skills-ref skills-ref && rm -rf _as
-cd skills-ref && uv sync
+scripts/install-validator.sh   # sparse clone at the pinned commit, `uv sync --locked`; CI runs the same script
 ```
 
 `research_repos/pstack` is a read-only reference (cursor/plugins `pstack`); do not copy its Cursor-specific names or fields.
