@@ -13,7 +13,7 @@ npx skills@latest update                                                # pull t
 
 Install all skills, not a subset: `engineering-mode` routes to the others through relative links (`../tdd/SKILL.md`). On a small change, invoke `/engineering-mode` explicitly; on one-line requests agents load it on their own in fewer than half of the runs (see "Outcome evals").
 
-Releases are semver git tags (`vMAJOR.MINOR.PATCH`), with each one's changes listed in [`CHANGELOG.md`](CHANGELOG.md).
+Releases are semver git tags (`vMAJOR.MINOR.PATCH`) with GitHub Releases, cut automatically. Every commit must be a [Conventional Commit](https://www.conventionalcommits.org/en/v1.0.0/): the commit hooks and CI reject anything else. When a push to `master` passes CI, commitizen (`cz bump`) reads the commits since the last tag, bumps the version, prepends the entries to [`CHANGELOG.md`](CHANGELOG.md), and tags. `feat:` (new skill or check) releases a minor version. `fix:` (a change to what a skill tells the agent, or a script fix) releases a patch. `feat!:` or a `BREAKING CHANGE:` footer (skill renamed or removed, script output changed) is breaking, which bumps the minor version while the kit is 0.x. `docs:`, `test:`, `build:`, `ci:` and `chore:` release nothing. Preview locally with `uv run --locked cz bump --dry-run --yes`.
 
 ## Trigger evals
 
