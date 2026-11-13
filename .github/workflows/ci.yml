@@ -83,7 +83,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           before="$(uv run --locked cz version --project)"
           # Exit 21 = no commit since the last tag calls for a release.
-          uv run --locked cz --no-raise 21 bump --yes --changelog-to-stdout > "$RUNNER_TEMP/notes.md"
+          uv run --locked cz --no-raise 21 bump --yes --changelog-to-stdout --git-output-to-stderr > "$RUNNER_TEMP/notes.md"
           after="$(uv run --locked cz version --project)"
           if [[ "$after" != "$before" ]]; then echo "tag=v$after" >> "$GITHUB_OUTPUT"; fi
       - name: Push the bump commit and tag
